@@ -2,6 +2,7 @@ mod agent;
 mod tools;
 
 use clap::Parser;
+use colored::Colorize;
 use std::path::PathBuf;
 
 /// Ninja — a model-agnostic CLI coding agent via OpenRouter
@@ -47,23 +48,13 @@ struct Cli {
     /// Save rollout to file
     #[arg(long)]
     rollout: Option<PathBuf>,
+
+    /// Interactive REPL mode (default when no prompt given)
+    #[arg(short, long)]
+    interactive: bool,
 }
 
-#[tokio::main]
-async fn main() {
-    let cli = Cli::parse();
-
-    // Resolve prompt
-    let prompt = if let Some(ref p) = cli.prompt {
-        p.clone()
-    } else if let Some(ref path) = cli.prompt_file {
-        std::fs::read_to_string(path).expect("Failed to read prompt file")
-    } else {
-        eprintln!("Error: provide --prompt or --prompt-file");
-        std::process::exit(1);
-    };
-
-    // Resolve API key
+fn resolve_api_config(cli: &Cli) -> (String, String) {
     let api_key = cli
         .api_key
         .clone()
@@ -78,6 +69,12 @@ async fn main() {
         .or_else(|| std::env::var("ANTHROPIC_BASE_URL").ok())
         .unwrap_or_else(|| "https://openrouter.ai/api".to_string());
 
+    (api_key, api_base_url)
+}
+
+async fn run_oneshot(cli: &Cli, prompt: String) {
+    let (api_key, api_base_url) = resolve_api_config(cli);
+
     let config = agent::AgentConfig {
         model: cli.model.clone(),
         api_key,
@@ -85,6 +82,7 @@ async fn main() {
         workdir: cli.workdir.clone(),
         max_iterations: cli.max_iterations,
         verbose: cli.verbose,
+        streaming: false,
     };
 
     if cli.verbose {
@@ -108,7 +106,6 @@ async fn main() {
             }
         }
         _ => {
-            // text output
             if let Some(ref result) = rollout.final_result {
                 println!("{}", result);
             }
@@ -125,4 +122,158 @@ async fn main() {
     }
 
     std::process::exit(if rollout.success { 0 } else { 1 });
+}
+
+async fn run_interactive(cli: &Cli) {
+    let (api_key, api_base_url) = resolve_api_config(cli);
+
+    println!("{}", "Ninja — Interactive Mode".bold().cyan());
+    println!(
+        "Model: {} | Workdir: {}",
+        cli.model.green(),
+        cli.workdir.display().to_string().green()
+    );
+    println!(
+        "Type your task and press Enter. Type {} to quit.\n",
+        "/exit".yellow()
+    );
+
+    let mut rl = rustyline::DefaultEditor::new().expect("Failed to initialize readline");
+
+    loop {
+        let readline = rl.readline(&format!("{} ", "ninja>".bold().cyan()));
+
+        match readline {
+            Ok(line) => {
+                let line = line.trim().to_string();
+                if line.is_empty() {
+                    continue;
+                }
+                if line == "/exit" || line == "/quit" || line == "exit" || line == "quit" {
+                    println!("{}", "Goodbye!".dimmed());
+                    break;
+                }
+                if line == "/help" {
+                    println!("  {}  — Exit interactive mode", "/exit".yellow());
+                    println!("  {}  — Show this help", "/help".yellow());
+                    println!(
+                        "  {} — Change working directory",
+                        "/cd <path>".yellow()
+                    );
+                    println!();
+                    continue;
+                }
+                if line.starts_with("/cd ") {
+                    let path = line.trim_start_matches("/cd ").trim();
+                    let new_path = PathBuf::from(path);
+                    if new_path.exists() && new_path.is_dir() {
+                        println!("  Workdir → {}", new_path.display().to_string().green());
+                    } else {
+                        println!("  {} Directory not found: {}", "Error:".red(), path);
+                    }
+                    continue;
+                }
+
+                let _ = rl.add_history_entry(&line);
+
+                println!();
+                println!("{}", "Working...".dimmed());
+
+                let config = agent::AgentConfig {
+                    model: cli.model.clone(),
+                    api_key: api_key.clone(),
+                    api_base_url: api_base_url.clone(),
+                    workdir: cli.workdir.clone(),
+                    max_iterations: cli.max_iterations,
+                    verbose: cli.verbose,
+                    streaming: true,
+                };
+
+                let mut runner = agent::AgentRunner::new(config);
+                let rollout = runner.run(&line).await;
+
+                if let Some(ref result) = rollout.final_result {
+                    println!("\n{}", result);
+                }
+
+                // Print stats
+                let stats = format!(
+                    "[{} iterations | {}in/{}out tokens | {:.1}s]",
+                    rollout.iteration_count,
+                    rollout.total_input_tokens,
+                    rollout.total_output_tokens,
+                    rollout.total_duration_ms as f64 / 1000.0,
+                );
+                println!("\n{}\n", stats.dimmed());
+
+                // Save rollout if configured
+                if let Some(ref path) = cli.rollout {
+                    let data = serde_json::to_string_pretty(&rollout).unwrap();
+                    std::fs::write(path, data).expect("Failed to write rollout");
+                    println!("  Rollout saved to {}", path.display());
+                }
+            }
+            Err(rustyline::error::ReadlineError::Interrupted) => {
+                println!("{}", "\nInterrupted. Type /exit to quit.".dimmed());
+            }
+            Err(rustyline::error::ReadlineError::Eof) => {
+                println!("{}", "\nGoodbye!".dimmed());
+                break;
+            }
+            Err(err) => {
+                eprintln!("Error: {:?}", err);
+                break;
+            }
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let cli = Cli::parse();
+
+    // Determine mode: interactive or oneshot
+    let has_prompt = cli.prompt.is_some() || cli.prompt_file.is_some();
+
+    if cli.interactive || !has_prompt {
+        // Interactive REPL mode
+        if !has_prompt {
+            run_interactive(&cli).await;
+        } else {
+            // --interactive with --prompt: run the prompt then enter REPL
+            let prompt = if let Some(ref p) = cli.prompt {
+                p.clone()
+            } else {
+                std::fs::read_to_string(cli.prompt_file.as_ref().unwrap())
+                    .expect("Failed to read prompt file")
+            };
+            // Run the initial prompt first
+            let (api_key, api_base_url) = resolve_api_config(&cli);
+            let config = agent::AgentConfig {
+                model: cli.model.clone(),
+                api_key,
+                api_base_url,
+                workdir: cli.workdir.clone(),
+                max_iterations: cli.max_iterations,
+                verbose: cli.verbose,
+                streaming: true,
+            };
+            let mut runner = agent::AgentRunner::new(config);
+            let rollout = runner.run(&prompt).await;
+            if let Some(ref result) = rollout.final_result {
+                println!("{}", result);
+            }
+            // Then enter REPL
+            run_interactive(&cli).await;
+        }
+    } else {
+        // One-shot mode
+        let prompt = if let Some(ref p) = cli.prompt {
+            p.clone()
+        } else {
+            std::fs::read_to_string(cli.prompt_file.as_ref().unwrap())
+                .expect("Failed to read prompt file")
+        };
+        run_oneshot(&cli, prompt).await;
+    }
 }

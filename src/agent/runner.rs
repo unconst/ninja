@@ -17,6 +17,7 @@ pub struct AgentConfig {
     pub workdir: PathBuf,
     pub max_iterations: usize,
     pub verbose: bool,
+    pub streaming: bool,
 }
 
 /// The main agent runner — drives the model ↔ tool loop.
@@ -125,7 +126,12 @@ impl AgentRunner {
             // Call model API with retry on transient errors
             let mut response = None;
             for attempt in 0..3u32 {
-                match self.client.chat(&messages, &tool_defs, &system).await {
+                let api_result = if self.config.streaming {
+                    self.client.chat_streaming(&messages, &tool_defs, &system).await
+                } else {
+                    self.client.chat(&messages, &tool_defs, &system).await
+                };
+                match api_result {
                     Ok(r) => {
                         response = Some(r);
                         break;
