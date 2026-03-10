@@ -1165,36 +1165,65 @@ impl AgentRunner {
             return None;
         }
 
+        let resolved_path = if Path::new(path).is_absolute() {
+            PathBuf::from(path)
+        } else {
+            self.config.workdir.join(path)
+        };
+
         // Read the file back to verify the edit was applied
         let read_input = serde_json::json!({
             "path": path
         });
 
-        match tools::execute_tool("read_file", &read_input, &self.config.workdir) {
+        let mut result = match tools::execute_tool("read_file", &read_input, &self.config.workdir) {
             Ok(actual_content) => {
                 if actual_content.contains(new_string.trim()) {
-                    // New content found in file — edit verified
-                    Some(format!("{}\n\nValidation: Edit verified — new content found in file.", edit_output))
+                    format!("{}\n\nValidation: Edit verified — new content found in file.", edit_output)
                 } else {
-                    // new_string not found — edit may have failed silently
                     let content_preview = if actual_content.len() > 500 {
                         format!("{}...", safe_truncate(&actual_content, 500))
                     } else {
                         actual_content.clone()
                     };
 
-                    Some(format!(
+                    format!(
                         "{}\n\nValidation WARNING: The new content was NOT found in the file after editing. \
                          The edit may not have been applied correctly. Read the file to check:\n{}",
                         edit_output,
                         content_preview
-                    ))
+                    )
                 }
             },
             Err(_) => {
-                Some(format!("{}\n\nValidation Warning: Could not read file back to verify changes.", edit_output))
+                format!("{}\n\nValidation Warning: Could not read file back to verify changes.", edit_output)
+            }
+        };
+
+        // Quick syntax check for Python files
+        if path.ends_with(".py") {
+            if let Ok(output) = std::process::Command::new("python3")
+                .args(&["-c", &format!("import ast; ast.parse(open('{}').read())", resolved_path.display())])
+                .current_dir(&self.config.workdir)
+                .output()
+            {
+                if !output.status.success() {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    // Extract just the error line (last 2 lines usually)
+                    let err_lines: Vec<&str> = stderr.lines().collect();
+                    let err_msg = if err_lines.len() > 2 {
+                        err_lines[err_lines.len()-2..].join("\n")
+                    } else {
+                        stderr.trim().to_string()
+                    };
+                    result.push_str(&format!(
+                        "\n\nSYNTAX ERROR after edit: {}\nFix this syntax error before proceeding.", err_msg
+                    ));
+                }
             }
         }
+
+        Some(result)
     }
 
     /// Check if git clone is necessary or if we're already in the target repository
