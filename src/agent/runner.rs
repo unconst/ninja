@@ -238,21 +238,14 @@ impl AgentRunner {
                 content: MessageContent::Blocks(assistant_blocks),
             });
 
-            // Execute tools — parallelize read-only, serialize writes
+            // Execute tools — all independent tool calls run concurrently
             let mut result_blocks = Vec::new();
 
-            let is_read_only = |name: &str| -> bool {
-                matches!(name, "read_file" | "list_dir" | "glob_search" | "grep_search" | "find_definition" | "find_references" | "web_fetch" | "todo_write" | "think")
-            };
-
-            // Check if all tool calls are read-only (safe to parallelize)
-            let all_read_only = response.tool_calls.iter().all(|tc| is_read_only(&tc.name));
-
-            if all_read_only && response.tool_calls.len() > 1 {
-                // Parallel execution for read-only tools
+            if response.tool_calls.len() > 1 {
+                // Concurrent execution for all tool calls (model scheduled them independently)
                 for tc in &response.tool_calls {
                     let tool_desc = self.format_tool_description(&tc.name, &tc.input);
-                    eprintln!("  {} {} {}", "▶".cyan(), tool_desc, "(parallel)".dimmed());
+                    eprintln!("  {} {} {}", "▶".cyan(), tool_desc, "(concurrent)".dimmed());
                     rollout.log_tool_call(&tc.name, &tc.input.to_string());
                 }
 
@@ -305,10 +298,10 @@ impl AgentRunner {
 
                 let parallel_elapsed = parallel_start.elapsed();
                 if self.config.verbose {
-                    eprintln!("  {} tools completed in {:.1}s (parallel)", response.tool_calls.len(), parallel_elapsed.as_secs_f64());
+                    eprintln!("  {} tools completed in {:.1}s (concurrent)", response.tool_calls.len(), parallel_elapsed.as_secs_f64());
                 }
             } else {
-                // Sequential execution (writes or single tool)
+                // Single tool — sequential execution with recovery
                 for tc in &response.tool_calls {
                     let tool_desc = self.format_tool_description(&tc.name, &tc.input);
                     eprintln!("  {} {}", "▶".cyan(), tool_desc);
