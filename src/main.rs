@@ -25,6 +25,10 @@ struct Cli {
     #[arg(short, long, default_value = "anthropic/claude-sonnet-4")]
     model: String,
 
+    /// Fast model for exploration steps (auto-routes between fast and main model)
+    #[arg(long)]
+    fast_model: Option<String>,
+
     /// Maximum iterations for the agent loop
     #[arg(long, default_value = "50")]
     max_iterations: usize,
@@ -77,6 +81,7 @@ async fn run_oneshot(cli: &Cli, prompt: String) {
 
     let config = agent::AgentConfig {
         model: cli.model.clone(),
+        fast_model: cli.fast_model.clone(),
         api_key,
         api_base_url,
         workdir: cli.workdir.clone(),
@@ -143,6 +148,7 @@ async fn run_interactive(cli: &Cli) {
     // Create a persistent runner for multi-turn conversation
     let config = agent::AgentConfig {
         model: cli.model.clone(),
+        fast_model: cli.fast_model.clone(),
         api_key: api_key.clone(),
         api_base_url: api_base_url.clone(),
         workdir: cli.workdir.clone(),
@@ -179,6 +185,7 @@ async fn run_interactive(cli: &Cli) {
                 if line == "/clear" {
                     let new_config = agent::AgentConfig {
                         model: cli.model.clone(),
+                        fast_model: cli.fast_model.clone(),
                         api_key: api_key.clone(),
                         api_base_url: api_base_url.clone(),
                         workdir: cli.workdir.clone(),
@@ -267,6 +274,7 @@ async fn main() {
             let (api_key, api_base_url) = resolve_api_config(&cli);
             let config = agent::AgentConfig {
                 model: cli.model.clone(),
+                fast_model: cli.fast_model.clone(),
                 api_key,
                 api_base_url,
                 workdir: cli.workdir.clone(),

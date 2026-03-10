@@ -83,6 +83,14 @@ impl ApiClient {
         }
     }
 
+    pub fn set_model(&mut self, model: &str) {
+        self.model = model.to_string();
+    }
+
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+
     pub async fn chat(
         &self,
         messages: &[Message],

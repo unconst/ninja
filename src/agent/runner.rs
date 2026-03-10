@@ -14,6 +14,10 @@ const COMPACTION_TOKEN_THRESHOLD: u64 = 100_000;
 /// Configuration for the agent runner.
 pub struct AgentConfig {
     pub model: String,
+    /// Optional fast/cheap model for exploration-heavy iterations.
+    /// When set, the agent uses this model when the previous turn was all read-only tools,
+    /// and switches to the main model when edits or complex reasoning is needed.
+    pub fast_model: Option<String>,
     pub api_key: String,
     pub api_base_url: String,
     pub workdir: PathBuf,
@@ -30,6 +34,8 @@ pub struct AgentRunner {
     conversation: Vec<Message>,
     /// System prompt, built once on first run.
     system_prompt: Option<String>,
+    /// Whether the last iteration used only read-only tools (for model routing).
+    last_was_read_only: bool,
 }
 
 impl AgentRunner {
@@ -40,7 +46,39 @@ impl AgentRunner {
             client,
             conversation: Vec::new(),
             system_prompt: None,
+            last_was_read_only: true, // Start with fast model for initial exploration
         }
+    }
+
+    /// Select the appropriate model for the current iteration based on routing strategy.
+    /// Returns true if the model was changed.
+    fn route_model(&mut self) -> bool {
+        if let Some(ref fast_model) = self.config.fast_model {
+            if self.last_was_read_only && self.client.model() != fast_model {
+                if self.config.verbose {
+                    eprintln!("  [routing: switching to fast model {}]", fast_model);
+                }
+                self.client.set_model(fast_model);
+                return true;
+            } else if !self.last_was_read_only && self.client.model() != self.config.model {
+                if self.config.verbose {
+                    eprintln!("  [routing: switching to main model {}]", self.config.model);
+                }
+                self.client.set_model(&self.config.model);
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Check if a set of tool calls are all read-only.
+    fn all_tools_read_only(tool_calls: &[super::api_client::ToolCall]) -> bool {
+        tool_calls.iter().all(|tc| {
+            matches!(tc.name.as_str(),
+                "read_file" | "list_dir" | "glob_search" | "grep_search"
+                | "find_definition" | "find_references" | "web_fetch"
+            )
+        })
     }
 
     /// Run a new turn in a multi-turn conversation (used by REPL).
@@ -90,6 +128,9 @@ impl AgentRunner {
                     ),
                 });
             }
+
+            // Route model selection based on previous turn
+            self.route_model();
 
             let mut response = None;
             for attempt in 0..3u32 {
@@ -261,6 +302,10 @@ impl AgentRunner {
                     });
                 }
             }
+
+            // Update routing state based on what tools were used
+            self.last_was_read_only = Self::all_tools_read_only(&response.tool_calls);
+
             self.conversation.push(Message {
                 role: "user".to_string(),
                 content: MessageContent::Blocks(result_blocks),
@@ -316,6 +361,9 @@ impl AgentRunner {
                     ),
                 });
             }
+
+            // Route model selection based on previous turn
+            self.route_model();
 
             // Call model API with retry on transient errors
             let mut response = None;
@@ -449,6 +497,9 @@ impl AgentRunner {
                     is_error: if is_error { Some(true) } else { None },
                 });
             }
+
+            // Update routing state based on what tools were used
+            self.last_was_read_only = Self::all_tools_read_only(&response.tool_calls);
 
             messages.push(Message {
                 role: "user".to_string(),
