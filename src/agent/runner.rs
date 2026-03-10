@@ -574,12 +574,15 @@ impl AgentRunner {
                 look at the context shown and include more surrounding lines.\n\
              4. VERIFY: After making changes, read the file back to confirm your edits applied correctly.\n\
              5. COMPLETE ALL CHANGES: Work through your deliverables list systematically. Don't stop \
-                after modifying one file. After finishing all changes, review your list and confirm \
-                every file has been addressed.\n\
+                after modifying one file — EVERY file in the list must be changed. Common files \
+                people forget: type stubs (.pyi), changelog entries, config files (pyproject.toml, \
+                noxfile.py, tox.ini), and documentation (.rst, .md).\n\
              6. FINAL CHECKLIST: Before declaring done, verify:\n\
-                - All files from your deliverables list have been modified/created\n\
+                - ALL files from your deliverables list have been modified/created\n\
                 - Each edit was applied correctly (read back the file)\n\
-                - You haven't missed any documentation or changelog files\n\n\
+                - Type stubs (.pyi) match source signature changes\n\
+                - Documentation and changelog files are created/updated\n\
+                - Config/tooling files are updated if listed\n\n\
              ## Rules\n\
              - Be precise and minimal in changes — don't over-engineer\n\
              - When editing, prefer small targeted edits over rewriting entire files\n\
