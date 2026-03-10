@@ -1,6 +1,6 @@
 use colored::Colorize;
 use futures_util::future::join_all;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use super::api_client::{ApiClient, ContentBlock, Message, MessageContent};
@@ -147,6 +147,7 @@ impl AgentRunner {
         rollout.log_user(prompt);
 
         let mut cumulative_input_tokens: u64 = 0;
+        let mut completion_check_done = false;
 
         for iteration in 0..self.config.max_iterations {
             rollout.iteration_count = (iteration + 1) as u64;
@@ -164,6 +165,15 @@ impl AgentRunner {
                     role: "user".to_string(),
                     content: MessageContent::Text(
                         "[SYSTEM] You have 10 iterations remaining. Focus on completing remaining changes.".to_string()
+                    ),
+                });
+            } else if remaining == 5 {
+                self.conversation.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(
+                        "[SYSTEM] FILE CHECK — 5 iterations left. Run `git diff --stat` NOW to see which files \
+                         you've modified. Compare against the REQUIRED FILES list from the task. If ANY required \
+                         file is missing from your diff, modify it NOW.".to_string()
                     ),
                 });
             } else if remaining == 3 {
@@ -218,6 +228,43 @@ impl AgentRunner {
             }
 
             if response.tool_calls.is_empty() {
+                // Completion check: if agent stops early, verify with diff-stat
+                let used_pct = (iteration as f64) / (self.config.max_iterations as f64);
+                if used_pct < 0.4 && !completion_check_done {
+                    completion_check_done = true;
+                    self.conversation.push(Message {
+                        role: "assistant".to_string(),
+                        content: MessageContent::Text(response.text.clone()),
+                    });
+
+                    let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                    let diff_context = if diff_stat.is_empty() {
+                        "\n\nWARNING: `git diff --stat` shows NO modified files!".to_string()
+                    } else {
+                        format!(
+                            "\n\nCurrent `git diff --stat`:\n```\n{}\n```\n\
+                             Compare this against the REQUIRED FILES list from the task.",
+                            diff_stat
+                        )
+                    };
+
+                    self.conversation.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(format!(
+                            "[SYSTEM] COMPLETION CHECK — You stopped early. Before finishing, verify:\n\
+                             1. Have you modified ALL files listed in the REQUIRED FILES?\n\
+                             2. Did you create required documentation/changelog entries?\n\
+                             3. Did you update type stubs (.pyi) if needed?\
+                             {}\n\n\
+                             If any REQUIRED FILE is missing from git diff, modify it now. \
+                             If truly done, respond with your summary and no tool calls.",
+                            diff_context
+                        )),
+                    });
+                    rollout.log_error("Completion check injected — agent tried to stop early");
+                    continue;
+                }
+
                 // Append assistant's final response to conversation history
                 self.conversation.push(Message {
                     role: "assistant".to_string(),
@@ -525,17 +572,32 @@ impl AgentRunner {
                         role: "assistant".to_string(),
                         content: MessageContent::Text(response.text.clone()),
                     });
+
+                    // Auto-run git diff --stat for the verification
+                    let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                    let diff_context = if diff_stat.is_empty() {
+                        "\n\nWARNING: `git diff --stat` shows NO modified files!".to_string()
+                    } else {
+                        format!(
+                            "\n\nCurrent `git diff --stat`:\n```\n{}\n```\n\
+                             Compare this against the REQUIRED FILES list from the task.",
+                            diff_stat
+                        )
+                    };
+
                     messages.push(Message {
                         role: "user".to_string(),
-                        content: MessageContent::Text(
+                        content: MessageContent::Text(format!(
                             "[SYSTEM] COMPLETION CHECK — You stopped early. Before finishing, verify:\n\
-                             1. Have you modified ALL files listed in your plan/deliverables?\n\
+                             1. Have you modified ALL files listed in the REQUIRED FILES?\n\
                              2. Did you create required documentation/changelog entries?\n\
                              3. Did you update type stubs (.pyi) if needed?\n\
-                             4. Check your todo list — are all items marked done?\n\n\
-                             If any work remains, continue now. If truly done, respond with your \
-                             summary and no tool calls.".to_string()
-                        ),
+                             4. Check your todo list — are all items marked done?\
+                             {}\n\n\
+                             If any REQUIRED FILE is missing from git diff, modify it now. \
+                             If truly done, respond with your summary and no tool calls.",
+                            diff_context
+                        )),
                     });
                     rollout.log_error("Completion check injected — agent tried to stop early");
                     continue;
@@ -806,6 +868,36 @@ impl AgentRunner {
         }
 
         prompt
+    }
+
+    /// Run `git diff --stat` to see which files have been modified.
+    fn get_git_diff_stat(workdir: &Path) -> String {
+        if let Ok(output) = std::process::Command::new("git")
+            .args(&["diff", "--stat"])
+            .current_dir(workdir)
+            .output()
+        {
+            if output.status.success() {
+                let stat = String::from_utf8_lossy(&output.stdout).to_string();
+                if !stat.trim().is_empty() {
+                    return stat.trim().to_string();
+                }
+            }
+        }
+        // Also check for untracked files
+        if let Ok(output) = std::process::Command::new("git")
+            .args(&["status", "--porcelain"])
+            .current_dir(workdir)
+            .output()
+        {
+            if output.status.success() {
+                let status = String::from_utf8_lossy(&output.stdout).to_string();
+                if !status.trim().is_empty() {
+                    return status.trim().to_string();
+                }
+            }
+        }
+        String::new()
     }
 
     /// Validate the initial environment and gather context information.
