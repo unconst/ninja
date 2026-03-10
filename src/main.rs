@@ -140,6 +140,18 @@ async fn run_interactive(cli: &Cli) {
 
     let mut rl = rustyline::DefaultEditor::new().expect("Failed to initialize readline");
 
+    // Create a persistent runner for multi-turn conversation
+    let config = agent::AgentConfig {
+        model: cli.model.clone(),
+        api_key: api_key.clone(),
+        api_base_url: api_base_url.clone(),
+        workdir: cli.workdir.clone(),
+        max_iterations: cli.max_iterations,
+        verbose: cli.verbose,
+        streaming: true,
+    };
+    let mut runner = agent::AgentRunner::new(config);
+
     loop {
         let readline = rl.readline(&format!("{} ", "ninja>".bold().cyan()));
 
@@ -154,13 +166,28 @@ async fn run_interactive(cli: &Cli) {
                     break;
                 }
                 if line == "/help" {
-                    println!("  {}  — Exit interactive mode", "/exit".yellow());
-                    println!("  {}  — Show this help", "/help".yellow());
+                    println!("  {}   — Exit interactive mode", "/exit".yellow());
+                    println!("  {}   — Show this help", "/help".yellow());
+                    println!("  {}  — Start fresh conversation", "/clear".yellow());
                     println!(
                         "  {} — Change working directory",
                         "/cd <path>".yellow()
                     );
                     println!();
+                    continue;
+                }
+                if line == "/clear" {
+                    let new_config = agent::AgentConfig {
+                        model: cli.model.clone(),
+                        api_key: api_key.clone(),
+                        api_base_url: api_base_url.clone(),
+                        workdir: cli.workdir.clone(),
+                        max_iterations: cli.max_iterations,
+                        verbose: cli.verbose,
+                        streaming: true,
+                    };
+                    runner = agent::AgentRunner::new(new_config);
+                    println!("{}", "Conversation cleared.".dimmed());
                     continue;
                 }
                 if line.starts_with("/cd ") {
@@ -179,18 +206,7 @@ async fn run_interactive(cli: &Cli) {
                 println!();
                 println!("{}", "Working...".dimmed());
 
-                let config = agent::AgentConfig {
-                    model: cli.model.clone(),
-                    api_key: api_key.clone(),
-                    api_base_url: api_base_url.clone(),
-                    workdir: cli.workdir.clone(),
-                    max_iterations: cli.max_iterations,
-                    verbose: cli.verbose,
-                    streaming: true,
-                };
-
-                let mut runner = agent::AgentRunner::new(config);
-                let rollout = runner.run(&line).await;
+                let rollout = runner.run_turn(&line).await;
 
                 if let Some(ref result) = rollout.final_result {
                     println!("\n{}", result);

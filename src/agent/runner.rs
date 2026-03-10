@@ -24,12 +24,164 @@ pub struct AgentConfig {
 pub struct AgentRunner {
     config: AgentConfig,
     client: ApiClient,
+    /// Persistent message history for multi-turn conversations.
+    conversation: Vec<Message>,
+    /// System prompt, built once on first run.
+    system_prompt: Option<String>,
 }
 
 impl AgentRunner {
     pub fn new(config: AgentConfig) -> Self {
         let client = ApiClient::new(&config.api_key, &config.api_base_url, &config.model);
-        Self { config, client }
+        Self {
+            config,
+            client,
+            conversation: Vec::new(),
+            system_prompt: None,
+        }
+    }
+
+    /// Run a new turn in a multi-turn conversation (used by REPL).
+    /// Appends to the existing conversation history.
+    pub async fn run_turn(&mut self, prompt: &str) -> Rollout {
+        // Build system prompt on first call
+        if self.system_prompt.is_none() {
+            let env_info = self.validate_initial_environment();
+            self.system_prompt = Some(self.build_system_prompt(&env_info));
+        }
+
+        // Append new user message to persistent conversation
+        self.conversation.push(Message {
+            role: "user".to_string(),
+            content: MessageContent::Text(prompt.to_string()),
+        });
+
+        let start = Instant::now();
+        let mut rollout = Rollout::new(&self.config.model);
+        let tool_defs = tools::get_tool_definitions();
+        let system = self.system_prompt.clone().unwrap();
+
+        rollout.log_user(prompt);
+
+        let mut cumulative_input_tokens: u64 = 0;
+
+        for iteration in 0..self.config.max_iterations {
+            rollout.iteration_count = (iteration + 1) as u64;
+
+            if self.config.verbose {
+                eprintln!("[iteration {}]", iteration + 1);
+            }
+
+            let remaining = self.config.max_iterations - iteration;
+            if remaining == 10 {
+                self.conversation.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(
+                        "[SYSTEM] You have 10 iterations remaining. Focus on completing remaining changes.".to_string()
+                    ),
+                });
+            } else if remaining == 3 {
+                self.conversation.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(
+                        "[SYSTEM] Only 3 iterations left! Wrap up immediately.".to_string()
+                    ),
+                });
+            }
+
+            let mut response = None;
+            for attempt in 0..3u32 {
+                let api_result = if self.config.streaming {
+                    self.client.chat_streaming(&self.conversation, &tool_defs, &system).await
+                } else {
+                    self.client.chat(&self.conversation, &tool_defs, &system).await
+                };
+                match api_result {
+                    Ok(r) => { response = Some(r); break; }
+                    Err(e) => {
+                        rollout.log_error(&format!("API error (attempt {}): {}", attempt + 1, e));
+                        eprintln!("API error (attempt {}): {}", attempt + 1, e);
+                        if attempt < 2 {
+                            let delay_secs = 2u64.pow(attempt);
+                            tokio::time::sleep(std::time::Duration::from_secs(delay_secs)).await;
+                        }
+                    }
+                }
+            }
+            let response = match response {
+                Some(r) => r,
+                None => { eprintln!("All API retries exhausted."); break; }
+            };
+
+            rollout.log_assistant(&response.text, response.input_tokens, response.output_tokens, response.duration);
+            cumulative_input_tokens = response.input_tokens;
+
+            if self.config.verbose && !response.text.is_empty() {
+                eprintln!("  assistant: {}", &response.text[..response.text.len().min(200)]);
+            }
+
+            // Compact if needed
+            if cumulative_input_tokens > COMPACTION_TOKEN_THRESHOLD && self.conversation.len() > 6 {
+                self.conversation = self.compact_messages(&self.conversation);
+            }
+
+            if response.tool_calls.is_empty() {
+                // Append assistant's final response to conversation history
+                self.conversation.push(Message {
+                    role: "assistant".to_string(),
+                    content: MessageContent::Text(response.text.clone()),
+                });
+                rollout.final_result = Some(response.text);
+                rollout.success = true;
+                break;
+            }
+
+            // Build assistant message with tool calls
+            let mut assistant_blocks = Vec::new();
+            if !response.text.is_empty() {
+                assistant_blocks.push(ContentBlock::Text { text: response.text.clone() });
+            }
+            for tc in &response.tool_calls {
+                assistant_blocks.push(ContentBlock::ToolUse {
+                    id: tc.id.clone(), name: tc.name.clone(), input: tc.input.clone(),
+                });
+            }
+            self.conversation.push(Message {
+                role: "assistant".to_string(),
+                content: MessageContent::Blocks(assistant_blocks),
+            });
+
+            // Execute tools
+            let mut result_blocks = Vec::new();
+            for tc in &response.tool_calls {
+                rollout.log_tool_call(&tc.name, &tc.input.to_string());
+                let tool_start = Instant::now();
+                let result = self.execute_tool_with_recovery(&tc.name, &tc.input);
+                let tool_duration = tool_start.elapsed();
+                let (output, is_error) = match result {
+                    Ok(o) => (o, false),
+                    Err(e) => (e, true),
+                };
+                rollout.log_tool_result(&tc.name, &output, tool_duration);
+                let truncated = if output.len() > 15000 {
+                    let mut t = output[..15000].to_string();
+                    t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
+                    t
+                } else { output };
+                result_blocks.push(ContentBlock::ToolResult {
+                    tool_use_id: tc.id.clone(),
+                    content: truncated,
+                    is_error: if is_error { Some(true) } else { None },
+                });
+            }
+            self.conversation.push(Message {
+                role: "user".to_string(),
+                content: MessageContent::Blocks(result_blocks),
+            });
+        }
+
+        rollout.total_duration_ms = start.elapsed().as_millis() as u64;
+        rollout
     }
 
     pub async fn run(&mut self, prompt: &str) -> Rollout {
@@ -37,53 +189,8 @@ impl AgentRunner {
         let mut rollout = Rollout::new(&self.config.model);
         let tool_defs = tools::get_tool_definitions();
 
-        // Perform initial environment validation
         let env_info = self.validate_initial_environment();
-        
-        let system = format!(
-            "You are Ninja, a powerful autonomous coding agent. You solve software engineering tasks \
-             by reading, understanding, and modifying code.\n\n\
-             Working directory: {}\n\
-             {}\n\n\
-             ## Available Tools\n\
-             - read_file: Read file contents (supports offset/limit for large files)\n\
-             - write_file: Create or overwrite files\n\
-             - edit_file: Replace exact string matches in files. The old_string MUST be unique \
-               — include surrounding context lines if needed. Set replace_all=true to replace all occurrences.\n\
-             - list_dir: List directory contents\n\
-             - shell_exec: Run shell commands (bash)\n\
-             - glob_search: Find files by name pattern\n\
-             - grep_search: Search file contents with regex\n\n\
-             ## Strategy\n\
-             1. EXPLORE FIRST: Before making any changes, use grep_search and read_file to understand \
-                the codebase structure and the specific files involved.\n\
-             2. ENUMERATE ALL DELIVERABLES: Before editing anything, write out the COMPLETE list of files \
-                that need changes. Include:\n\
-                - Source code files (the actual bug fix / feature)\n\
-                - Documentation files (changelogs, what's-new, rst/md docs)\n\
-                - Configuration files if affected\n\
-                Look at the hints and test patch for clues about ALL required files.\n\
-             3. EDIT CAREFULLY: Always read a file before editing it. For edit_file, include enough \
-                surrounding context in old_string to make it unique. If you get a 'found N times' error, \
-                look at the context shown and include more surrounding lines.\n\
-             4. VERIFY: After making changes, read the file back to confirm your edits applied correctly.\n\
-             5. COMPLETE ALL CHANGES: Work through your deliverables list systematically. Don't stop \
-                after modifying one file. After finishing all changes, review your list and confirm \
-                every file has been addressed.\n\
-             6. FINAL CHECKLIST: Before declaring done, verify:\n\
-                - All files from your deliverables list have been modified/created\n\
-                - Each edit was applied correctly (read back the file)\n\
-                - You haven't missed any documentation or changelog files\n\n\
-             ## Rules\n\
-             - Be precise and minimal in changes — don't over-engineer\n\
-             - When editing, prefer small targeted edits over rewriting entire files\n\
-             - If a test patch is provided, apply it first, then make source changes to pass the tests\n\
-             - If you can't run tests due to missing dependencies, don't waste iterations retrying. \
-               Proceed with confidence based on code analysis.\n\
-             - When done, list every file you changed and briefly summarize each change",
-            self.config.workdir.display(),
-            env_info
-        );
+        let system = self.build_system_prompt(&env_info);
 
         let mut messages: Vec<Message> = vec![Message {
             role: "user".to_string(),
@@ -264,6 +371,54 @@ impl AgentRunner {
 
         rollout.total_duration_ms = start.elapsed().as_millis() as u64;
         rollout
+    }
+
+    /// Build the system prompt for the agent.
+    fn build_system_prompt(&self, env_info: &str) -> String {
+        format!(
+            "You are Ninja, a powerful autonomous coding agent. You solve software engineering tasks \
+             by reading, understanding, and modifying code.\n\n\
+             Working directory: {}\n\
+             {}\n\n\
+             ## Available Tools\n\
+             - read_file: Read file contents (supports offset/limit for large files)\n\
+             - write_file: Create or overwrite files\n\
+             - edit_file: Replace exact string matches in files. The old_string MUST be unique \
+               — include surrounding context lines if needed. Set replace_all=true to replace all occurrences.\n\
+             - list_dir: List directory contents\n\
+             - shell_exec: Run shell commands (bash)\n\
+             - glob_search: Find files by name pattern\n\
+             - grep_search: Search file contents with regex\n\n\
+             ## Strategy\n\
+             1. EXPLORE FIRST: Before making any changes, use grep_search and read_file to understand \
+                the codebase structure and the specific files involved.\n\
+             2. ENUMERATE ALL DELIVERABLES: Before editing anything, write out the COMPLETE list of files \
+                that need changes. Include:\n\
+                - Source code files (the actual bug fix / feature)\n\
+                - Documentation files (changelogs, what's-new, rst/md docs)\n\
+                - Configuration files if affected\n\
+                Look at the hints and test patch for clues about ALL required files.\n\
+             3. EDIT CAREFULLY: Always read a file before editing it. For edit_file, include enough \
+                surrounding context in old_string to make it unique. If you get a 'found N times' error, \
+                look at the context shown and include more surrounding lines.\n\
+             4. VERIFY: After making changes, read the file back to confirm your edits applied correctly.\n\
+             5. COMPLETE ALL CHANGES: Work through your deliverables list systematically. Don't stop \
+                after modifying one file. After finishing all changes, review your list and confirm \
+                every file has been addressed.\n\
+             6. FINAL CHECKLIST: Before declaring done, verify:\n\
+                - All files from your deliverables list have been modified/created\n\
+                - Each edit was applied correctly (read back the file)\n\
+                - You haven't missed any documentation or changelog files\n\n\
+             ## Rules\n\
+             - Be precise and minimal in changes — don't over-engineer\n\
+             - When editing, prefer small targeted edits over rewriting entire files\n\
+             - If a test patch is provided, apply it first, then make source changes to pass the tests\n\
+             - If you can't run tests due to missing dependencies, don't waste iterations retrying. \
+               Proceed with confidence based on code analysis.\n\
+             - When done, list every file you changed and briefly summarize each change",
+            self.config.workdir.display(),
+            env_info
+        )
     }
 
     /// Validate the initial environment and gather context information
