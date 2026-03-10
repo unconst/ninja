@@ -685,7 +685,9 @@ impl AgentRunner {
              - For edit_file, include enough surrounding context in old_string to make it unique\n\
              - After each edit, read back the file to confirm it applied correctly\n\
              - Consider backward compatibility and edge cases (try/except for version differences, etc.)\n\
-             - Create ALL required files: source code, docs, changelogs, type stubs (.pyi), config\n\n\
+             - Create ALL required files: source code, docs, changelogs, type stubs (.pyi), config\n\
+             - If the REQUIRED FILES list includes files that don't exist yet, CREATE them with write_file. \
+               Common examples: changelog entries (e.g. changelog/NNNN.type.rst), new modules, new test files.\n\n\
              **Phase 3: VERIFY & FINISH (iterations 36+)**\n\
              - Review your deliverables checklist — every file must be addressed\n\
              - Check for INDIRECT CHANGES needed in config files: when you update a linter, formatter, \
