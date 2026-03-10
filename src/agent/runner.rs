@@ -248,7 +248,7 @@ impl AgentRunner {
             if response.tool_calls.is_empty() {
                 // Completion check: if agent stops early, verify with diff-stat
                 let used_pct = (iteration as f64) / (self.config.max_iterations as f64);
-                if used_pct < 0.4 && !completion_check_done {
+                if used_pct < 0.6 && !completion_check_done {
                     completion_check_done = true;
                     self.conversation.push(Message {
                         role: "assistant".to_string(),
@@ -586,7 +586,7 @@ impl AgentRunner {
                 // If agent stops early (before using 40% of iterations) and hasn't been
                 // nudged yet, inject a completion check to prevent premature stopping
                 let used_pct = (iteration as f64) / (self.config.max_iterations as f64);
-                if used_pct < 0.4 && !completion_check_done {
+                if used_pct < 0.6 && !completion_check_done {
                     completion_check_done = true;
                     messages.push(Message {
                         role: "assistant".to_string(),
