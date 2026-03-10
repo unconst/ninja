@@ -5,6 +5,10 @@ use super::api_client::{ApiClient, ContentBlock, Message, MessageContent};
 use super::rollout::Rollout;
 use crate::tools;
 
+/// Threshold in estimated tokens before triggering conversation compaction.
+/// Claude's context is ~200K tokens; compact at ~100K to leave room.
+const COMPACTION_TOKEN_THRESHOLD: u64 = 100_000;
+
 /// Configuration for the agent runner.
 pub struct AgentConfig {
     pub model: String,
@@ -87,6 +91,8 @@ impl AgentRunner {
 
         rollout.log_user(prompt);
 
+        let mut cumulative_input_tokens: u64 = 0;
+
         for iteration in 0..self.config.max_iterations {
             rollout.iteration_count = (iteration + 1) as u64;
 
@@ -150,16 +156,31 @@ impl AgentRunner {
                 response.duration,
             );
 
+            cumulative_input_tokens = response.input_tokens;
+
             if self.config.verbose {
                 if !response.text.is_empty() {
                     eprintln!("  assistant: {}", &response.text[..response.text.len().min(200)]);
                 }
                 eprintln!(
-                    "  tokens: in={} out={} tool_calls={}",
+                    "  tokens: in={} out={} tool_calls={} cumulative_in={}",
                     response.input_tokens,
                     response.output_tokens,
-                    response.tool_calls.len()
+                    response.tool_calls.len(),
+                    cumulative_input_tokens,
                 );
+            }
+
+            // Compact conversation history if approaching context limits
+            if cumulative_input_tokens > COMPACTION_TOKEN_THRESHOLD && messages.len() > 6 {
+                if self.config.verbose {
+                    eprintln!("  [compacting conversation: {} tokens, {} messages]", cumulative_input_tokens, messages.len());
+                }
+                messages = self.compact_messages(&messages);
+                rollout.log_error(&format!(
+                    "Conversation compacted at {} tokens, {} messages remaining",
+                    cumulative_input_tokens, messages.len()
+                ));
             }
 
             // If no tool calls, we're done
@@ -612,6 +633,80 @@ impl AgentRunner {
         }
         
         None
+    }
+
+    /// Compact conversation history by summarizing older tool interactions.
+    /// Keeps the first user message (original prompt) and recent messages,
+    /// replacing middle messages with a summary.
+    fn compact_messages(&self, messages: &[Message]) -> Vec<Message> {
+        if messages.len() <= 6 {
+            return messages.to_vec();
+        }
+
+        // Keep: first message (original prompt) + last 4 messages (recent context)
+        let keep_start = 1;  // after original prompt
+        let keep_end = messages.len().saturating_sub(4);
+
+        // Build summary of compacted messages
+        let mut summary_parts: Vec<String> = Vec::new();
+        summary_parts.push("## Conversation History Summary\nThe following actions were taken earlier in this session:\n".to_string());
+
+        for msg in &messages[keep_start..keep_end] {
+            match &msg.content {
+                MessageContent::Text(text) => {
+                    if msg.role == "assistant" {
+                        let preview = if text.len() > 200 { &text[..200] } else { text.as_str() };
+                        summary_parts.push(format!("- Assistant thought: {}", preview));
+                    }
+                    // Skip system injection messages in summary
+                }
+                MessageContent::Blocks(blocks) => {
+                    for block in blocks {
+                        match block {
+                            ContentBlock::ToolUse { name, input, .. } => {
+                                let args_preview = input.to_string();
+                                let args_short = if args_preview.len() > 100 {
+                                    format!("{}...", &args_preview[..100])
+                                } else {
+                                    args_preview
+                                };
+                                summary_parts.push(format!("- Used tool `{}`: {}", name, args_short));
+                            }
+                            ContentBlock::ToolResult { content, is_error, .. } => {
+                                let status = if *is_error == Some(true) { "ERROR" } else { "OK" };
+                                let preview = if content.len() > 150 { &content[..150] } else { content.as_str() };
+                                summary_parts.push(format!("  Result ({}): {}", status, preview));
+                            }
+                            ContentBlock::Text { text } => {
+                                let preview = if text.len() > 200 { &text[..200] } else { text.as_str() };
+                                summary_parts.push(format!("- {}", preview));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let summary = summary_parts.join("\n");
+
+        let mut compacted = Vec::new();
+        // Keep original prompt
+        compacted.push(messages[0].clone());
+        // Insert summary as a user message
+        compacted.push(Message {
+            role: "user".to_string(),
+            content: MessageContent::Text(format!(
+                "[SYSTEM] The conversation has been compacted to save context space.\n\n{}\n\n\
+                Continue working on the task. Review your deliverables checklist and complete any remaining changes.",
+                summary
+            )),
+        });
+        // Keep the recent messages (last 4)
+        for msg in &messages[messages.len().saturating_sub(4)..] {
+            compacted.push(msg.clone());
+        }
+
+        compacted
     }
 
     /// Extract repository name from git clone command
