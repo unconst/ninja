@@ -174,18 +174,22 @@ pub fn edit_file(args: &Value, workdir: &Path) -> Result<String, String> {
         return Err(format!("String not found in {}.{}", path.display(), hint));
     }
     if count > 1 && !replace_all {
-        // Show line numbers of each occurrence
-        let mut locations = Vec::new();
-        let _offset = 0;
-        for (i, _) in content.match_indices(old_string).take(5) {
-            let line_num = content[..i].matches('\n').count() + 1;
-            locations.push(format!("L{}", line_num));
+        // Show context around each match to help craft unique edits
+        let all_lines: Vec<&str> = content.lines().collect();
+        let mut ctx = String::new();
+        for (idx, (bp, _)) in content.match_indices(old_string).take(3).enumerate() {
+            let ln = content[..bp].matches('\n').count() + 1;
+            let s = ln.saturating_sub(2);
+            let e = (ln + 2).min(all_lines.len());
+            ctx.push_str(&format!("\n  Match {} at L{}:\n", idx + 1, ln));
+            for i in s..e {
+                let m = if i + 1 == ln { ">>>" } else { "   " };
+                ctx.push_str(&format!("    {} L{}: {}\n", m, i + 1, all_lines[i]));
+            }
         }
         return Err(format!(
-            "String found {} times in {} at {}. Include more surrounding context to make it unique, or set replace_all to true.",
-            count,
-            path.display(),
-            locations.join(", ")
+            "String found {} times in {}. Include more surrounding context, or set replace_all to true.{}",
+            count, path.display(), ctx
         ));
     }
 
