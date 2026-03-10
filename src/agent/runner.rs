@@ -654,7 +654,15 @@ impl AgentRunner {
              - Create ALL required files: source code, docs, changelogs, type stubs (.pyi), config\n\n\
              **Phase 3: VERIFY & FINISH (iterations 36+)**\n\
              - Review your deliverables checklist — every file must be addressed\n\
-             - Common files people forget: type stubs (.pyi), changelog entries, config files, docs\n\
+             - Check for INDIRECT CHANGES needed in config files: when you update a linter, formatter, \
+               or dependency version, run the tool to check if new rules/warnings fire. Update \
+               pyproject.toml, setup.cfg, .pre-commit-config.yaml with any new ignores or settings.\n\
+             - When you change file formats (e.g. PNG→SVG), update ALL references in docs/conf.py, \
+               index.rst, README, etc. — don't just add new files, also fix pointers to old ones.\n\
+             - Type stubs (.pyi): if you change a function signature in a .pyx/.py file, update the \
+               corresponding .pyi stub to match.\n\
+             - Run the project's linter or test suite after changes if feasible — new failures often \
+               reveal config files you need to update.\n\
              - When done, list every file you changed with a brief summary\n\n\
              ## Rules\n\
              - SPEED OVER PERFECTION: Make changes quickly. Don't over-explore.\n\
