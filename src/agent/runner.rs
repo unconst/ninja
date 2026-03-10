@@ -7,9 +7,10 @@ use super::api_client::{ApiClient, ContentBlock, Message, MessageContent};
 use super::rollout::Rollout;
 use crate::tools;
 
-/// Threshold in estimated tokens before triggering conversation compaction.
-/// Claude's context is ~200K tokens; compact at ~100K to leave room.
-const COMPACTION_TOKEN_THRESHOLD: u64 = 100_000;
+/// Soft compaction: aggressively shrink old tool results but keep message structure.
+const SOFT_COMPACTION_THRESHOLD: u64 = 80_000;
+/// Hard compaction: drop middle messages and replace with summary.
+const HARD_COMPACTION_THRESHOLD: u64 = 120_000;
 
 /// Safely truncate a string at a char boundary, never panicking on multi-byte chars.
 fn safe_truncate(s: &str, max_bytes: usize) -> &str {
@@ -208,9 +209,12 @@ impl AgentRunner {
                 eprintln!("  assistant: {}", safe_truncate(&response.text, 200));
             }
 
-            // Compact if needed
-            if cumulative_input_tokens > COMPACTION_TOKEN_THRESHOLD && self.conversation.len() > 6 {
+            // Two-stage compaction
+            if cumulative_input_tokens > HARD_COMPACTION_THRESHOLD && self.conversation.len() > 6 {
                 self.conversation = self.compact_messages(&self.conversation);
+            } else if cumulative_input_tokens > SOFT_COMPACTION_THRESHOLD {
+                // Soft compaction: aggressively shrink all but last 2 messages
+                Self::shrink_old_tool_results(&mut self.conversation, 2);
             }
 
             if response.tool_calls.is_empty() {
@@ -495,16 +499,19 @@ impl AgentRunner {
                 );
             }
 
-            // Compact conversation history if approaching context limits
-            if cumulative_input_tokens > COMPACTION_TOKEN_THRESHOLD && messages.len() > 6 {
+            // Two-stage compaction to manage context window
+            if cumulative_input_tokens > HARD_COMPACTION_THRESHOLD && messages.len() > 6 {
                 if self.config.verbose {
-                    eprintln!("  [compacting conversation: {} tokens, {} messages]", cumulative_input_tokens, messages.len());
+                    eprintln!("  [hard compaction: {} tokens, {} messages]", cumulative_input_tokens, messages.len());
                 }
                 messages = self.compact_messages(&messages);
                 rollout.log_error(&format!(
-                    "Conversation compacted at {} tokens, {} messages remaining",
+                    "Hard compaction at {} tokens, {} messages remaining",
                     cumulative_input_tokens, messages.len()
                 ));
+            } else if cumulative_input_tokens > SOFT_COMPACTION_THRESHOLD {
+                // Soft compaction: aggressively shrink all but last 2 messages
+                Self::shrink_old_tool_results(&mut messages, 2);
             }
 
             // If no tool calls, check completion
