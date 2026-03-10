@@ -499,15 +499,22 @@ impl AgentRunner {
                     ),
                 });
             } else if remaining == 5 {
+                // Auto-run git diff --stat and include results so agent can see gaps
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let diff_section = if diff_stat.is_empty() {
+                    "\n\nWARNING: `git diff --stat` shows NO modified files! You have not made any changes yet.".to_string()
+                } else {
+                    format!("\n\nCurrent `git diff --stat`:\n```\n{}\n```", diff_stat)
+                };
                 messages.push(Message {
                     role: "user".to_string(),
-                    content: MessageContent::Text(
-                        "[SYSTEM] FILE CHECK — 5 iterations left. Run `git diff --stat` NOW to see which files \
-                         you've modified. Compare against the REQUIRED FILES list from the task. If ANY required \
-                         file is missing from your diff, modify it NOW. Common misses: config files (pyproject.toml, \
-                         setup.cfg), type stubs (.pyi), documentation files (.rst, .md), and changelog files. \
-                         Do NOT stop until every required file appears in git diff.".to_string()
-                    ),
+                    content: MessageContent::Text(format!(
+                        "[SYSTEM] FILE CHECK — 5 iterations left. Compare the files below against the REQUIRED \
+                         FILES list from the task. If ANY required file is missing from git diff, you MUST modify \
+                         it NOW. Remember: if a file is listed as required, the solution ADDS new code to it — \
+                         do not skip it just because you didn't find existing code to change.{}\n\n\
+                         Do NOT stop until every required file appears in git diff.", diff_section
+                    )),
                 });
             } else if remaining == 3 {
                 messages.push(Message {
@@ -927,6 +934,11 @@ impl AgentRunner {
              - TRACK FILES: After Phase 1, use todo_write to create a checklist with one entry per \
                required file. Mark each entry done ONLY after you've confirmed the edit. This prevents \
                forgetting files in large multi-file tasks.\n\
+             - REQUIRED FILES ARE MANDATORY: If a file is listed as REQUIRED, you MUST produce a \
+               git diff for that file — even if you don't see obvious existing code to change. \
+               The solution may require ADDING entirely new code (classes, functions, imports) to that \
+               file. Never mark a required file as 'no changes needed' — re-examine the problem to \
+               find what new code belongs there.\n\
              - When done, list every file you changed and briefly summarize each change",
             self.config.workdir.display(),
             env_info
