@@ -186,10 +186,11 @@ impl ApiClient {
         if !resp.status().is_success() {
             let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
+            let end = body.char_indices().nth(500).map(|(i, _)| i).unwrap_or(body.len());
             return Err(format!(
                 "API error {}: {}",
                 status,
-                &body[..body.len().min(500)]
+                &body[..end]
             ));
         }
 
@@ -315,7 +316,8 @@ impl ApiClient {
         if !resp.status().is_success() {
             let status = resp.status();
             let body_text = resp.text().await.unwrap_or_default();
-            return Err(format!("API error {}: {}", status, &body_text[..body_text.len().min(500)]));
+            let end = body_text.char_indices().nth(500).map(|(i, _)| i).unwrap_or(body_text.len());
+            return Err(format!("API error {}: {}", status, &body_text[..end]));
         }
 
         // Parse SSE stream

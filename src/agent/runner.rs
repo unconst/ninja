@@ -327,7 +327,7 @@ impl AgentRunner {
                         let preview = safe_truncate(&output, 100);
                         eprintln!("    {} {} ({:.1}s)", "✗".red(), preview, tool_duration.as_secs_f64());
                     } else if self.config.verbose {
-                        let preview = &output[..output.len().min(150)];
+                        let preview = safe_truncate(&output, 150);
                         eprintln!("    {} ({:.1}s)", preview.dimmed(), tool_duration.as_secs_f64());
                     } else {
                         let summary = self.summarize_tool_result(&tc.name, &output);
@@ -483,7 +483,7 @@ impl AgentRunner {
 
             if self.config.verbose {
                 if !response.text.is_empty() {
-                    eprintln!("  assistant: {}", &response.text[..response.text.len().min(200)]);
+                    eprintln!("  assistant: {}", safe_truncate(&response.text, 200));
                 }
                 eprintln!(
                     "  tokens: in={} out={} tool_calls={} cumulative_in={}",
@@ -560,7 +560,7 @@ impl AgentRunner {
             let mut result_blocks = Vec::new();
             for tc in &response.tool_calls {
                 if self.config.verbose {
-                    eprintln!("  tool: {}({})", tc.name, &tc.input.to_string()[..tc.input.to_string().len().min(100)]);
+                    eprintln!("  tool: {}({})", tc.name, safe_truncate(&tc.input.to_string(), 100));
                 }
 
                 rollout.log_tool_call(&tc.name, &tc.input.to_string());
@@ -1250,8 +1250,7 @@ impl AgentRunner {
                 if output.contains("successfully") {
                     "applied".to_string()
                 } else {
-                    let preview = &output[..output.len().min(60)];
-                    preview.to_string()
+                    safe_truncate(output, 60).to_string()
                 }
             }
             "list_dir" => {
@@ -1261,8 +1260,7 @@ impl AgentRunner {
             "shell_exec" => {
                 let lines = output.lines().count();
                 if lines <= 1 {
-                    let preview = &output[..output.len().min(80)];
-                    preview.trim().to_string()
+                    safe_truncate(output, 80).trim().to_string()
                 } else {
                     format!("{} lines of output", lines)
                 }
@@ -1302,12 +1300,10 @@ impl AgentRunner {
                 format!("sub-agent returned {} lines", lines)
             }
             "todo_write" => {
-                let preview = &output[..output.len().min(80)];
-                preview.to_string()
+                safe_truncate(output, 80).to_string()
             }
             _ => {
-                let preview = &output[..output.len().min(60)];
-                preview.to_string()
+                safe_truncate(output, 60).to_string()
             }
         }
     }
