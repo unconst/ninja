@@ -475,7 +475,8 @@ impl AgentRunner {
              - list_dir: List directory contents\n\
              - shell_exec: Run shell commands (bash)\n\
              - glob_search: Find files by name pattern\n\
-             - grep_search: Search file contents with regex\n\n\
+             - grep_search: Search file contents with regex\n\
+             - web_fetch: Fetch content from a URL (documentation, issues, etc.)\n\n\
              ## Strategy\n\
              1. EXPLORE FIRST: Before making any changes, use grep_search and read_file to understand \
                 the codebase structure and the specific files involved.\n\
@@ -992,6 +993,11 @@ impl AgentRunner {
                 let pattern = input.get("pattern").and_then(|v| v.as_str()).unwrap_or("?");
                 format!("Grep '{}'", pattern)
             }
+            "web_fetch" => {
+                let url = input.get("url").and_then(|v| v.as_str()).unwrap_or("?");
+                let short = if url.len() > 50 { &url[..50] } else { url };
+                format!("Fetch {}", short)
+            }
             _ => format!("{}", tool_name),
         }
     }
@@ -1034,6 +1040,10 @@ impl AgentRunner {
             "glob_search" | "grep_search" => {
                 let matches = output.lines().count();
                 format!("{} matches", matches)
+            }
+            "web_fetch" => {
+                let chars = output.len();
+                format!("{} chars fetched", chars)
             }
             _ => {
                 let preview = &output[..output.len().min(60)];
