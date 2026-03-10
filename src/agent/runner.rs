@@ -382,6 +382,7 @@ impl AgentRunner {
         rollout.log_user(prompt);
 
         let mut cumulative_input_tokens: u64 = 0;
+        let mut completion_check_done = false;
 
         for iteration in 0..self.config.max_iterations {
             rollout.iteration_count = (iteration + 1) as u64;
@@ -502,8 +503,32 @@ impl AgentRunner {
                 ));
             }
 
-            // If no tool calls, we're done
+            // If no tool calls, check completion
             if response.tool_calls.is_empty() {
+                // If agent stops early (before using 40% of iterations) and hasn't been
+                // nudged yet, inject a completion check to prevent premature stopping
+                let used_pct = (iteration as f64) / (self.config.max_iterations as f64);
+                if used_pct < 0.4 && !completion_check_done {
+                    completion_check_done = true;
+                    messages.push(Message {
+                        role: "assistant".to_string(),
+                        content: MessageContent::Text(response.text.clone()),
+                    });
+                    messages.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(
+                            "[SYSTEM] COMPLETION CHECK — You stopped early. Before finishing, verify:\n\
+                             1. Have you modified ALL files listed in your plan/deliverables?\n\
+                             2. Did you create required documentation/changelog entries?\n\
+                             3. Did you update type stubs (.pyi) if needed?\n\
+                             4. Check your todo list — are all items marked done?\n\n\
+                             If any work remains, continue now. If truly done, respond with your \
+                             summary and no tool calls.".to_string()
+                        ),
+                    });
+                    rollout.log_error("Completion check injected — agent tried to stop early");
+                    continue;
+                }
                 rollout.final_result = Some(response.text.clone());
                 rollout.success = true;
                 break;
