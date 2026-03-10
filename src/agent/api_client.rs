@@ -420,10 +420,20 @@ impl ApiClient {
                     "messages": api_messages,
                 });
                 if !system.is_empty() {
-                    body["system"] = json!(system);
+                    // Use structured system prompt with cache_control for prompt caching
+                    body["system"] = json!([{
+                        "type": "text",
+                        "text": system,
+                        "cache_control": {"type": "ephemeral"}
+                    }]);
                 }
                 if !api_tools.is_empty() {
-                    body["tools"] = json!(api_tools);
+                    // Mark last tool with cache_control for caching the full tool list
+                    let mut cached_tools = api_tools.clone();
+                    if let Some(last) = cached_tools.last_mut() {
+                        last["cache_control"] = json!({"type": "ephemeral"});
+                    }
+                    body["tools"] = json!(cached_tools);
                 }
                 body
             }
@@ -450,7 +460,8 @@ impl ApiClient {
         req = match format {
             ApiFormat::Anthropic => req
                 .header("x-api-key", &self.api_key)
-                .header("anthropic-version", "2023-06-01"),
+                .header("anthropic-version", "2023-06-01")
+                .header("anthropic-beta", "prompt-caching-2024-07-31"),
             ApiFormat::OpenAI => req.header("Authorization", format!("Bearer {}", self.api_key)),
         };
 
@@ -506,10 +517,18 @@ impl ApiClient {
                     "stream": true,
                 });
                 if !system.is_empty() {
-                    body["system"] = json!(system);
+                    body["system"] = json!([{
+                        "type": "text",
+                        "text": system,
+                        "cache_control": {"type": "ephemeral"}
+                    }]);
                 }
                 if !api_tools.is_empty() {
-                    body["tools"] = json!(api_tools);
+                    let mut cached_tools = api_tools.clone();
+                    if let Some(last) = cached_tools.last_mut() {
+                        last["cache_control"] = json!({"type": "ephemeral"});
+                    }
+                    body["tools"] = json!(cached_tools);
                 }
                 body
             }
@@ -538,7 +557,8 @@ impl ApiClient {
         req = match format {
             ApiFormat::Anthropic => req
                 .header("x-api-key", &self.api_key)
-                .header("anthropic-version", "2023-06-01"),
+                .header("anthropic-version", "2023-06-01")
+                .header("anthropic-beta", "prompt-caching-2024-07-31"),
             ApiFormat::OpenAI => req.header("Authorization", format!("Bearer {}", self.api_key)),
         };
 
