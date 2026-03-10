@@ -5,9 +5,9 @@ mod search;
 use serde_json::Value;
 use std::path::Path;
 
-use crate::agent::claude_client::ToolDef;
+use crate::agent::api_client::ToolDef;
 
-/// Get all tool definitions for the Claude API.
+/// Get all tool definitions for the model API.
 pub fn get_tool_definitions() -> Vec<ToolDef> {
     let mut tools = Vec::new();
     tools.extend(file_ops::definitions());

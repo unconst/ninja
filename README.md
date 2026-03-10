@@ -1,15 +1,15 @@
 # Ninja
 
-A Rust CLI coding agent powered by Claude via OpenRouter. Ninja is an open-source replacement for Claude Code — it reads files, edits code, runs shell commands, and searches codebases to solve software engineering tasks autonomously.
+A model-agnostic Rust CLI coding agent powered by OpenRouter. Ninja is an open-source replacement for Claude Code — it reads files, edits code, runs shell commands, and searches codebases to solve software engineering tasks autonomously. Use any model available on OpenRouter (Claude, GPT-4, Gemini, Llama, etc.) with a single `--model` flag.
 
 ## How It Works
 
-Ninja runs an **agent loop**: it sends a prompt to Claude, receives tool calls back, executes them locally, and feeds the results back to Claude. This repeats until the task is complete or the iteration limit is reached.
+Ninja runs an **agent loop**: it sends a prompt to the LLM via OpenRouter, receives tool calls back, executes them locally, and feeds the results back. This repeats until the task is complete or the iteration limit is reached.
 
 ```
 ┌─────────┐     ┌──────────────┐     ┌───────────┐
-│  Prompt  │────▶│  Claude API   │────▶│ Tool Calls │
-│          │     │ (OpenRouter)  │     │            │
+│  Prompt  │────▶│  OpenRouter   │────▶│ Tool Calls │
+│          │     │ (any model)   │     │            │
 └─────────┘     └──────────────┘     └─────┬──────┘
                        ▲                     │
                        │                     ▼
@@ -50,17 +50,19 @@ Requires Rust (install via [rustup](https://rustup.rs)). Uses `rustls-tls` — n
 # Set your API key
 export OPENROUTER_API_KEY=your-key-here
 
-# Basic usage
+# Basic usage (defaults to anthropic/claude-sonnet-4)
 ninja --prompt "Fix the bug in main.rs"
+
+# Use any OpenRouter model
+ninja --prompt "Refactor this" --model google/gemini-2.5-pro
+ninja --prompt "Add tests" --model openai/gpt-4o
+ninja --prompt "Explain the code" --model meta-llama/llama-4-scout
 
 # With a prompt file and specific working directory
 ninja --prompt-file task.md --workdir /path/to/repo
 
 # Save full rollout trace for analysis
 ninja --prompt "Add tests" --rollout rollout.json --verbose
-
-# Use a specific model
-ninja --prompt "Refactor this" --model anthropic/claude-sonnet-4
 
 # Control iteration budget
 ninja --prompt "Implement feature X" --max-iterations 30
@@ -76,8 +78,8 @@ src/
 ├── main.rs                  # CLI entry point (clap)
 ├── agent/
 │   ├── mod.rs               # Module exports
-│   ├── claude_client.rs     # Anthropic Messages API client (via OpenRouter)
-│   ├── runner.rs            # Agent loop: prompt → Claude → tool calls → repeat
+│   ├── api_client.rs        # OpenRouter Messages API client (model-agnostic)
+│   ├── runner.rs            # Agent loop: prompt → model → tool calls → repeat
 │   └── rollout.rs           # Rollout logging (tokens, timing, tool calls)
 └── tools/
     ├── mod.rs               # Tool registry and dispatch
@@ -94,9 +96,9 @@ Ninja is improved automatically through a closed-loop pipeline:
 
 2. **Execution** — Ninja attempts to solve the task in an isolated checkout. The full rollout (every LLM call, tool call, and result) is saved as JSON.
 
-3. **Evaluation** — Claude evaluates the rollout against the ground truth diff: which files were modified correctly, what was missed, where the agent got stuck.
+3. **Evaluation** — An evaluator LLM reviews the rollout against the ground truth diff: which files were modified correctly, what was missed, where the agent got stuck.
 
-4. **Improvement** — Based on evaluation results, Claude generates patches to Ninja's own source code (system prompt tuning, tool improvements, agent loop fixes). Patches are applied with automatic rollback on build failure.
+4. **Improvement** — Based on evaluation results, the evaluator generates patches to Ninja's own source code (system prompt tuning, tool improvements, agent loop fixes). Patches are applied with automatic rollback on build failure.
 
 5. **Rebuild & Retest** — Ninja is rebuilt and re-run on the same tasks to measure improvement.
 
@@ -118,8 +120,9 @@ Pipeline tools live in the [Arbos](https://github.com/unconst/arbos) repo:
 | Env Variable | Description | Default |
 |---|---|---|
 | `OPENROUTER_API_KEY` | API key for OpenRouter | (required) |
-| `ANTHROPIC_API_KEY` | Alternative: direct Anthropic API key | — |
-| `ANTHROPIC_BASE_URL` | Override API base URL | `https://openrouter.ai/api` |
+| `OPENROUTER_BASE_URL` | Override API base URL | `https://openrouter.ai/api` |
+| `ANTHROPIC_API_KEY` | Alternative: direct Anthropic API key (fallback) | — |
+| `ANTHROPIC_BASE_URL` | Alternative: direct API base URL (fallback) | — |
 
 ## License
 

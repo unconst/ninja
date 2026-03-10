@@ -2,7 +2,7 @@ use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::agent::claude_client::ToolDef;
+use crate::agent::api_client::ToolDef;
 
 pub fn definitions() -> Vec<ToolDef> {
     vec![

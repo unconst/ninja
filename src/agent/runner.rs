@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
-use super::claude_client::{ClaudeClient, ContentBlock, Message, MessageContent};
+use super::api_client::{ApiClient, ContentBlock, Message, MessageContent};
 use super::rollout::Rollout;
 use crate::tools;
 
@@ -15,15 +15,15 @@ pub struct AgentConfig {
     pub verbose: bool,
 }
 
-/// The main agent runner — drives the Claude ↔ tool loop.
+/// The main agent runner — drives the model ↔ tool loop.
 pub struct AgentRunner {
     config: AgentConfig,
-    client: ClaudeClient,
+    client: ApiClient,
 }
 
 impl AgentRunner {
     pub fn new(config: AgentConfig) -> Self {
-        let client = ClaudeClient::new(&config.api_key, &config.api_base_url, &config.model);
+        let client = ApiClient::new(&config.api_key, &config.api_base_url, &config.model);
         Self { config, client }
     }
 
@@ -83,7 +83,7 @@ impl AgentRunner {
                 eprintln!("[iteration {}]", iteration + 1);
             }
 
-            // Call Claude with retry on transient errors
+            // Call model API with retry on transient errors
             let mut response = None;
             for attempt in 0..3u32 {
                 match self.client.chat(&messages, &tool_defs, &system).await {

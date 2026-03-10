@@ -4,7 +4,7 @@ mod tools;
 use clap::Parser;
 use std::path::PathBuf;
 
-/// Ninja — a CLI coding agent powered by Claude
+/// Ninja — a model-agnostic CLI coding agent via OpenRouter
 #[derive(Parser, Debug)]
 #[command(name = "ninja", version, about)]
 struct Cli {
@@ -32,11 +32,11 @@ struct Cli {
     #[arg(long, default_value = "text")]
     output_format: String,
 
-    /// API key (or set ANTHROPIC_API_KEY env var)
+    /// API key (or set OPENROUTER_API_KEY env var)
     #[arg(long)]
     api_key: Option<String>,
 
-    /// API base URL (or set ANTHROPIC_BASE_URL env var)
+    /// API base URL (or set OPENROUTER_BASE_URL env var)
     #[arg(long)]
     api_base_url: Option<String>,
 
@@ -67,13 +67,14 @@ async fn main() {
     let api_key = cli
         .api_key
         .clone()
-        .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok())
         .or_else(|| std::env::var("OPENROUTER_API_KEY").ok())
-        .expect("No API key found. Set ANTHROPIC_API_KEY or use --api-key");
+        .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok())
+        .expect("No API key found. Set OPENROUTER_API_KEY or use --api-key");
 
     let api_base_url = cli
         .api_base_url
         .clone()
+        .or_else(|| std::env::var("OPENROUTER_BASE_URL").ok())
         .or_else(|| std::env::var("ANTHROPIC_BASE_URL").ok())
         .unwrap_or_else(|| "https://openrouter.ai/api".to_string());
 

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::time::{Duration, Instant};
 
-/// Tool definition sent to the Claude API.
+/// Tool definition sent to the model API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolDef {
     pub name: String,
@@ -45,9 +45,9 @@ pub enum ContentBlock {
     },
 }
 
-/// Response from the Claude API.
+/// Response from the model API.
 #[derive(Debug, Clone)]
-pub struct ClaudeResponse {
+pub struct ApiResponse {
     pub text: String,
     pub tool_calls: Vec<ToolCall>,
     pub stop_reason: String,
@@ -64,14 +64,14 @@ pub struct ToolCall {
     pub input: Value,
 }
 
-pub struct ClaudeClient {
+pub struct ApiClient {
     client: Client,
     api_key: String,
     api_base_url: String,
     model: String,
 }
 
-impl ClaudeClient {
+impl ApiClient {
     pub fn new(api_key: &str, api_base_url: &str, model: &str) -> Self {
         Self {
             client: Client::new(),
@@ -86,10 +86,10 @@ impl ClaudeClient {
         messages: &[Message],
         tools: &[ToolDef],
         system: &str,
-    ) -> Result<ClaudeResponse, String> {
+    ) -> Result<ApiResponse, String> {
         let start = Instant::now();
 
-        // Use Anthropic Messages API format (native)
+        // Use Messages API format (OpenRouter-compatible)
         let api_messages: Vec<Value> = messages
             .iter()
             .map(|msg| {
@@ -190,7 +190,7 @@ impl ClaudeClient {
 
         let duration = start.elapsed();
 
-        // Parse Anthropic Messages API response
+        // Parse Messages API response
         let stop_reason = data["stop_reason"]
             .as_str()
             .unwrap_or("unknown")
@@ -223,7 +223,7 @@ impl ClaudeClient {
         let input_tokens = usage["input_tokens"].as_u64().unwrap_or(0);
         let output_tokens = usage["output_tokens"].as_u64().unwrap_or(0);
 
-        Ok(ClaudeResponse {
+        Ok(ApiResponse {
             text: text_parts.join("\n"),
             tool_calls,
             stop_reason,

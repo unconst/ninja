@@ -1,5 +1,5 @@
 mod runner;
-pub mod claude_client;
+pub mod api_client;
 mod rollout;
 
 pub use runner::{AgentRunner, AgentConfig};
