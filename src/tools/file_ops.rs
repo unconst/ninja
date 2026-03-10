@@ -50,7 +50,7 @@ pub fn definitions() -> Vec<ToolDef> {
         },
         ToolDef {
             name: "edit_file".to_string(),
-            description: "Edit a file by replacing an exact string match with new content."
+            description: "Edit a file by replacing an exact string match with new content. The old_string must be unique in the file unless replace_all is true. Include enough surrounding context to make old_string unique."
                 .to_string(),
             input_schema: json!({
                 "type": "object",
@@ -61,11 +61,15 @@ pub fn definitions() -> Vec<ToolDef> {
                     },
                     "old_string": {
                         "type": "string",
-                        "description": "The exact string to find and replace"
+                        "description": "The exact string to find and replace. Must be unique in the file (include surrounding context if needed)"
                     },
                     "new_string": {
                         "type": "string",
                         "description": "The string to replace it with"
+                    },
+                    "replace_all": {
+                        "type": "boolean",
+                        "description": "If true, replace ALL occurrences of old_string (default: false)"
                     }
                 },
                 "required": ["path", "old_string", "new_string"]
@@ -141,6 +145,7 @@ pub fn edit_file(args: &Value, workdir: &Path) -> Result<String, String> {
     let path_str = args["path"].as_str().ok_or("Missing 'path' argument")?;
     let old_string = args["old_string"].as_str().ok_or("Missing 'old_string' argument")?;
     let new_string = args["new_string"].as_str().ok_or("Missing 'new_string' argument")?;
+    let replace_all = args["replace_all"].as_bool().unwrap_or(false);
     let path = resolve_path(path_str, workdir);
 
     let content = fs::read_to_string(&path)
@@ -150,19 +155,23 @@ pub fn edit_file(args: &Value, workdir: &Path) -> Result<String, String> {
     if count == 0 {
         return Err(format!("String not found in {}", path.display()));
     }
-    if count > 1 {
+    if count > 1 && !replace_all {
         return Err(format!(
-            "String found {} times in {}. Provide more context to make it unique.",
+            "String found {} times in {}. Provide more context to make it unique, or set replace_all to true.",
             count,
             path.display()
         ));
     }
 
-    let new_content = content.replacen(old_string, new_string, 1);
+    let new_content = if replace_all {
+        content.replace(old_string, new_string)
+    } else {
+        content.replacen(old_string, new_string, 1)
+    };
     fs::write(&path, &new_content)
         .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
 
-    Ok(format!("File edited: {}", path.display()))
+    Ok(format!("File edited: {} ({} replacement{})", path.display(), count, if count > 1 { "s" } else { "" }))
 }
 
 pub fn list_dir(args: &Value, workdir: &Path) -> Result<String, String> {
