@@ -32,14 +32,19 @@ impl AgentRunner {
         let mut rollout = Rollout::new(&self.config.model);
         let tool_defs = tools::get_tool_definitions();
 
+        // Perform initial environment validation
+        let env_info = self.validate_initial_environment();
+        
         let system = format!(
             "You are Ninja, a powerful coding agent. You help users with software engineering tasks.\n\
              Working directory: {}\n\
+             {}\n\
              You have access to tools for reading/writing files, searching code, and running shell commands.\n\
              When given a task, break it down and execute step by step.\n\
              Always read relevant files before modifying them.\n\
              Be concise in your responses.",
-            self.config.workdir.display()
+            self.config.workdir.display(),
+            env_info
         );
 
         let mut messages: Vec<Message> = vec![Message {
@@ -111,7 +116,7 @@ impl AgentRunner {
                 content: MessageContent::Blocks(assistant_blocks),
             });
 
-            // Execute tool calls
+            // Execute tool calls with error handling and recovery
             let mut result_blocks = Vec::new();
             for tc in &response.tool_calls {
                 if self.config.verbose {
@@ -121,7 +126,7 @@ impl AgentRunner {
                 rollout.log_tool_call(&tc.name, &tc.input.to_string());
 
                 let tool_start = Instant::now();
-                let result = tools::execute_tool(&tc.name, &tc.input, &self.config.workdir);
+                let result = self.execute_tool_with_recovery(&tc.name, &tc.input);
                 let tool_duration = tool_start.elapsed();
 
                 let (output, is_error) = match result {
@@ -151,5 +156,314 @@ impl AgentRunner {
 
         rollout.total_duration_ms = start.elapsed().as_millis() as u64;
         rollout
+    }
+
+    /// Validate the initial environment and gather context information
+    fn validate_initial_environment(&self) -> String {
+        let mut env_info = Vec::new();
+        
+        // Check if we're in a git repository
+        if let Ok(output) = std::process::Command::new("git")
+            .args(&["rev-parse", "--is-inside-work-tree"])
+            .current_dir(&self.config.workdir)
+            .output()
+        {
+            if output.status.success() {
+                // We're in a git repository, get more info
+                if let Ok(remote_output) = std::process::Command::new("git")
+                    .args(&["remote", "-v"])
+                    .current_dir(&self.config.workdir)
+                    .output()
+                {
+                    if let Ok(remote_info) = String::from_utf8(remote_output.stdout) {
+                        if !remote_info.trim().is_empty() {
+                            env_info.push(format!("Git repository detected with remotes:\n{}", remote_info.trim()));
+                        } else {
+                            env_info.push("Git repository detected (no remotes configured)".to_string());
+                        }
+                    }
+                }
+                
+                // Get current branch
+                if let Ok(branch_output) = std::process::Command::new("git")
+                    .args(&["branch", "--show-current"])
+                    .current_dir(&self.config.workdir)
+                    .output()
+                {
+                    if let Ok(branch_name) = String::from_utf8(branch_output.stdout) {
+                        let branch_name = branch_name.trim();
+                        if !branch_name.is_empty() {
+                            env_info.push(format!("Current branch: {}", branch_name));
+                        }
+                    }
+                }
+                
+                // Check git status
+                if let Ok(status_output) = std::process::Command::new("git")
+                    .args(&["status", "--porcelain"])
+                    .current_dir(&self.config.workdir)
+                    .output()
+                {
+                    if let Ok(status_info) = String::from_utf8(status_output.stdout) {
+                        if status_info.trim().is_empty() {
+                            env_info.push("Working directory is clean".to_string());
+                        } else {
+                            let modified_files = status_info.lines().count();
+                            env_info.push(format!("Working directory has {} modified/untracked files", modified_files));
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Check for common project files
+        let project_indicators = [
+            ("package.json", "Node.js project"),
+            ("Cargo.toml", "Rust project"),
+            ("requirements.txt", "Python project"),
+            ("pom.xml", "Maven project"),
+            ("build.gradle", "Gradle project"),
+            ("Makefile", "Make-based project"),
+            ("docker-compose.yml", "Docker Compose project"),
+            ("Dockerfile", "Docker project"),
+        ];
+        
+        for (file, description) in &project_indicators {
+            if self.config.workdir.join(file).exists() {
+                env_info.push(format!("{} detected", description));
+            }
+        }
+        
+        if env_info.is_empty() {
+            "Environment: Empty or new directory".to_string()
+        } else {
+            format!("Environment context:\n{}", env_info.join("\n"))
+        }
+    }
+
+    /// Execute a tool with error handling and recovery mechanisms
+    fn execute_tool_with_recovery(&self, tool_name: &str, input: &serde_json::Value) -> Result<String, String> {
+        // Check for git clone commands and validate if already in target repository
+        if tool_name == "shell" {
+            if let Some(command) = input.get("command").and_then(|c| c.as_str()) {
+                if command.starts_with("git clone") {
+                    if let Some(recovery_result) = self.check_git_clone_necessity(command) {
+                        return Ok(recovery_result);
+                    }
+                }
+            }
+        }
+        
+        // First attempt to execute the tool
+        let result = tools::execute_tool(tool_name, input, &self.config.workdir);
+        
+        match result {
+            Ok(output) => Ok(output),
+            Err(error) => {
+                // Apply recovery strategies based on tool type and error
+                if let Some(recovered_output) = self.try_recover_from_error(tool_name, input, &error) {
+                    Ok(recovered_output)
+                } else {
+                    Err(error)
+                }
+            }
+        }
+    }
+
+    /// Check if git clone is necessary or if we're already in the target repository
+    fn check_git_clone_necessity(&self, command: &str) -> Option<String> {
+        let repo_url = self.extract_repo_url_from_clone_command(command)?;
+        
+        // Check if we're already in a git repository
+        if let Ok(output) = std::process::Command::new("git")
+            .args(&["remote", "-v"])
+            .current_dir(&self.config.workdir)
+            .output()
+        {
+            if output.status.success() {
+                if let Ok(remote_info) = String::from_utf8(output.stdout) {
+                    // Check if any remote matches the target repository
+                    if self.is_matching_repository(&remote_info, &repo_url) {
+                        return Some(format!(
+                            "Already in target repository '{}'. Current remotes:\n{}",
+                            repo_url,
+                            remote_info.trim()
+                        ));
+                    }
+                }
+            }
+        }
+        
+        None
+    }
+
+    /// Check if the current repository matches the target repository URL
+    fn is_matching_repository(&self, remote_info: &str, target_url: &str) -> bool {
+        let normalized_target = self.normalize_git_url(target_url);
+        
+        for line in remote_info.lines() {
+            if let Some(url_start) = line.find('\t') {
+                let url_part = &line[url_start + 1..];
+                if let Some(url_end) = url_part.find(' ') {
+                    let remote_url = &url_part[..url_end];
+                    let normalized_remote = self.normalize_git_url(remote_url);
+                    
+                    if normalized_remote == normalized_target {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        false
+    }
+
+    /// Normalize git URLs for comparison (handle different formats like HTTPS vs SSH)
+    fn normalize_git_url(&self, url: &str) -> String {
+        let mut normalized = url.to_lowercase();
+        
+        // Remove .git suffix
+        if normalized.ends_with(".git") {
+            normalized = normalized[..normalized.len() - 4].to_string();
+        }
+        
+        // Convert SSH to HTTPS format for comparison
+        if normalized.starts_with("git@github.com:") {
+            normalized = normalized.replace("git@github.com:", "https://github.com/");
+        }
+        
+        // Remove trailing slashes
+        normalized = normalized.trim_end_matches('/').to_string();
+        
+        normalized
+    }
+
+    /// Extract repository URL from git clone command
+    fn extract_repo_url_from_clone_command(&self, command: &str) -> Option<String> {
+        let parts: Vec<&str> = command.split_whitespace().collect();
+        
+        for (i, part) in parts.iter().enumerate() {
+            if part == &"clone" && i + 1 < parts.len() {
+                return Some(parts[i + 1].to_string());
+            }
+        }
+        
+        None
+    }
+
+    /// Attempt to recover from common tool execution errors
+    fn try_recover_from_error(&self, tool_name: &str, input: &serde_json::Value, error: &str) -> Option<String> {
+        match tool_name {
+            "shell" => self.recover_shell_error(input, error),
+            "write_file" => self.recover_write_file_error(input, error),
+            "read_file" => self.recover_read_file_error(input, error),
+            _ => None,
+        }
+    }
+
+    /// Recovery strategies for shell command errors
+    fn recover_shell_error(&self, input: &serde_json::Value, error: &str) -> Option<String> {
+        let command = input.get("command")?.as_str()?;
+        
+        // Handle git clone directory already exists error
+        if command.starts_with("git clone") && error.contains("already exists") {
+            let repo_name = self.extract_repo_name_from_clone_command(command)?;
+            let repo_path = self.config.workdir.join(&repo_name);
+            
+            if repo_path.exists() && repo_path.join(".git").exists() {
+                return Some(format!(
+                    "Repository '{}' already exists and appears to be a valid git repository. Skipping clone.",
+                    repo_name
+                ));
+            }
+        }
+        
+        // Handle permission denied errors by suggesting alternatives
+        if error.contains("Permission denied") {
+            return Some(format!(
+                "Permission denied for command '{}'. Consider using sudo or checking file permissions.",
+                command
+            ));
+        }
+        
+        // Handle command not found errors
+        if error.contains("command not found") || error.contains("not recognized") {
+            return Some(format!(
+                "Command not found: '{}'. Please ensure the required tool is installed.",
+                command
+            ));
+        }
+        
+        None
+    }
+
+    /// Recovery strategies for file write errors
+    fn recover_write_file_error(&self, input: &serde_json::Value, error: &str) -> Option<String> {
+        let path = input.get("path")?.as_str()?;
+        
+        // Handle directory doesn't exist error
+        if error.contains("No such file or directory") || error.contains("cannot find the path") {
+            if let Some(parent) = std::path::Path::new(path).parent() {
+                if !parent.exists() {
+                    return Some(format!(
+                        "Directory '{}' does not exist. Please create the directory first using mkdir or the shell tool.",
+                        parent.display()
+                    ));
+                }
+            }
+        }
+        
+        // Handle permission errors
+        if error.contains("Permission denied") {
+            return Some(format!(
+                "Permission denied writing to '{}'. Check file permissions or try a different location.",
+                path
+            ));
+        }
+        
+        None
+    }
+
+    /// Recovery strategies for file read errors
+    fn recover_read_file_error(&self, input: &serde_json::Value, error: &str) -> Option<String> {
+        let path = input.get("path")?.as_str()?;
+        
+        // Handle file not found error with helpful suggestions
+        if error.contains("No such file or directory") || error.contains("cannot find the path") {
+            return Some(format!(
+                "File '{}' not found. Use the 'list_files' tool to explore the directory structure, or check if the file path is correct.",
+                path
+            ));
+        }
+        
+        // Handle permission errors
+        if error.contains("Permission denied") {
+            return Some(format!(
+                "Permission denied reading '{}'. Check file permissions.",
+                path
+            ));
+        }
+        
+        None
+    }
+
+    /// Extract repository name from git clone command
+    fn extract_repo_name_from_clone_command(&self, command: &str) -> Option<String> {
+        // Handle various git clone formats
+        let parts: Vec<&str> = command.split_whitespace().collect();
+        
+        for (i, part) in parts.iter().enumerate() {
+            if part == &"clone" && i + 1 < parts.len() {
+                let repo_url = parts[i + 1];
+                
+                // Extract repo name from URL (e.g., "https://github.com/user/repo.git" -> "repo")
+                if let Some(last_part) = repo_url.split('/').last() {
+                    let repo_name = last_part.trim_end_matches(".git");
+                    return Some(repo_name.to_string());
+                }
+            }
+        }
+        
+        None
     }
 }
