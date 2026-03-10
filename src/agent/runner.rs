@@ -788,59 +788,37 @@ impl AgentRunner {
         prompt
     }
 
-    /// Validate the initial environment and gather context information
+    /// Validate the initial environment and gather context information.
+    /// Uses minimal subprocess calls to keep startup fast.
     fn validate_initial_environment(&self) -> String {
         let mut env_info = Vec::new();
-        
-        // Check if we're in a git repository
+
+        // Single git status call with branch info (porcelain v2 gives branch + status)
         if let Ok(output) = std::process::Command::new("git")
-            .args(&["rev-parse", "--is-inside-work-tree"])
+            .args(&["status", "-b", "--porcelain=v2"])
             .current_dir(&self.config.workdir)
             .output()
         {
             if output.status.success() {
-                // We're in a git repository, get more info
-                if let Ok(remote_output) = std::process::Command::new("git")
-                    .args(&["remote", "-v"])
-                    .current_dir(&self.config.workdir)
-                    .output()
-                {
-                    if let Ok(remote_info) = String::from_utf8(remote_output.stdout) {
-                        if !remote_info.trim().is_empty() {
-                            env_info.push(format!("Git repository detected with remotes:\n{}", remote_info.trim()));
-                        } else {
-                            env_info.push("Git repository detected (no remotes configured)".to_string());
+                if let Ok(status_str) = String::from_utf8(output.stdout) {
+                    let mut branch = String::new();
+                    let mut modified = 0usize;
+
+                    for line in status_str.lines() {
+                        if line.starts_with("# branch.head ") {
+                            branch = line.trim_start_matches("# branch.head ").to_string();
+                        } else if line.starts_with("1 ") || line.starts_with("2 ") || line.starts_with("? ") {
+                            modified += 1;
                         }
                     }
-                }
-                
-                // Get current branch
-                if let Ok(branch_output) = std::process::Command::new("git")
-                    .args(&["branch", "--show-current"])
-                    .current_dir(&self.config.workdir)
-                    .output()
-                {
-                    if let Ok(branch_name) = String::from_utf8(branch_output.stdout) {
-                        let branch_name = branch_name.trim();
-                        if !branch_name.is_empty() {
-                            env_info.push(format!("Current branch: {}", branch_name));
-                        }
+
+                    if !branch.is_empty() {
+                        env_info.push(format!("Git branch: {}", branch));
                     }
-                }
-                
-                // Check git status
-                if let Ok(status_output) = std::process::Command::new("git")
-                    .args(&["status", "--porcelain"])
-                    .current_dir(&self.config.workdir)
-                    .output()
-                {
-                    if let Ok(status_info) = String::from_utf8(status_output.stdout) {
-                        if status_info.trim().is_empty() {
-                            env_info.push("Working directory is clean".to_string());
-                        } else {
-                            let modified_files = status_info.lines().count();
-                            env_info.push(format!("Working directory has {} modified/untracked files", modified_files));
-                        }
+                    if modified > 0 {
+                        env_info.push(format!("{} modified/untracked files", modified));
+                    } else {
+                        env_info.push("Working directory is clean".to_string());
                     }
                 }
             }

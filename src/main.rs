@@ -87,7 +87,7 @@ async fn run_oneshot(cli: &Cli, prompt: String) {
         workdir: cli.workdir.clone(),
         max_iterations: cli.max_iterations,
         verbose: cli.verbose,
-        streaming: false,
+        streaming: true,
     };
 
     if cli.verbose {
