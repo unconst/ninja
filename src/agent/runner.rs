@@ -670,30 +670,80 @@ impl AgentRunner {
                 eprintln!("  {} {}", "▶".cyan(), tool_descs.join(" | "));
 
                 let parallel_start = Instant::now();
-                let mut handles = Vec::new();
-                for tc in &response.tool_calls {
-                    let name = tc.name.clone();
-                    let input = tc.input.clone();
-                    let workdir = self.config.workdir.clone();
-                    handles.push(tokio::task::spawn_blocking(move || {
-                        let start = Instant::now();
-                        let result = tools::execute_tool(&name, &input, &workdir);
-                        let duration = start.elapsed();
-                        (name, result, duration)
-                    }));
+
+                // Pre-resolve: handle MCP tools and git clone interception before spawning
+                // Each entry: (index, Option<pre-resolved result>)
+                let mut pre_resolved: Vec<Option<Result<String, String>>> = vec![None; response.tool_calls.len()];
+                for (i, tc) in response.tool_calls.iter().enumerate() {
+                    // Git clone interception
+                    if tc.name == "shell_exec" {
+                        if let Some(command) = tc.input.get("command").and_then(|c| c.as_str()) {
+                            if command.starts_with("git clone") {
+                                if let Some(recovery_result) = self.check_git_clone_necessity(command) {
+                                    pre_resolved[i] = Some(Ok(recovery_result));
+                                }
+                            }
+                        }
+                    }
+                    // MCP tool routing (MCP connections are not Send, must run on main)
+                    if self.mcp_manager.is_mcp_tool(&tc.name) {
+                        pre_resolved[i] = Some(self.mcp_manager.execute_tool(&tc.name, &tc.input));
+                    }
                 }
 
-                let results = join_all(handles).await;
+                let mut handles: Vec<Option<tokio::task::JoinHandle<(String, Result<String, String>, std::time::Duration)>>> = Vec::new();
+                for (i, tc) in response.tool_calls.iter().enumerate() {
+                    if pre_resolved[i].is_some() {
+                        handles.push(None); // Already resolved
+                    } else {
+                        let name = tc.name.clone();
+                        let input = tc.input.clone();
+                        let workdir = self.config.workdir.clone();
+                        handles.push(Some(tokio::task::spawn_blocking(move || {
+                            let start = Instant::now();
+                            let result = tools::execute_tool(&name, &input, &workdir);
+                            let duration = start.elapsed();
+                            (name, result, duration)
+                        })));
+                    }
+                }
 
-                for (i, join_result) in results.into_iter().enumerate() {
+                // Collect results from both pre-resolved and spawned tasks
+                for (i, handle_opt) in handles.into_iter().enumerate() {
                     let tc = &response.tool_calls[i];
-                    let (_tool_name, result, tool_duration) = join_result.unwrap_or_else(|e| {
-                        (tc.name.clone(), Err(format!("Task panicked: {}", e)), std::time::Duration::ZERO)
-                    });
-                    let (output, is_error) = match result {
-                        Ok(o) => (o, false),
-                        Err(e) => (e, true),
+                    let (result, tool_duration) = if let Some(pre) = pre_resolved[i].take() {
+                        (pre, std::time::Duration::ZERO)
+                    } else if let Some(handle) = handle_opt {
+                        match handle.await {
+                            Ok((_name, result, dur)) => (result, dur),
+                            Err(e) => (Err(format!("Task panicked: {}", e)), std::time::Duration::ZERO),
+                        }
+                    } else {
+                        (Err("Internal error: no handle or pre-resolved result".to_string()), std::time::Duration::ZERO)
                     };
+
+                    // Post-process: edit validation and error recovery
+                    let (output, is_error) = match result {
+                        Ok(output) => {
+                            if tc.name == "edit_file" {
+                                if let Some(validated) = self.validate_file_edit(&tc.input, &output) {
+                                    (validated, false)
+                                } else {
+                                    (output, false)
+                                }
+                            } else {
+                                (output, false)
+                            }
+                        }
+                        Err(error) => {
+                            if let Some(recovered) = self.try_recover_from_error(&tc.name, &tc.input, &error) {
+                                (recovered, false)
+                            } else {
+                                (error, true)
+                            }
+                        }
+                    };
+
                     rollout.log_tool_result(&tc.name, &output, tool_duration);
 
                     if is_error {
