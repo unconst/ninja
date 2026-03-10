@@ -52,19 +52,30 @@ impl AgentRunner {
              ## Strategy\n\
              1. EXPLORE FIRST: Before making any changes, use grep_search and read_file to understand \
                 the codebase structure and the specific files involved.\n\
-             2. PLAN: Identify all files that need changes. For multi-file tasks, list them all before editing.\n\
+             2. ENUMERATE ALL DELIVERABLES: Before editing anything, write out the COMPLETE list of files \
+                that need changes. Include:\n\
+                - Source code files (the actual bug fix / feature)\n\
+                - Documentation files (changelogs, what's-new, rst/md docs)\n\
+                - Configuration files if affected\n\
+                Look at the hints and test patch for clues about ALL required files.\n\
              3. EDIT CAREFULLY: Always read a file before editing it. For edit_file, include enough \
                 surrounding context in old_string to make it unique. If you get a 'found N times' error, \
                 look at the context shown and include more surrounding lines.\n\
-             4. VERIFY: After making changes, read the file back to confirm your edits applied correctly. \
-                For code changes, run relevant tests with shell_exec.\n\
-             5. COMPLETE ALL CHANGES: Don't stop after modifying one file if the task requires changes \
-                to multiple files. Track which files still need modification.\n\n\
+             4. VERIFY: After making changes, read the file back to confirm your edits applied correctly.\n\
+             5. COMPLETE ALL CHANGES: Work through your deliverables list systematically. Don't stop \
+                after modifying one file. After finishing all changes, review your list and confirm \
+                every file has been addressed.\n\
+             6. FINAL CHECKLIST: Before declaring done, verify:\n\
+                - All files from your deliverables list have been modified/created\n\
+                - Each edit was applied correctly (read back the file)\n\
+                - You haven't missed any documentation or changelog files\n\n\
              ## Rules\n\
              - Be precise and minimal in changes — don't over-engineer\n\
              - When editing, prefer small targeted edits over rewriting entire files\n\
              - If a test patch is provided, apply it first, then make source changes to pass the tests\n\
-             - When you're done, briefly summarize what you changed",
+             - If you can't run tests due to missing dependencies, don't waste iterations retrying. \
+               Proceed with confidence based on code analysis.\n\
+             - When done, list every file you changed and briefly summarize each change",
             self.config.workdir.display(),
             env_info
         );
@@ -81,6 +92,28 @@ impl AgentRunner {
 
             if self.config.verbose {
                 eprintln!("[iteration {}]", iteration + 1);
+            }
+
+            // Inject urgency reminder when nearing iteration limit
+            let remaining = self.config.max_iterations - iteration;
+            if remaining == 10 {
+                messages.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(
+                        "[SYSTEM] You have 10 iterations remaining. Review your deliverables checklist — \
+                         make sure all required files have been modified/created. Focus on completing \
+                         any remaining changes now. Don't waste iterations on testing if dependencies \
+                         are missing.".to_string()
+                    ),
+                });
+            } else if remaining == 3 {
+                messages.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(
+                        "[SYSTEM] Only 3 iterations left! Wrap up immediately. If any files from your \
+                         plan are still unmodified, make those changes now. Summarize what you've done.".to_string()
+                    ),
+                });
             }
 
             // Call model API with retry on transient errors
