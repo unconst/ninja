@@ -1,3 +1,4 @@
+use colored::Colorize;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -151,9 +152,13 @@ impl AgentRunner {
                 content: MessageContent::Blocks(assistant_blocks),
             });
 
-            // Execute tools
+            // Execute tools with activity display
             let mut result_blocks = Vec::new();
             for tc in &response.tool_calls {
+                // Show tool activity
+                let tool_desc = self.format_tool_description(&tc.name, &tc.input);
+                eprintln!("  {} {}", "▶".cyan(), tool_desc);
+
                 rollout.log_tool_call(&tc.name, &tc.input.to_string());
                 let tool_start = Instant::now();
                 let result = self.execute_tool_with_recovery(&tc.name, &tc.input);
@@ -163,6 +168,19 @@ impl AgentRunner {
                     Err(e) => (e, true),
                 };
                 rollout.log_tool_result(&tc.name, &output, tool_duration);
+
+                // Show result summary
+                if is_error {
+                    let preview = &output[..output.len().min(100)];
+                    eprintln!("    {} {} ({:.1}s)", "✗".red(), preview, tool_duration.as_secs_f64());
+                } else if self.config.verbose {
+                    let preview = &output[..output.len().min(150)];
+                    eprintln!("    {} ({:.1}s)", preview.dimmed(), tool_duration.as_secs_f64());
+                } else {
+                    let summary = self.summarize_tool_result(&tc.name, &output);
+                    eprintln!("    {} {}", "✓".green(), summary.dimmed());
+                }
+
                 let truncated = if output.len() > 15000 {
                     let mut t = output[..15000].to_string();
                     t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
@@ -868,6 +886,91 @@ impl AgentRunner {
         }
 
         compacted
+    }
+
+    /// Format a human-readable description of a tool call.
+    fn format_tool_description(&self, tool_name: &str, input: &serde_json::Value) -> String {
+        match tool_name {
+            "read_file" => {
+                let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("?");
+                let short = path.rsplit('/').next().unwrap_or(path);
+                format!("Read {}", short)
+            }
+            "write_file" => {
+                let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("?");
+                let short = path.rsplit('/').next().unwrap_or(path);
+                format!("Write {}", short)
+            }
+            "edit_file" => {
+                let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("?");
+                let short = path.rsplit('/').next().unwrap_or(path);
+                format!("Edit {}", short)
+            }
+            "list_dir" => {
+                let path = input.get("path").and_then(|v| v.as_str()).unwrap_or(".");
+                format!("List {}", path)
+            }
+            "shell_exec" => {
+                let cmd = input.get("command").and_then(|v| v.as_str()).unwrap_or("?");
+                let preview = if cmd.len() > 60 { &cmd[..60] } else { cmd };
+                format!("Shell: {}", preview)
+            }
+            "glob_search" => {
+                let pattern = input.get("pattern").and_then(|v| v.as_str()).unwrap_or("?");
+                format!("Glob {}", pattern)
+            }
+            "grep_search" => {
+                let pattern = input.get("pattern").and_then(|v| v.as_str()).unwrap_or("?");
+                format!("Grep '{}'", pattern)
+            }
+            _ => format!("{}", tool_name),
+        }
+    }
+
+    /// Create a brief summary of a tool result for display.
+    fn summarize_tool_result(&self, tool_name: &str, output: &str) -> String {
+        match tool_name {
+            "read_file" => {
+                let lines = output.lines().count();
+                format!("{} lines", lines)
+            }
+            "write_file" => {
+                if output.contains("bytes") {
+                    output.to_string()
+                } else {
+                    "written".to_string()
+                }
+            }
+            "edit_file" => {
+                if output.contains("successfully") {
+                    "applied".to_string()
+                } else {
+                    let preview = &output[..output.len().min(60)];
+                    preview.to_string()
+                }
+            }
+            "list_dir" => {
+                let entries = output.lines().count();
+                format!("{} entries", entries)
+            }
+            "shell_exec" => {
+                let lines = output.lines().count();
+                if lines <= 1 {
+                    let preview = &output[..output.len().min(80)];
+                    preview.trim().to_string()
+                } else {
+                    format!("{} lines of output", lines)
+                }
+            }
+            "glob_search" | "grep_search" => {
+                let matches = output.lines().count();
+                format!("{} matches", matches)
+            }
+            _ => {
+                let preview = &output[..output.len().min(60)];
+                preview.to_string()
+            }
+        }
     }
 
     /// Extract repository name from git clone command
