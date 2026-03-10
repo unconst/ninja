@@ -11,6 +11,19 @@ use crate::tools;
 /// Claude's context is ~200K tokens; compact at ~100K to leave room.
 const COMPACTION_TOKEN_THRESHOLD: u64 = 100_000;
 
+/// Safely truncate a string at a char boundary, never panicking on multi-byte chars.
+fn safe_truncate(s: &str, max_bytes: usize) -> &str {
+    if s.len() <= max_bytes {
+        return s;
+    }
+    // Walk backward from max_bytes to find a char boundary
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}
+
 /// Configuration for the agent runner.
 pub struct AgentConfig {
     pub model: String,
@@ -271,7 +284,7 @@ impl AgentRunner {
                     rollout.log_tool_result(&tool_name, &output, tool_duration);
 
                     if is_error {
-                        let preview = &output[..output.len().min(100)];
+                        let preview = safe_truncate(&output, 100);
                         eprintln!("    {} {} ({:.1}s)", "✗".red(), preview, tool_duration.as_secs_f64());
                     } else {
                         let summary = self.summarize_tool_result(&tool_name, &output);
@@ -279,7 +292,7 @@ impl AgentRunner {
                     }
 
                     let truncated = if output.len() > 15000 {
-                        let mut t = output[..15000].to_string();
+                        let mut t = safe_truncate(&output, 15000).to_string();
                         t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
                         t
                     } else { output };
@@ -311,7 +324,7 @@ impl AgentRunner {
                     rollout.log_tool_result(&tc.name, &output, tool_duration);
 
                     if is_error {
-                        let preview = &output[..output.len().min(100)];
+                        let preview = safe_truncate(&output, 100);
                         eprintln!("    {} {} ({:.1}s)", "✗".red(), preview, tool_duration.as_secs_f64());
                     } else if self.config.verbose {
                         let preview = &output[..output.len().min(150)];
@@ -322,7 +335,7 @@ impl AgentRunner {
                     }
 
                     let truncated = if output.len() > 15000 {
-                        let mut t = output[..15000].to_string();
+                        let mut t = safe_truncate(&output, 15000).to_string();
                         t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
                         t
                     } else { output };
@@ -536,13 +549,13 @@ impl AgentRunner {
                 rollout.log_tool_result(&tc.name, &output, tool_duration);
 
                 if self.config.verbose {
-                    let preview = &output[..output.len().min(200)];
+                    let preview = safe_truncate(&output, 200);
                     eprintln!("  result: {}{}", preview, if output.len() > 200 { "..." } else { "" });
                 }
 
                 // Truncate very long tool outputs to manage context window
                 let truncated_output = if output.len() > 15000 {
-                    let mut t = output[..15000].to_string();
+                    let mut t = safe_truncate(&output, 15000).to_string();
                     t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
                     t
                 } else {
@@ -632,7 +645,7 @@ impl AgentRunner {
             if config_path.exists() {
                 if let Ok(content) = std::fs::read_to_string(&config_path) {
                     let truncated = if content.len() > 5000 {
-                        format!("{}...\n(truncated)", &content[..5000])
+                        format!("{}...\n(truncated)", safe_truncate(&content, 5000))
                     } else {
                         content
                     };
@@ -795,7 +808,7 @@ impl AgentRunner {
                 } else {
                     // Content doesn't match - there might be an issue
                     let content_preview = if actual_content.len() > 500 {
-                        format!("{}...", &actual_content[..500])
+                        format!("{}...", safe_truncate(&actual_content, 500))
                     } else {
                         actual_content.clone()
                     };
@@ -1043,7 +1056,7 @@ impl AgentRunner {
             match &msg.content {
                 MessageContent::Text(text) => {
                     if msg.role == "assistant" {
-                        let preview = if text.len() > 200 { &text[..200] } else { text.as_str() };
+                        let preview = safe_truncate(text.as_str(), 200);
                         summary_parts.push(format!("- Assistant thought: {}", preview));
                     }
                     // Skip system injection messages in summary
@@ -1054,7 +1067,7 @@ impl AgentRunner {
                             ContentBlock::ToolUse { name, input, .. } => {
                                 let args_preview = input.to_string();
                                 let args_short = if args_preview.len() > 100 {
-                                    format!("{}...", &args_preview[..100])
+                                    format!("{}...", safe_truncate(&args_preview, 100))
                                 } else {
                                     args_preview
                                 };
@@ -1062,11 +1075,11 @@ impl AgentRunner {
                             }
                             ContentBlock::ToolResult { content, is_error, .. } => {
                                 let status = if *is_error == Some(true) { "ERROR" } else { "OK" };
-                                let preview = if content.len() > 150 { &content[..150] } else { content.as_str() };
+                                let preview = safe_truncate(content.as_str(), 150);
                                 summary_parts.push(format!("  Result ({}): {}", status, preview));
                             }
                             ContentBlock::Text { text } => {
-                                let preview = if text.len() > 200 { &text[..200] } else { text.as_str() };
+                                let preview = safe_truncate(text.as_str(), 200);
                                 summary_parts.push(format!("- {}", preview));
                             }
                         }
@@ -1121,7 +1134,7 @@ impl AgentRunner {
             }
             "shell_exec" => {
                 let cmd = input.get("command").and_then(|v| v.as_str()).unwrap_or("?");
-                let preview = if cmd.len() > 60 { &cmd[..60] } else { cmd };
+                let preview = safe_truncate(cmd, 60);
                 format!("Shell: {}", preview)
             }
             "glob_search" => {
@@ -1134,12 +1147,12 @@ impl AgentRunner {
             }
             "web_fetch" => {
                 let url = input.get("url").and_then(|v| v.as_str()).unwrap_or("?");
-                let short = if url.len() > 50 { &url[..50] } else { url };
+                let short = safe_truncate(url, 50);
                 format!("Fetch {}", short)
             }
             "web_search" => {
                 let query = input.get("query").and_then(|v| v.as_str()).unwrap_or("?");
-                let short = if query.len() > 50 { &query[..50] } else { query };
+                let short = safe_truncate(query, 50);
                 format!("Search '{}'", short)
             }
             "find_definition" => {
@@ -1152,7 +1165,7 @@ impl AgentRunner {
             }
             "run_tests" => {
                 if let Some(cmd) = input.get("command").and_then(|v| v.as_str()) {
-                    let short = if cmd.len() > 40 { &cmd[..40] } else { cmd };
+                    let short = safe_truncate(cmd, 40);
                     format!("Test: {}", short)
                 } else {
                     "Run tests".to_string()
@@ -1160,7 +1173,7 @@ impl AgentRunner {
             }
             "spawn_agent" => {
                 let prompt = input.get("prompt").and_then(|v| v.as_str()).unwrap_or("?");
-                let short = if prompt.len() > 40 { &prompt[..40] } else { prompt };
+                let short = safe_truncate(prompt, 40);
                 format!("Agent: {}", short)
             }
             "todo_write" => "Update todo list".to_string(),
