@@ -429,6 +429,17 @@ impl AgentRunner {
                          are missing.".to_string()
                     ),
                 });
+            } else if remaining == 5 {
+                messages.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(
+                        "[SYSTEM] FILE CHECK — 5 iterations left. Run `git diff --stat` NOW to see which files \
+                         you've modified. Compare against the REQUIRED FILES list from the task. If ANY required \
+                         file is missing from your diff, modify it NOW. Common misses: config files (pyproject.toml, \
+                         setup.cfg), type stubs (.pyi), documentation files (.rst, .md), and changelog files. \
+                         Do NOT stop until every required file appears in git diff.".to_string()
+                    ),
+                });
             } else if remaining == 3 {
                 messages.push(Message {
                     role: "user".to_string(),
