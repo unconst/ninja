@@ -101,6 +101,45 @@ fn resolve_path(path_str: &str, workdir: &Path) -> PathBuf {
     }
 }
 
+/// Acquire an advisory file lock for exclusive write access.
+/// Uses a .lock file adjacent to the target. Returns the lock file handle
+/// (lock is released when the handle is dropped).
+fn acquire_file_lock(path: &Path) -> Result<fs::File, String> {
+    use std::os::unix::io::AsRawFd;
+
+    let lock_path = path.with_extension(
+        format!(
+            "{}.lock",
+            path.extension()
+                .map(|e| e.to_string_lossy().to_string())
+                .unwrap_or_default()
+        ),
+    );
+
+    // Create parent dir for lock file if needed
+    if let Some(parent) = lock_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+
+    let lock_file = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(false)
+        .open(&lock_path)
+        .map_err(|e| format!("Failed to create lock file: {}", e))?;
+
+    // LOCK_EX — exclusive lock, blocking
+    let ret = unsafe { libc::flock(lock_file.as_raw_fd(), libc::LOCK_EX) };
+    if ret != 0 {
+        return Err(format!(
+            "Failed to acquire lock on {}",
+            lock_path.display()
+        ));
+    }
+
+    Ok(lock_file)
+}
+
 pub fn read_file(args: &Value, workdir: &Path) -> Result<String, String> {
     let path_str = args["path"].as_str().ok_or("Missing 'path' argument")?;
     let path = resolve_path(path_str, workdir);
@@ -135,18 +174,32 @@ pub fn write_file(args: &Value, workdir: &Path) -> Result<String, String> {
             .map_err(|e| format!("Failed to create directory: {}", e))?;
     }
 
+    // Lock file for exclusive access
+    let _lock = acquire_file_lock(&path)?;
+
     fs::write(&path, content)
         .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
 
-    Ok(format!("File written: {} ({} bytes)", path.display(), content.len()))
+    Ok(format!(
+        "File written: {} ({} bytes)",
+        path.display(),
+        content.len()
+    ))
 }
 
 pub fn edit_file(args: &Value, workdir: &Path) -> Result<String, String> {
     let path_str = args["path"].as_str().ok_or("Missing 'path' argument")?;
-    let old_string = args["old_string"].as_str().ok_or("Missing 'old_string' argument")?;
-    let new_string = args["new_string"].as_str().ok_or("Missing 'new_string' argument")?;
+    let old_string = args["old_string"]
+        .as_str()
+        .ok_or("Missing 'old_string' argument")?;
+    let new_string = args["new_string"]
+        .as_str()
+        .ok_or("Missing 'new_string' argument")?;
     let replace_all = args["replace_all"].as_bool().unwrap_or(false);
     let path = resolve_path(path_str, workdir);
+
+    // Lock file for exclusive access (read-modify-write atomically)
+    let _lock = acquire_file_lock(&path)?;
 
     let content = fs::read_to_string(&path)
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
@@ -168,10 +221,17 @@ pub fn edit_file(args: &Value, workdir: &Path) -> Result<String, String> {
         let hint = if similar.is_empty() {
             String::new()
         } else {
-            let lines: Vec<String> = similar.iter().map(|(n, l)| format!("  L{}: {}", n + 1, l)).collect();
+            let lines: Vec<String> = similar
+                .iter()
+                .map(|(n, l)| format!("  L{}: {}", n + 1, l))
+                .collect();
             format!("\nSimilar lines found:\n{}", lines.join("\n"))
         };
-        return Err(format!("String not found in {}.{}", path.display(), hint));
+        return Err(format!(
+            "String not found in {}.{}",
+            path.display(),
+            hint
+        ));
     }
     if count > 1 && !replace_all {
         // Show context around each match to help craft unique edits
@@ -189,7 +249,9 @@ pub fn edit_file(args: &Value, workdir: &Path) -> Result<String, String> {
         }
         return Err(format!(
             "String found {} times in {}. Include more surrounding context, or set replace_all to true.{}",
-            count, path.display(), ctx
+            count,
+            path.display(),
+            ctx
         ));
     }
 
@@ -201,7 +263,12 @@ pub fn edit_file(args: &Value, workdir: &Path) -> Result<String, String> {
     fs::write(&path, &new_content)
         .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
 
-    Ok(format!("File edited: {} ({} replacement{})", path.display(), count, if count > 1 { "s" } else { "" }))
+    Ok(format!(
+        "File edited: {} ({} replacement{})",
+        path.display(),
+        count,
+        if count > 1 { "s" } else { "" }
+    ))
 }
 
 pub fn list_dir(args: &Value, workdir: &Path) -> Result<String, String> {
