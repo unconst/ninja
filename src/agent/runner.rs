@@ -57,6 +57,17 @@ impl AgentRunner {
         self.system_prompt = None;
     }
 
+    /// Manually compact the conversation (used by /compact in REPL mode).
+    /// Returns the number of messages before and after compaction.
+    pub fn compact(&mut self) -> (usize, usize) {
+        let before = self.conversation.len();
+        if before > 6 {
+            self.conversation = self.compact_messages(&self.conversation);
+        }
+        let after = self.conversation.len();
+        (before, after)
+    }
+
     /// Select the appropriate model for the current iteration based on routing strategy.
     /// Returns true if the model was changed.
     fn route_model(&mut self) -> bool {
@@ -539,7 +550,8 @@ impl AgentRunner {
              - web_fetch: Fetch content from a URL (documentation, issues, etc.)\n\
              - find_definition: Find where a symbol is defined (function, class, etc.)\n\
              - find_references: Find all references to a symbol\n\
-             - run_tests: Run project tests (auto-detects framework, or provide custom command)\n\n\
+             - run_tests: Run project tests (auto-detects framework, or provide custom command)\n\
+             - spawn_agent: Launch a sub-agent for independent parallel tasks\n\n\
              ## Strategy\n\
              1. EXPLORE FIRST: Before making any changes, use grep_search and read_file to understand \
                 the codebase structure and the specific files involved.\n\
@@ -1098,6 +1110,11 @@ impl AgentRunner {
                     "Run tests".to_string()
                 }
             }
+            "spawn_agent" => {
+                let prompt = input.get("prompt").and_then(|v| v.as_str()).unwrap_or("?");
+                let short = if prompt.len() > 40 { &prompt[..40] } else { prompt };
+                format!("Agent: {}", short)
+            }
             _ => format!("{}", tool_name),
         }
     }
@@ -1161,6 +1178,10 @@ impl AgentRunner {
                 } else {
                     "tests completed".to_string()
                 }
+            }
+            "spawn_agent" => {
+                let lines = output.lines().count();
+                format!("sub-agent returned {} lines", lines)
             }
             _ => {
                 let preview = &output[..output.len().min(60)];

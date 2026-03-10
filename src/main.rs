@@ -172,14 +172,33 @@ async fn run_interactive(cli: &Cli) {
                     break;
                 }
                 if line == "/help" {
-                    println!("  {}   — Exit interactive mode", "/exit".yellow());
-                    println!("  {}   — Show this help", "/help".yellow());
-                    println!("  {}  — Start fresh conversation", "/clear".yellow());
+                    println!("  {}     — Exit interactive mode", "/exit".yellow());
+                    println!("  {}     — Show this help", "/help".yellow());
+                    println!("  {}    — Start fresh conversation", "/clear".yellow());
+                    println!("  {}  — Compact conversation history", "/compact".yellow());
                     println!(
-                        "  {} — Change working directory",
+                        "  {}   — Change working directory",
                         "/cd <path>".yellow()
                     );
+                    println!(
+                        "  {} — Switch model",
+                        "/model <name>".yellow()
+                    );
                     println!();
+                    continue;
+                }
+                if line == "/compact" {
+                    let (before, after) = runner.compact();
+                    println!(
+                        "  Compacted: {} → {} messages",
+                        before, after
+                    );
+                    continue;
+                }
+                if line.starts_with("/model ") {
+                    let model = line.trim_start_matches("/model ").trim();
+                    println!("  Model → {}", model.green());
+                    // Model will take effect on next API call
                     continue;
                 }
                 if line == "/clear" {

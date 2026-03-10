@@ -4,6 +4,7 @@ mod search;
 mod web;
 mod navigate;
 mod testing;
+mod subagent;
 
 use serde_json::Value;
 use std::path::Path;
@@ -19,6 +20,7 @@ pub fn get_tool_definitions() -> Vec<ToolDef> {
     tools.extend(web::definitions());
     tools.extend(navigate::definitions());
     tools.extend(testing::definitions());
+    tools.extend(subagent::definitions());
     tools
 }
 
@@ -36,6 +38,7 @@ pub fn execute_tool(name: &str, args: &Value, workdir: &Path) -> Result<String, 
         "find_definition" => navigate::find_definition(args, workdir),
         "find_references" => navigate::find_references(args, workdir),
         "run_tests" => testing::run_tests(args, workdir),
+        "spawn_agent" => subagent::spawn_agent(args, workdir),
         _ => Err(format!("Unknown tool: {}", name)),
     }
 }
