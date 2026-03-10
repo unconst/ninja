@@ -817,14 +817,16 @@ impl AgentRunner {
              ## Strategy — STRICT ITERATION BUDGET\n\
              You have a limited number of iterations. Follow this phased approach:\n\n\
              **Phase 1: EXPLORE (iterations 1-5 MAX)**\n\
-             - Read the problem statement and any test/solution patches carefully\n\
-             - Use grep_search to locate relevant files — read them in FULL (don't use small offset/limit)\n\
+             - Read the problem statement carefully. If REQUIRED FILES are listed, read ALL of them \
+               right away (call read_file on each one in your first response — they execute concurrently!)\n\
+             - Use grep_search to locate additional relevant files — read them in FULL\n\
              - By iteration 3, you MUST have a written plan: list EVERY file that needs changes\n\
              - Do NOT spend more than 5 iterations exploring. If unsure, start implementing.\n\n\
              **Phase 2: IMPLEMENT (iterations 6-35)**\n\
-             - Work through your file list systematically, editing one file at a time\n\
+             - Work through the REQUIRED FILES list systematically — do not skip ANY file\n\
              - Always read a file before editing it\n\
              - For edit_file, include enough surrounding context in old_string to make it unique\n\
+             - For large edits (>20 lines), prefer replace_lines over edit_file\n\
              - After each edit, read back the file to confirm it applied correctly\n\
              - Consider backward compatibility and edge cases (try/except for version differences, etc.)\n\
              - Create ALL required files: source code, docs, changelogs, type stubs (.pyi), config\n\
