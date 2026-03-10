@@ -153,13 +153,39 @@ pub fn edit_file(args: &Value, workdir: &Path) -> Result<String, String> {
 
     let count = content.matches(old_string).count();
     if count == 0 {
-        return Err(format!("String not found in {}", path.display()));
+        // Show nearby lines to help the agent find the right string
+        let first_line = old_string.lines().next().unwrap_or(old_string);
+        let similar: Vec<(usize, &str)> = content
+            .lines()
+            .enumerate()
+            .filter(|(_, line)| {
+                let trimmed = first_line.trim();
+                !trimmed.is_empty() && line.contains(trimmed)
+            })
+            .take(5)
+            .collect();
+
+        let hint = if similar.is_empty() {
+            String::new()
+        } else {
+            let lines: Vec<String> = similar.iter().map(|(n, l)| format!("  L{}: {}", n + 1, l)).collect();
+            format!("\nSimilar lines found:\n{}", lines.join("\n"))
+        };
+        return Err(format!("String not found in {}.{}", path.display(), hint));
     }
     if count > 1 && !replace_all {
+        // Show line numbers of each occurrence
+        let mut locations = Vec::new();
+        let _offset = 0;
+        for (i, _) in content.match_indices(old_string).take(5) {
+            let line_num = content[..i].matches('\n').count() + 1;
+            locations.push(format!("L{}", line_num));
+        }
         return Err(format!(
-            "String found {} times in {}. Provide more context to make it unique, or set replace_all to true.",
+            "String found {} times in {} at {}. Include more surrounding context to make it unique, or set replace_all to true.",
             count,
-            path.display()
+            path.display(),
+            locations.join(", ")
         ));
     }
 
