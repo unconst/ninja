@@ -478,7 +478,8 @@ impl AgentRunner {
              - grep_search: Search file contents with regex\n\
              - web_fetch: Fetch content from a URL (documentation, issues, etc.)\n\
              - find_definition: Find where a symbol is defined (function, class, etc.)\n\
-             - find_references: Find all references to a symbol\n\n\
+             - find_references: Find all references to a symbol\n\
+             - run_tests: Run project tests (auto-detects framework, or provide custom command)\n\n\
              ## Strategy\n\
              1. EXPLORE FIRST: Before making any changes, use grep_search and read_file to understand \
                 the codebase structure and the specific files involved.\n\
@@ -1008,6 +1009,14 @@ impl AgentRunner {
                 let symbol = input.get("symbol").and_then(|v| v.as_str()).unwrap_or("?");
                 format!("Find refs '{}'", symbol)
             }
+            "run_tests" => {
+                if let Some(cmd) = input.get("command").and_then(|v| v.as_str()) {
+                    let short = if cmd.len() > 40 { &cmd[..40] } else { cmd };
+                    format!("Test: {}", short)
+                } else {
+                    "Run tests".to_string()
+                }
+            }
             _ => format!("{}", tool_name),
         }
     }
@@ -1061,6 +1070,15 @@ impl AgentRunner {
                     output.trim().to_string()
                 } else {
                     format!("{} results", count)
+                }
+            }
+            "run_tests" => {
+                if output.contains("PASSED") {
+                    "tests passed".to_string()
+                } else if output.contains("FAILED") {
+                    "tests failed".to_string()
+                } else {
+                    "tests completed".to_string()
                 }
             }
             _ => {
