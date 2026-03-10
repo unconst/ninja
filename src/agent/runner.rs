@@ -380,13 +380,31 @@ impl AgentRunner {
                 eprintln!("[iteration {}]", iteration + 1);
             }
 
-            // Inject urgency reminder when nearing iteration limit
+            // Inject phase transition and urgency reminders
             let remaining = self.config.max_iterations - iteration;
-            if remaining == 10 {
+            if iteration == 5 {
                 messages.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(
-                        "[SYSTEM] You have 10 iterations remaining. Review your deliverables checklist — \
+                        "[SYSTEM] PHASE CHECK — Iteration 5 reached. You should be DONE exploring by now. \
+                         If you haven't started editing files, START NOW. State your plan briefly, then \
+                         begin implementing. Every iteration spent reading without editing is wasted.".to_string()
+                    ),
+                });
+            } else if iteration == 15 {
+                messages.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(
+                        "[SYSTEM] MID-RUN CHECK — Iteration 15. How many files from your plan have you \
+                         actually modified? If less than half, pick up the pace. Focus on the remaining \
+                         files.".to_string()
+                    ),
+                });
+            } else if remaining == 10 {
+                messages.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(
+                        "[SYSTEM] URGENT — 10 iterations remaining. Review your deliverables checklist — \
                          make sure all required files have been modified/created. Focus on completing \
                          any remaining changes now. Don't waste iterations on testing if dependencies \
                          are missing.".to_string()
@@ -396,7 +414,7 @@ impl AgentRunner {
                 messages.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(
-                        "[SYSTEM] Only 3 iterations left! Wrap up immediately. If any files from your \
+                        "[SYSTEM] FINAL — Only 3 iterations left! Wrap up immediately. If any files from your \
                          plan are still unmodified, make those changes now. Summarize what you've done.".to_string()
                     ),
                 });
@@ -575,35 +593,34 @@ impl AgentRunner {
              - run_tests: Run project tests (auto-detects framework, or provide custom command)\n\
              - spawn_agent: Launch a sub-agent for independent parallel tasks\n\
              - todo_write: Track progress on multi-step tasks with a structured todo list\n\n\
-             ## Strategy\n\
-             1. EXPLORE FIRST: Before making any changes, use grep_search and read_file to understand \
-                the codebase structure and the specific files involved.\n\
-             2. ENUMERATE ALL DELIVERABLES: Before editing anything, write out the COMPLETE list of files \
-                that need changes. Include:\n\
-                - Source code files (the actual bug fix / feature)\n\
-                - Documentation files (changelogs, what's-new, rst/md docs)\n\
-                - Configuration files if affected\n\
-                Look at the hints and test patch for clues about ALL required files.\n\
-             3. EDIT CAREFULLY: Always read a file before editing it. For edit_file, include enough \
-                surrounding context in old_string to make it unique. If you get a 'found N times' error, \
-                look at the context shown and include more surrounding lines.\n\
-             4. VERIFY: After making changes, read the file back to confirm your edits applied correctly.\n\
-             5. COMPLETE ALL CHANGES: Work through your deliverables list systematically. Don't stop \
-                after modifying one file — EVERY file in the list must be changed. Common files \
-                people forget: type stubs (.pyi), changelog entries, config files (pyproject.toml, \
-                noxfile.py, tox.ini), and documentation (.rst, .md).\n\
-             6. FINAL CHECKLIST: Before declaring done, verify:\n\
-                - ALL files from your deliverables list have been modified/created\n\
-                - Each edit was applied correctly (read back the file)\n\
-                - Type stubs (.pyi) match source signature changes\n\
-                - Documentation and changelog files are created/updated\n\
-                - Config/tooling files are updated if listed\n\n\
+             ## Strategy — STRICT ITERATION BUDGET\n\
+             You have a limited number of iterations. Follow this phased approach:\n\n\
+             **Phase 1: EXPLORE (iterations 1-5 MAX)**\n\
+             - Read the problem statement and any test/solution patches carefully\n\
+             - Use grep_search to locate relevant files — read them in FULL (don't use small offset/limit)\n\
+             - By iteration 3, you MUST have a written plan: list EVERY file that needs changes\n\
+             - Do NOT spend more than 5 iterations exploring. If unsure, start implementing.\n\n\
+             **Phase 2: IMPLEMENT (iterations 6-35)**\n\
+             - Work through your file list systematically, editing one file at a time\n\
+             - Always read a file before editing it\n\
+             - For edit_file, include enough surrounding context in old_string to make it unique\n\
+             - After each edit, read back the file to confirm it applied correctly\n\
+             - Consider backward compatibility and edge cases (try/except for version differences, etc.)\n\
+             - Create ALL required files: source code, docs, changelogs, type stubs (.pyi), config\n\n\
+             **Phase 3: VERIFY & FINISH (iterations 36+)**\n\
+             - Review your deliverables checklist — every file must be addressed\n\
+             - Common files people forget: type stubs (.pyi), changelog entries, config files, docs\n\
+             - When done, list every file you changed with a brief summary\n\n\
              ## Rules\n\
+             - SPEED OVER PERFECTION: Make changes quickly. Don't over-explore.\n\
+             - Read files FULLY — avoid reading tiny chunks (offset/limit). Read the whole file.\n\
              - Be precise and minimal in changes — don't over-engineer\n\
              - When editing, prefer small targeted edits over rewriting entire files\n\
              - If a test patch is provided, apply it first, then make source changes to pass the tests\n\
              - If you can't run tests due to missing dependencies, don't waste iterations retrying. \
                Proceed with confidence based on code analysis.\n\
+             - Consider BACKWARD COMPATIBILITY: use try/except blocks when adding new API parameters \
+               that may not exist in older library versions.\n\
              - When done, list every file you changed and briefly summarize each change",
             self.config.workdir.display(),
             env_info
