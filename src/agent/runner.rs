@@ -718,7 +718,8 @@ impl AgentRunner {
              - find_definition: Find where a symbol is defined (function, class, etc.)\n\
              - find_references: Find all references to a symbol\n\
              - run_tests: Run project tests (auto-detects framework, or provide custom command)\n\
-             - spawn_agent: Launch a sub-agent for independent parallel tasks\n\
+             - spawn_agent: Launch a sub-agent for independent parallel tasks. Use this to fan out \
+               work across multiple files or research tasks simultaneously.\n\
              - todo_write: Track progress on multi-step tasks with a structured todo list\n\
              - think: Reason step-by-step about complex decisions before acting (no side effects)\n\n\
              ## Strategy — STRICT ITERATION BUDGET\n\
@@ -751,6 +752,9 @@ impl AgentRunner {
              - When done, list every file you changed with a brief summary\n\n\
              ## Rules\n\
              - SPEED OVER PERFECTION: Make changes quickly. Don't over-explore.\n\
+             - PARALLELIZE: When you need to read or research multiple independent files/topics, \
+               use spawn_agent to fan out the work. When you call multiple tools in one response, \
+               they execute concurrently.\n\
              - Read files FULLY — avoid reading tiny chunks (offset/limit). Read the whole file.\n\
              - Be precise and minimal in changes — don't over-engineer\n\
              - When editing, prefer small targeted edits over rewriting entire files\n\
