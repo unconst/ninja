@@ -50,6 +50,15 @@ pub struct Rollout {
     pub model: String,
     /// Estimated cost in USD (based on model pricing)
     pub estimated_cost_usd: f64,
+    /// System prompt used for this run (captured for full reproducibility)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_prompt: Option<String>,
+    /// Working directory
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workdir: Option<String>,
+    /// Tool definitions available to the agent
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_definitions: Option<Vec<String>>,
 }
 
 impl Rollout {
@@ -65,6 +74,9 @@ impl Rollout {
             iteration_count: 0,
             model: model.to_string(),
             estimated_cost_usd: 0.0,
+            system_prompt: None,
+            workdir: None,
+            tool_definitions: None,
         }
     }
 
@@ -97,6 +109,36 @@ impl Rollout {
             self.tool_call_count += 1;
         }
         self.entries.push(entry);
+    }
+
+    pub fn log_system(&mut self, system_prompt: &str, workdir: &str, tool_names: &[String]) {
+        self.system_prompt = Some(system_prompt.to_string());
+        self.workdir = Some(workdir.to_string());
+        self.tool_definitions = Some(tool_names.to_vec());
+        self.add_entry(RolloutEntry {
+            timestamp: Utc::now(),
+            entry_type: "system".to_string(),
+            content: format!("System prompt: {} chars, {} tools, workdir: {}", system_prompt.len(), tool_names.len(), workdir),
+            input_tokens: None,
+            output_tokens: None,
+            duration_ms: None,
+            tool_name: None,
+            model: None,
+        });
+    }
+
+    pub fn log_iteration(&mut self, iteration: usize, model: &str) {
+        self.iteration_count = iteration as u64;
+        self.add_entry(RolloutEntry {
+            timestamp: Utc::now(),
+            entry_type: "iteration".to_string(),
+            content: format!("Iteration {} using model {}", iteration, model),
+            input_tokens: None,
+            output_tokens: None,
+            duration_ms: None,
+            tool_name: None,
+            model: Some(model.to_string()),
+        });
     }
 
     pub fn log_user(&mut self, content: &str) {

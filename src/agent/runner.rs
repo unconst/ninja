@@ -125,12 +125,19 @@ impl AgentRunner {
         let tool_defs = tools::get_tool_definitions();
         let system = self.system_prompt.clone().unwrap();
 
+        let tool_names: Vec<String> = tool_defs.iter()
+            .map(|td| td.name.clone())
+            .collect();
+        rollout.log_system(&system, &self.config.workdir.display().to_string(), &tool_names);
         rollout.log_user(prompt);
 
         let mut cumulative_input_tokens: u64 = 0;
 
         for iteration in 0..self.config.max_iterations {
             rollout.iteration_count = (iteration + 1) as u64;
+
+            let current_model = self.client.model().to_string();
+            rollout.log_iteration(iteration + 1, &current_model);
 
             if self.config.verbose {
                 eprintln!("[iteration {}]", iteration + 1);
@@ -349,6 +356,11 @@ impl AgentRunner {
         let env_info = self.validate_initial_environment();
         let system = self.build_system_prompt(&env_info);
 
+        let tool_names: Vec<String> = tool_defs.iter()
+            .map(|td| td.name.clone())
+            .collect();
+        rollout.log_system(&system, &self.config.workdir.display().to_string(), &tool_names);
+
         let mut messages: Vec<Message> = vec![Message {
             role: "user".to_string(),
             content: MessageContent::Text(prompt.to_string()),
@@ -360,6 +372,9 @@ impl AgentRunner {
 
         for iteration in 0..self.config.max_iterations {
             rollout.iteration_count = (iteration + 1) as u64;
+
+            let current_model = self.client.model().to_string();
+            rollout.log_iteration(iteration + 1, &current_model);
 
             if self.config.verbose {
                 eprintln!("[iteration {}]", iteration + 1);
