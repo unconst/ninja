@@ -692,6 +692,8 @@ impl AgentRunner {
              - Read files FULLY — avoid reading tiny chunks (offset/limit). Read the whole file.\n\
              - Be precise and minimal in changes — don't over-engineer\n\
              - When editing, prefer small targeted edits over rewriting entire files\n\
+             - If edit_file fails with 'String not found', re-read the file and copy the EXACT text. \
+               After 2 failed attempts on the same file, switch to write_file to overwrite it entirely.\n\
              - If a test patch is provided, apply it first, then make source changes to pass the tests\n\
              - If you can't run tests due to missing dependencies, don't waste iterations retrying. \
                Proceed with confidence based on code analysis.\n\
@@ -1048,7 +1050,30 @@ impl AgentRunner {
     /// Recovery strategies for file edit errors
     fn recover_edit_file_error(&self, input: &serde_json::Value, error: &str) -> Option<String> {
         let path = input.get("path")?.as_str()?;
-        
+
+        // Handle "String not found" — most common edit failure
+        if error.contains("String not found") {
+            return Some(format!(
+                "Edit failed: old_string not found in '{}'. Recovery steps:\n\
+                 1. Re-read the file with read_file to see its CURRENT content\n\
+                 2. Copy the EXACT text you want to replace (whitespace matters)\n\
+                 3. If the file has changed since you last read it, use the updated content\n\
+                 4. If the edit keeps failing, use write_file to overwrite the entire file with the corrected version\n\
+                 5. For large files, use edit_file with a smaller, more unique old_string snippet",
+                path
+            ));
+        }
+
+        // Handle "Multiple matches" — old_string appears more than once
+        if error.contains("Multiple matches") || error.contains("matches found") {
+            return Some(format!(
+                "Edit failed: old_string matches multiple locations in '{}'. Include more surrounding \
+                 context (extra lines above/below) to make old_string unique, or use replace_all=true \
+                 if you want to replace ALL occurrences.",
+                path
+            ));
+        }
+
         // Handle file not found error - suggest using write_file instead
         if error.contains("No such file or directory") || error.contains("cannot find the path") {
             return Some(format!(
@@ -1056,7 +1081,7 @@ impl AgentRunner {
                 path
             ));
         }
-        
+
         // Handle permission errors
         if error.contains("Permission denied") {
             return Some(format!(
@@ -1064,7 +1089,7 @@ impl AgentRunner {
                 path
             ));
         }
-        
+
         // Handle content too large errors
         if error.contains("too large") || error.contains("size limit") {
             return Some(format!(
@@ -1072,7 +1097,7 @@ impl AgentRunner {
                 path
             ));
         }
-        
+
         None
     }
 
