@@ -40,6 +40,8 @@ pub struct AgentConfig {
     pub streaming: bool,
     /// Extended thinking budget in tokens (0 = disabled). Anthropic models only.
     pub thinking_budget: u64,
+    /// Temperature for generation (None uses model default).
+    pub temperature: Option<f64>,
 }
 
 /// The main agent runner — drives the model ↔ tool loop.
@@ -61,6 +63,9 @@ impl AgentRunner {
         let mut client = ApiClient::new(&config.api_key, &config.api_base_url, &config.model);
         if config.thinking_budget > 0 {
             client.set_thinking_budget(config.thinking_budget);
+        }
+        if let Some(temp) = config.temperature {
+            client.set_temperature(temp);
         }
 
         // Initialize MCP connections

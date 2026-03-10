@@ -89,6 +89,8 @@ pub struct ApiClient {
     model: String,
     /// Extended thinking budget in tokens (0 = disabled). Anthropic-only.
     thinking_budget: u64,
+    /// Temperature for generation (None uses model default).
+    temperature: Option<f64>,
 }
 
 impl ApiClient {
@@ -99,11 +101,16 @@ impl ApiClient {
             api_base_url: api_base_url.to_string(),
             model: model.to_string(),
             thinking_budget: 0,
+            temperature: None,
         }
     }
 
     pub fn set_thinking_budget(&mut self, budget: u64) {
         self.thinking_budget = budget;
+    }
+
+    pub fn set_temperature(&mut self, temp: f64) {
+        self.temperature = Some(temp);
     }
 
     pub fn set_model(&mut self, model: &str) {
@@ -428,7 +435,7 @@ impl ApiClient {
         let format = self.detect_format();
         let url = self.endpoint_url(format);
 
-        let body = match format {
+        let mut body = match format {
             ApiFormat::Anthropic => {
                 let api_messages = self.build_anthropic_messages(messages);
                 let api_tools = self.build_anthropic_tools(tools);
@@ -482,6 +489,13 @@ impl ApiClient {
                 body
             }
         };
+
+        // Add temperature if set (not allowed when thinking is enabled)
+        if let Some(temp) = self.temperature {
+            if self.thinking_budget == 0 {
+                body["temperature"] = json!(temp);
+            }
+        }
 
         let mut req = self
             .client
@@ -543,7 +557,7 @@ impl ApiClient {
         let format = self.detect_format();
         let url = self.endpoint_url(format);
 
-        let body = match format {
+        let mut body = match format {
             ApiFormat::Anthropic => {
                 let api_messages = self.build_anthropic_messages(messages);
                 let api_tools = self.build_anthropic_tools(tools);
@@ -596,6 +610,13 @@ impl ApiClient {
                 body
             }
         };
+
+        // Add temperature if set (not allowed when thinking is enabled)
+        if let Some(temp) = self.temperature {
+            if self.thinking_budget == 0 {
+                body["temperature"] = json!(temp);
+            }
+        }
 
         let mut req = self
             .client

@@ -57,6 +57,10 @@ struct Cli {
     #[arg(long, default_value = "0")]
     thinking_budget: u64,
 
+    /// Temperature for generation (0.0-1.0). Lower = more deterministic.
+    #[arg(long)]
+    temperature: Option<f64>,
+
     /// Interactive REPL mode (default when no prompt given)
     #[arg(short, long)]
     interactive: bool,
@@ -93,6 +97,7 @@ async fn run_oneshot(cli: &Cli, prompt: String) {
         verbose: cli.verbose,
         streaming: true,
         thinking_budget: cli.thinking_budget,
+        temperature: cli.temperature,
     };
 
     if cli.verbose {
@@ -161,6 +166,7 @@ async fn run_interactive(cli: &Cli) {
         verbose: cli.verbose,
         streaming: true,
         thinking_budget: cli.thinking_budget,
+        temperature: cli.temperature,
     };
     let mut runner = agent::AgentRunner::new(config);
 
@@ -218,6 +224,7 @@ async fn run_interactive(cli: &Cli) {
                         verbose: cli.verbose,
                         streaming: true,
                         thinking_budget: cli.thinking_budget,
+                        temperature: cli.temperature,
                     };
                     runner = agent::AgentRunner::new(new_config);
                     println!("{}", "Conversation cleared.".dimmed());
@@ -314,6 +321,7 @@ async fn main() {
                 verbose: cli.verbose,
                 streaming: true,
                 thinking_budget: cli.thinking_budget,
+                temperature: cli.temperature,
             };
             let mut runner = agent::AgentRunner::new(config);
             let rollout = runner.run(&prompt).await;
