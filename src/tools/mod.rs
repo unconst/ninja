@@ -2,6 +2,7 @@ mod file_ops;
 mod shell;
 mod search;
 mod web;
+mod navigate;
 
 use serde_json::Value;
 use std::path::Path;
@@ -15,6 +16,7 @@ pub fn get_tool_definitions() -> Vec<ToolDef> {
     tools.extend(shell::definitions());
     tools.extend(search::definitions());
     tools.extend(web::definitions());
+    tools.extend(navigate::definitions());
     tools
 }
 
@@ -29,6 +31,8 @@ pub fn execute_tool(name: &str, args: &Value, workdir: &Path) -> Result<String, 
         "glob_search" => search::glob_search(args, workdir),
         "grep_search" => search::grep_search(args, workdir),
         "web_fetch" => web::web_fetch(args, workdir),
+        "find_definition" => navigate::find_definition(args, workdir),
+        "find_references" => navigate::find_references(args, workdir),
         _ => Err(format!("Unknown tool: {}", name)),
     }
 }

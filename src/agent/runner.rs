@@ -157,7 +157,7 @@ impl AgentRunner {
             let mut result_blocks = Vec::new();
 
             let is_read_only = |name: &str| -> bool {
-                matches!(name, "read_file" | "list_dir" | "glob_search" | "grep_search")
+                matches!(name, "read_file" | "list_dir" | "glob_search" | "grep_search" | "find_definition" | "find_references" | "web_fetch")
             };
 
             // Check if all tool calls are read-only (safe to parallelize)
@@ -476,7 +476,9 @@ impl AgentRunner {
              - shell_exec: Run shell commands (bash)\n\
              - glob_search: Find files by name pattern\n\
              - grep_search: Search file contents with regex\n\
-             - web_fetch: Fetch content from a URL (documentation, issues, etc.)\n\n\
+             - web_fetch: Fetch content from a URL (documentation, issues, etc.)\n\
+             - find_definition: Find where a symbol is defined (function, class, etc.)\n\
+             - find_references: Find all references to a symbol\n\n\
              ## Strategy\n\
              1. EXPLORE FIRST: Before making any changes, use grep_search and read_file to understand \
                 the codebase structure and the specific files involved.\n\
@@ -998,6 +1000,14 @@ impl AgentRunner {
                 let short = if url.len() > 50 { &url[..50] } else { url };
                 format!("Fetch {}", short)
             }
+            "find_definition" => {
+                let symbol = input.get("symbol").and_then(|v| v.as_str()).unwrap_or("?");
+                format!("Find def '{}'", symbol)
+            }
+            "find_references" => {
+                let symbol = input.get("symbol").and_then(|v| v.as_str()).unwrap_or("?");
+                format!("Find refs '{}'", symbol)
+            }
             _ => format!("{}", tool_name),
         }
     }
@@ -1044,6 +1054,14 @@ impl AgentRunner {
             "web_fetch" => {
                 let chars = output.len();
                 format!("{} chars fetched", chars)
+            }
+            "find_definition" | "find_references" => {
+                let count = output.lines().count();
+                if count == 1 && output.contains("No ") {
+                    output.trim().to_string()
+                } else {
+                    format!("{} results", count)
+                }
             }
             _ => {
                 let preview = &output[..output.len().min(60)];
