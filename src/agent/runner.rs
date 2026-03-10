@@ -204,7 +204,7 @@ impl AgentRunner {
             cumulative_input_tokens = response.input_tokens;
 
             if self.config.verbose && !response.text.is_empty() {
-                eprintln!("  assistant: {}", &response.text[..response.text.len().min(200)]);
+                eprintln!("  assistant: {}", safe_truncate(&response.text, 200));
             }
 
             // Compact if needed
@@ -772,7 +772,7 @@ impl AgentRunner {
     /// Execute a tool with error handling and recovery mechanisms
     fn execute_tool_with_recovery(&self, tool_name: &str, input: &serde_json::Value) -> Result<String, String> {
         // Check for git clone commands and validate if already in target repository
-        if tool_name == "shell" {
+        if tool_name == "shell_exec" {
             if let Some(command) = input.get("command").and_then(|c| c.as_str()) {
                 if command.starts_with("git clone") {
                     if let Some(recovery_result) = self.check_git_clone_necessity(command) {
@@ -812,41 +812,41 @@ impl AgentRunner {
     /// Validate that file edits were applied correctly by reading back the file
     fn validate_file_edit(&self, input: &serde_json::Value, edit_output: &str) -> Option<String> {
         let path = input.get("path")?.as_str()?;
-        let expected_content = input.get("content")?.as_str()?;
-        
+        // edit_file uses new_string (not content) — verify the new text appears in the file
+        let new_string = input.get("new_string").and_then(|v| v.as_str())?;
+
         // Only validate if the edit operation reported success
-        if !edit_output.contains("successfully") && !edit_output.contains("written") {
+        if !edit_output.contains("successfully") && !edit_output.contains("applied") && !edit_output.contains("replaced") {
             return None;
         }
-        
-        // Read the file back to verify the content
+
+        // Read the file back to verify the edit was applied
         let read_input = serde_json::json!({
             "path": path
         });
-        
+
         match tools::execute_tool("read_file", &read_input, &self.config.workdir) {
             Ok(actual_content) => {
-                // Check if the content matches what we expected
-                if actual_content.trim() == expected_content.trim() {
-                    // Content matches - edit was successful
-                    Some(format!("{}\n\nValidation: File content verified successfully.", edit_output))
+                if actual_content.contains(new_string.trim()) {
+                    // New content found in file — edit verified
+                    Some(format!("{}\n\nValidation: Edit verified — new content found in file.", edit_output))
                 } else {
-                    // Content doesn't match - there might be an issue
+                    // new_string not found — edit may have failed silently
                     let content_preview = if actual_content.len() > 500 {
                         format!("{}...", safe_truncate(&actual_content, 500))
                     } else {
                         actual_content.clone()
                     };
-                    
+
                     Some(format!(
-                        "{}\n\nValidation Warning: File content differs from expected. Actual content:\n{}",
+                        "{}\n\nValidation WARNING: The new content was NOT found in the file after editing. \
+                         The edit may not have been applied correctly. Read the file to check:\n{}",
                         edit_output,
                         content_preview
                     ))
                 }
             },
             Err(_) => {
-                // Could not read the file back for validation
                 Some(format!("{}\n\nValidation Warning: Could not read file back to verify changes.", edit_output))
             }
         }
@@ -936,7 +936,7 @@ impl AgentRunner {
     /// Attempt to recover from common tool execution errors
     fn try_recover_from_error(&self, tool_name: &str, input: &serde_json::Value, error: &str) -> Option<String> {
         match tool_name {
-            "shell" => self.recover_shell_error(input, error),
+            "shell_exec" => self.recover_shell_error(input, error),
             "write_file" => self.recover_write_file_error(input, error),
             "edit_file" => self.recover_edit_file_error(input, error),
             "read_file" => self.recover_read_file_error(input, error),
@@ -1115,16 +1115,35 @@ impl AgentRunner {
 
         let summary = summary_parts.join("\n");
 
+        // Gather current git diff --stat so the agent knows what it already changed
+        let git_diff_info = match std::process::Command::new("git")
+            .args(&["diff", "--stat"])
+            .current_dir(&self.config.workdir)
+            .output()
+        {
+            Ok(output) if output.status.success() => {
+                let stat = String::from_utf8_lossy(&output.stdout);
+                if stat.trim().is_empty() {
+                    String::new()
+                } else {
+                    format!("\n\n## Files You Have Already Modified (git diff --stat)\n```\n{}\n```\n\
+                            Do NOT re-read or re-edit these files unless you need to make additional changes.",
+                            safe_truncate(stat.trim(), 2000))
+                }
+            }
+            _ => String::new(),
+        };
+
         let mut compacted = Vec::new();
         // Keep original prompt
         compacted.push(messages[0].clone());
-        // Insert summary as a user message
+        // Insert summary as a user message with git diff awareness
         compacted.push(Message {
             role: "user".to_string(),
             content: MessageContent::Text(format!(
-                "[SYSTEM] The conversation has been compacted to save context space.\n\n{}\n\n\
+                "[SYSTEM] The conversation has been compacted to save context space.\n\n{}{}\n\n\
                 Continue working on the task. Review your deliverables checklist and complete any remaining changes.",
-                summary
+                summary, git_diff_info
             )),
         });
         // Keep the recent messages (last 4)
