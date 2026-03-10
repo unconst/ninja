@@ -987,7 +987,41 @@ impl AgentRunner {
                 env_info.push(format!("{} detected", description));
             }
         }
-        
+
+        // Quick repo structure snapshot (top-level dirs + key files, max 2 levels)
+        if let Ok(entries) = std::fs::read_dir(&self.config.workdir) {
+            let mut dirs = Vec::new();
+            let mut files = Vec::new();
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.starts_with('.') { continue; }
+                if entry.metadata().map(|m| m.is_dir()).unwrap_or(false) {
+                    // Count files in subdirectory for context
+                    let count = std::fs::read_dir(entry.path())
+                        .map(|e| e.count())
+                        .unwrap_or(0);
+                    dirs.push(format!("  {}/  ({} items)", name, count));
+                } else {
+                    files.push(format!("  {}", name));
+                }
+            }
+            dirs.sort();
+            files.sort();
+            if !dirs.is_empty() || !files.is_empty() {
+                let mut structure = String::from("Repository structure:");
+                for d in dirs.iter().take(20) {
+                    structure.push_str(&format!("\n{}", d));
+                }
+                for f in files.iter().take(15) {
+                    structure.push_str(&format!("\n{}", f));
+                }
+                if dirs.len() > 20 || files.len() > 15 {
+                    structure.push_str(&format!("\n  ... ({} dirs, {} files total)", dirs.len(), files.len()));
+                }
+                env_info.push(structure);
+            }
+        }
+
         if env_info.is_empty() {
             "Environment: Empty or new directory".to_string()
         } else {
