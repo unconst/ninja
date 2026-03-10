@@ -1,4 +1,5 @@
 use colored::Colorize;
+use futures_util::future::join_all;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -152,45 +153,113 @@ impl AgentRunner {
                 content: MessageContent::Blocks(assistant_blocks),
             });
 
-            // Execute tools with activity display
+            // Execute tools — parallelize read-only, serialize writes
             let mut result_blocks = Vec::new();
-            for tc in &response.tool_calls {
-                // Show tool activity
-                let tool_desc = self.format_tool_description(&tc.name, &tc.input);
-                eprintln!("  {} {}", "▶".cyan(), tool_desc);
 
-                rollout.log_tool_call(&tc.name, &tc.input.to_string());
-                let tool_start = Instant::now();
-                let result = self.execute_tool_with_recovery(&tc.name, &tc.input);
-                let tool_duration = tool_start.elapsed();
-                let (output, is_error) = match result {
-                    Ok(o) => (o, false),
-                    Err(e) => (e, true),
-                };
-                rollout.log_tool_result(&tc.name, &output, tool_duration);
+            let is_read_only = |name: &str| -> bool {
+                matches!(name, "read_file" | "list_dir" | "glob_search" | "grep_search")
+            };
 
-                // Show result summary
-                if is_error {
-                    let preview = &output[..output.len().min(100)];
-                    eprintln!("    {} {} ({:.1}s)", "✗".red(), preview, tool_duration.as_secs_f64());
-                } else if self.config.verbose {
-                    let preview = &output[..output.len().min(150)];
-                    eprintln!("    {} ({:.1}s)", preview.dimmed(), tool_duration.as_secs_f64());
-                } else {
-                    let summary = self.summarize_tool_result(&tc.name, &output);
-                    eprintln!("    {} {}", "✓".green(), summary.dimmed());
+            // Check if all tool calls are read-only (safe to parallelize)
+            let all_read_only = response.tool_calls.iter().all(|tc| is_read_only(&tc.name));
+
+            if all_read_only && response.tool_calls.len() > 1 {
+                // Parallel execution for read-only tools
+                for tc in &response.tool_calls {
+                    let tool_desc = self.format_tool_description(&tc.name, &tc.input);
+                    eprintln!("  {} {} {}", "▶".cyan(), tool_desc, "(parallel)".dimmed());
+                    rollout.log_tool_call(&tc.name, &tc.input.to_string());
                 }
 
-                let truncated = if output.len() > 15000 {
-                    let mut t = output[..15000].to_string();
-                    t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
-                    t
-                } else { output };
-                result_blocks.push(ContentBlock::ToolResult {
-                    tool_use_id: tc.id.clone(),
-                    content: truncated,
-                    is_error: if is_error { Some(true) } else { None },
-                });
+                let parallel_start = Instant::now();
+                let mut handles = Vec::new();
+                for tc in &response.tool_calls {
+                    let name = tc.name.clone();
+                    let input = tc.input.clone();
+                    let workdir = self.config.workdir.clone();
+                    handles.push(tokio::task::spawn_blocking(move || {
+                        let start = Instant::now();
+                        let result = tools::execute_tool(&name, &input, &workdir);
+                        let duration = start.elapsed();
+                        (name, result, duration)
+                    }));
+                }
+
+                let results = join_all(handles).await;
+
+                for (i, join_result) in results.into_iter().enumerate() {
+                    let tc = &response.tool_calls[i];
+                    let (tool_name, result, tool_duration) = join_result.unwrap_or_else(|e| {
+                        (tc.name.clone(), Err(format!("Task panicked: {}", e)), std::time::Duration::ZERO)
+                    });
+                    let (output, is_error) = match result {
+                        Ok(o) => (o, false),
+                        Err(e) => (e, true),
+                    };
+                    rollout.log_tool_result(&tool_name, &output, tool_duration);
+
+                    if is_error {
+                        let preview = &output[..output.len().min(100)];
+                        eprintln!("    {} {} ({:.1}s)", "✗".red(), preview, tool_duration.as_secs_f64());
+                    } else {
+                        let summary = self.summarize_tool_result(&tool_name, &output);
+                        eprintln!("    {} {} ({:.1}s)", "✓".green(), summary.dimmed(), tool_duration.as_secs_f64());
+                    }
+
+                    let truncated = if output.len() > 15000 {
+                        let mut t = output[..15000].to_string();
+                        t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
+                        t
+                    } else { output };
+                    result_blocks.push(ContentBlock::ToolResult {
+                        tool_use_id: tc.id.clone(),
+                        content: truncated,
+                        is_error: if is_error { Some(true) } else { None },
+                    });
+                }
+
+                let parallel_elapsed = parallel_start.elapsed();
+                if self.config.verbose {
+                    eprintln!("  {} tools completed in {:.1}s (parallel)", response.tool_calls.len(), parallel_elapsed.as_secs_f64());
+                }
+            } else {
+                // Sequential execution (writes or single tool)
+                for tc in &response.tool_calls {
+                    let tool_desc = self.format_tool_description(&tc.name, &tc.input);
+                    eprintln!("  {} {}", "▶".cyan(), tool_desc);
+
+                    rollout.log_tool_call(&tc.name, &tc.input.to_string());
+                    let tool_start = Instant::now();
+                    let result = self.execute_tool_with_recovery(&tc.name, &tc.input);
+                    let tool_duration = tool_start.elapsed();
+                    let (output, is_error) = match result {
+                        Ok(o) => (o, false),
+                        Err(e) => (e, true),
+                    };
+                    rollout.log_tool_result(&tc.name, &output, tool_duration);
+
+                    if is_error {
+                        let preview = &output[..output.len().min(100)];
+                        eprintln!("    {} {} ({:.1}s)", "✗".red(), preview, tool_duration.as_secs_f64());
+                    } else if self.config.verbose {
+                        let preview = &output[..output.len().min(150)];
+                        eprintln!("    {} ({:.1}s)", preview.dimmed(), tool_duration.as_secs_f64());
+                    } else {
+                        let summary = self.summarize_tool_result(&tc.name, &output);
+                        eprintln!("    {} {}", "✓".green(), summary.dimmed());
+                    }
+
+                    let truncated = if output.len() > 15000 {
+                        let mut t = output[..15000].to_string();
+                        t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
+                        t
+                    } else { output };
+                    result_blocks.push(ContentBlock::ToolResult {
+                        tool_use_id: tc.id.clone(),
+                        content: truncated,
+                        is_error: if is_error { Some(true) } else { None },
+                    });
+                }
             }
             self.conversation.push(Message {
                 role: "user".to_string(),
