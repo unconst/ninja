@@ -131,6 +131,7 @@ impl AgentRunner {
                 "read_file" | "list_dir" | "glob_search" | "grep_search"
                 | "find_definition" | "find_references" | "web_fetch" | "web_search"
                 | "todo_write" | "think" | "memory_write"
+                | "git_status" | "git_diff" | "git_log"
             )
         })
     }
@@ -813,7 +814,11 @@ impl AgentRunner {
                work across multiple files or research tasks simultaneously.\n\
              - todo_write: Track progress on multi-step tasks with a structured todo list\n\
              - think: Reason step-by-step about complex decisions before acting (no side effects)\n\
-             - memory_write: Save important discoveries, patterns, or project notes to persistent memory\n\n\
+             - memory_write: Save important discoveries, patterns, or project notes to persistent memory\n\
+             - git_status: Show working tree status (modified, staged, untracked files)\n\
+             - git_diff: Show changes in working directory (supports staged, stat_only, file_path)\n\
+             - git_log: Show recent commit history\n\
+             - git_commit: Stage and commit changes (supports 'all' or specific 'files' list)\n\n\
              ## Strategy — STRICT ITERATION BUDGET\n\
              You have a limited number of iterations. Follow this phased approach:\n\n\
              **Phase 1: EXPLORE (iterations 1-5 MAX)**\n\

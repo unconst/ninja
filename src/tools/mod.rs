@@ -1,4 +1,5 @@
 mod file_ops;
+mod git;
 mod shell;
 mod search;
 mod web;
@@ -28,6 +29,7 @@ pub fn get_tool_definitions() -> Vec<ToolDef> {
     tools.extend(todo::definitions());
     tools.extend(think::definitions());
     tools.extend(memory::definitions());
+    tools.extend(git::definitions());
     tools
 }
 
@@ -51,6 +53,10 @@ pub fn execute_tool(name: &str, args: &Value, workdir: &Path) -> Result<String, 
         "todo_write" => todo::todo_write(args, workdir),
         "think" => think::think(args, workdir),
         "memory_write" => memory::memory_write(args, workdir),
+        "git_status" => git::git_status(args, workdir),
+        "git_diff" => git::git_diff(args, workdir),
+        "git_log" => git::git_log(args, workdir),
+        "git_commit" => git::git_commit(args, workdir),
         _ => Err(format!("Unknown tool: {}", name)),
     }
 }
