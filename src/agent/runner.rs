@@ -717,6 +717,8 @@ impl AgentRunner {
              - write_file: Create or overwrite files\n\
              - edit_file: Replace exact string matches in files. The old_string MUST be unique \
                — include surrounding context lines if needed. Set replace_all=true to replace all occurrences.\n\
+             - replace_lines: Replace a range of lines by line number (1-based, inclusive). \
+               More reliable than edit_file for large changes. Always read the file first to get line numbers.\n\
              - list_dir: List directory contents\n\
              - shell_exec: Run shell commands (bash)\n\
              - glob_search: Find files by name pattern\n\

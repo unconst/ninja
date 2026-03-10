@@ -76,6 +76,35 @@ pub fn definitions() -> Vec<ToolDef> {
             }),
         },
         ToolDef {
+            name: "replace_lines".to_string(),
+            description: "Replace a range of lines in a file with new content. More reliable than \
+                          edit_file for large changes. Line numbers are 1-based and inclusive. \
+                          You MUST read the file first to know the correct line numbers."
+                .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Path to the file to edit"
+                    },
+                    "start_line": {
+                        "type": "integer",
+                        "description": "First line to replace (1-based, inclusive)"
+                    },
+                    "end_line": {
+                        "type": "integer",
+                        "description": "Last line to replace (1-based, inclusive). Use same as start_line to replace a single line."
+                    },
+                    "new_content": {
+                        "type": "string",
+                        "description": "The new content to insert (replaces the entire line range). Use empty string to delete lines."
+                    }
+                },
+                "required": ["path", "start_line", "end_line", "new_content"]
+            }),
+        },
+        ToolDef {
             name: "list_dir".to_string(),
             description: "List files and directories in a given path.".to_string(),
             input_schema: json!({
@@ -266,6 +295,90 @@ pub fn edit_file(args: &Value, workdir: &Path) -> Result<String, String> {
         path.display(),
         count,
         if count > 1 { "s" } else { "" }
+    ))
+}
+
+pub fn replace_lines(args: &Value, workdir: &Path) -> Result<String, String> {
+    let path_str = args["path"].as_str().ok_or("Missing 'path' argument")?;
+    let start_line = args["start_line"]
+        .as_u64()
+        .ok_or("Missing 'start_line' argument")? as usize;
+    let end_line = args["end_line"]
+        .as_u64()
+        .ok_or("Missing 'end_line' argument")? as usize;
+    let new_content = args["new_content"]
+        .as_str()
+        .ok_or("Missing 'new_content' argument")?;
+    let path = resolve_path(path_str, workdir);
+
+    if start_line == 0 {
+        return Err("start_line must be >= 1 (1-based)".to_string());
+    }
+    if end_line < start_line {
+        return Err(format!(
+            "end_line ({}) must be >= start_line ({})",
+            end_line, start_line
+        ));
+    }
+
+    // Lock file for exclusive access
+    let _lock = acquire_file_lock(&path)?;
+
+    let content = fs::read_to_string(&path)
+        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+
+    let lines: Vec<&str> = content.lines().collect();
+    let total_lines = lines.len();
+
+    if start_line > total_lines {
+        return Err(format!(
+            "start_line {} exceeds file length ({} lines)",
+            start_line, total_lines
+        ));
+    }
+
+    let effective_end = end_line.min(total_lines);
+    let start_idx = start_line - 1; // Convert to 0-based
+
+    // Build new file content
+    let mut new_lines: Vec<&str> = Vec::new();
+    // Lines before the replacement range
+    new_lines.extend_from_slice(&lines[..start_idx]);
+    // New content (may be empty for deletion)
+    if !new_content.is_empty() {
+        for line in new_content.lines() {
+            new_lines.push(line);
+        }
+    }
+    // Lines after the replacement range
+    if effective_end < total_lines {
+        new_lines.extend_from_slice(&lines[effective_end..]);
+    }
+
+    let mut result = new_lines.join("\n");
+    // Preserve trailing newline if original had one
+    if content.ends_with('\n') {
+        result.push('\n');
+    }
+
+    fs::write(&path, &result)
+        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+
+    let lines_removed = effective_end - start_idx;
+    let lines_added = if new_content.is_empty() {
+        0
+    } else {
+        new_content.lines().count()
+    };
+
+    Ok(format!(
+        "Replaced lines {}-{} in {} ({} lines removed, {} lines added, {} total lines now)",
+        start_line,
+        effective_end,
+        path.display(),
+        lines_removed,
+        lines_added,
+        new_lines.len()
     ))
 }
 
