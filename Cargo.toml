@@ -1,0 +1,16 @@
+[package]
+name = "ninja"
+version = "0.1.0"
+edition = "2021"
+description = "Ninja — a CLI coding agent powered by Claude"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tokio = { version = "1", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+colored = "2"
