@@ -8,6 +8,7 @@ mod subagent;
 mod todo;
 mod think;
 pub mod memory;
+pub mod mcp;
 
 use serde_json::Value;
 use std::path::Path;

@@ -50,17 +50,32 @@ pub struct AgentRunner {
     system_prompt: Option<String>,
     /// Whether the last iteration used only read-only tools (for model routing).
     last_was_read_only: bool,
+    /// MCP server manager for external tool integrations.
+    mcp_manager: crate::tools::mcp::McpManager,
 }
 
 impl AgentRunner {
     pub fn new(config: AgentConfig) -> Self {
         let client = ApiClient::new(&config.api_key, &config.api_base_url, &config.model);
+
+        // Initialize MCP connections
+        let mut mcp_manager = crate::tools::mcp::McpManager::new();
+        let mcp_configs = crate::tools::mcp::McpManager::load_config(&config.workdir);
+        if !mcp_configs.is_empty() {
+            eprintln!("Connecting to {} MCP server(s)...", mcp_configs.len());
+            let errors = mcp_manager.connect_all(mcp_configs);
+            for err in &errors {
+                eprintln!("  MCP error: {}", err);
+            }
+        }
+
         Self {
             config,
             client,
             conversation: Vec::new(),
             system_prompt: None,
-            last_was_read_only: true, // Start with fast model for initial exploration
+            last_was_read_only: true,
+            mcp_manager,
         }
     }
 
@@ -137,7 +152,9 @@ impl AgentRunner {
 
         let start = Instant::now();
         let mut rollout = Rollout::new(&self.config.model);
-        let tool_defs = tools::get_tool_definitions();
+        let mut tool_defs = tools::get_tool_definitions();
+        // Append MCP tools
+        tool_defs.extend(self.mcp_manager.tool_definitions());
         let system = self.system_prompt.clone().unwrap();
 
         let tool_names: Vec<String> = tool_defs.iter()
@@ -406,7 +423,9 @@ impl AgentRunner {
     pub async fn run(&mut self, prompt: &str) -> Rollout {
         let start = Instant::now();
         let mut rollout = Rollout::new(&self.config.model);
-        let tool_defs = tools::get_tool_definitions();
+        let mut tool_defs = tools::get_tool_definitions();
+        // Append MCP tools
+        tool_defs.extend(self.mcp_manager.tool_definitions());
 
         let env_info = self.validate_initial_environment();
         let system = self.build_system_prompt(&env_info);
@@ -974,6 +993,11 @@ impl AgentRunner {
             }
         }
         
+        // Route MCP tool calls through the MCP manager
+        if self.mcp_manager.is_mcp_tool(tool_name) {
+            return self.mcp_manager.execute_tool(tool_name, input);
+        }
+
         // First attempt to execute the tool
         let result = tools::execute_tool(tool_name, input, &self.config.workdir);
         
