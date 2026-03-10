@@ -354,6 +354,9 @@ impl AgentRunner {
                 role: "user".to_string(),
                 content: MessageContent::Blocks(result_blocks),
             });
+
+            // Shrink old tool results to prevent cumulative context bloat
+            Self::shrink_old_tool_results(&mut self.conversation, 6);
         }
 
         rollout.total_duration_ms = start.elapsed().as_millis() as u64;
@@ -601,6 +604,10 @@ impl AgentRunner {
                 role: "user".to_string(),
                 content: MessageContent::Blocks(result_blocks),
             });
+
+            // Shrink old tool results to prevent cumulative context bloat.
+            // Keep last 6 messages intact (current turn + a bit of recent context).
+            Self::shrink_old_tool_results(&mut messages, 6);
         }
 
         rollout.total_duration_ms = start.elapsed().as_millis() as u64;
@@ -1301,6 +1308,69 @@ impl AgentRunner {
             _ => {
                 let preview = &output[..output.len().min(60)];
                 preview.to_string()
+            }
+        }
+    }
+
+    /// Shrink tool results in older messages to reduce context window growth.
+    /// Keeps the last `keep_recent` messages untouched; replaces large ToolResult
+    /// content in older messages with a compact summary line.
+    /// This is the primary mechanism for controlling cumulative input token cost:
+    /// without it, a 5000-char file read at iteration 5 is re-sent in all 40+
+    /// subsequent API calls. With it, that read becomes ~150 chars after 2 iterations.
+    fn shrink_old_tool_results(messages: &mut [Message], keep_recent: usize) {
+        let threshold = 500; // chars — results shorter than this are already cheap
+        let len = messages.len();
+        if len <= keep_recent {
+            return;
+        }
+        let cutoff = len - keep_recent;
+
+        // First pass: build a map of tool_use_id -> tool_name from assistant messages
+        let mut tool_name_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        for msg in messages.iter().take(cutoff) {
+            if let MessageContent::Blocks(blocks) = &msg.content {
+                for block in blocks {
+                    if let ContentBlock::ToolUse { id, name, .. } = block {
+                        tool_name_map.insert(id.clone(), name.clone());
+                    }
+                }
+            }
+        }
+
+        // Second pass: shrink large tool results
+        for msg in &mut messages[..cutoff] {
+            if let MessageContent::Blocks(blocks) = &mut msg.content {
+                for block in blocks.iter_mut() {
+                    if let ContentBlock::ToolResult { tool_use_id, content, is_error, .. } = block {
+                        if content.len() <= threshold {
+                            continue;
+                        }
+                        // Don't shrink error results — they're usually short and important
+                        if *is_error == Some(true) {
+                            continue;
+                        }
+                        let tool_name = tool_name_map.get(tool_use_id.as_str())
+                            .map(|s| s.as_str()).unwrap_or("tool");
+                        let line_count = content.lines().count();
+                        let char_count = content.len();
+
+                        // Keep first few lines as preview (structural info, function sigs)
+                        // More lines for read_file/grep since those carry important context
+                        let preview_lines = match tool_name {
+                            "read_file" | "grep_search" | "find_definition" | "find_references" => 5,
+                            "shell_exec" | "run_tests" => 3,
+                            _ => 2,
+                        };
+                        let preview: String = content.lines().take(preview_lines)
+                            .collect::<Vec<_>>().join("\n");
+                        let preview_short = safe_truncate(&preview, 300);
+                        *content = format!(
+                            "[Previous {} result — {} lines, {} chars]\n{}\n[... truncated from history — use read_file to re-read if needed]",
+                            tool_name, line_count, char_count, preview_short
+                        );
+                    }
+                }
             }
         }
     }
