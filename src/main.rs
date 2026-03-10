@@ -197,8 +197,8 @@ async fn run_interactive(cli: &Cli) {
                 }
                 if line.starts_with("/model ") {
                     let model = line.trim_start_matches("/model ").trim();
+                    runner.set_model(model);
                     println!("  Model → {}", model.green());
-                    // Model will take effect on next API call
                     continue;
                 }
                 if line == "/clear" {

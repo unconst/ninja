@@ -57,6 +57,12 @@ impl AgentRunner {
         self.system_prompt = None;
     }
 
+    /// Change the model (used by /model in REPL mode).
+    pub fn set_model(&mut self, model: &str) {
+        self.config.model = model.to_string();
+        self.client.set_model(model);
+    }
+
     /// Manually compact the conversation (used by /compact in REPL mode).
     /// Returns the number of messages before and after compaction.
     pub fn compact(&mut self) -> (usize, usize) {
@@ -94,7 +100,7 @@ impl AgentRunner {
         tool_calls.iter().all(|tc| {
             matches!(tc.name.as_str(),
                 "read_file" | "list_dir" | "glob_search" | "grep_search"
-                | "find_definition" | "find_references" | "web_fetch"
+                | "find_definition" | "find_references" | "web_fetch" | "web_search" | "todo_write"
             )
         })
     }
@@ -216,7 +222,7 @@ impl AgentRunner {
             let mut result_blocks = Vec::new();
 
             let is_read_only = |name: &str| -> bool {
-                matches!(name, "read_file" | "list_dir" | "glob_search" | "grep_search" | "find_definition" | "find_references" | "web_fetch")
+                matches!(name, "read_file" | "list_dir" | "glob_search" | "grep_search" | "find_definition" | "find_references" | "web_fetch" | "todo_write")
             };
 
             // Check if all tool calls are read-only (safe to parallelize)
@@ -548,10 +554,12 @@ impl AgentRunner {
              - glob_search: Find files by name pattern\n\
              - grep_search: Search file contents with regex\n\
              - web_fetch: Fetch content from a URL (documentation, issues, etc.)\n\
+             - web_search: Search the web for information using DuckDuckGo\n\
              - find_definition: Find where a symbol is defined (function, class, etc.)\n\
              - find_references: Find all references to a symbol\n\
              - run_tests: Run project tests (auto-detects framework, or provide custom command)\n\
-             - spawn_agent: Launch a sub-agent for independent parallel tasks\n\n\
+             - spawn_agent: Launch a sub-agent for independent parallel tasks\n\
+             - todo_write: Track progress on multi-step tasks with a structured todo list\n\n\
              ## Strategy\n\
              1. EXPLORE FIRST: Before making any changes, use grep_search and read_file to understand \
                 the codebase structure and the specific files involved.\n\
@@ -1094,6 +1102,11 @@ impl AgentRunner {
                 let short = if url.len() > 50 { &url[..50] } else { url };
                 format!("Fetch {}", short)
             }
+            "web_search" => {
+                let query = input.get("query").and_then(|v| v.as_str()).unwrap_or("?");
+                let short = if query.len() > 50 { &query[..50] } else { query };
+                format!("Search '{}'", short)
+            }
             "find_definition" => {
                 let symbol = input.get("symbol").and_then(|v| v.as_str()).unwrap_or("?");
                 format!("Find def '{}'", symbol)
@@ -1115,6 +1128,7 @@ impl AgentRunner {
                 let short = if prompt.len() > 40 { &prompt[..40] } else { prompt };
                 format!("Agent: {}", short)
             }
+            "todo_write" => "Update todo list".to_string(),
             _ => format!("{}", tool_name),
         }
     }
@@ -1162,6 +1176,11 @@ impl AgentRunner {
                 let chars = output.len();
                 format!("{} chars fetched", chars)
             }
+            "web_search" => {
+                // Count the numbered results
+                let count = output.lines().filter(|l| l.starts_with(|c: char| c.is_ascii_digit())).count();
+                format!("{} results", count)
+            }
             "find_definition" | "find_references" => {
                 let count = output.lines().count();
                 if count == 1 && output.contains("No ") {
@@ -1182,6 +1201,10 @@ impl AgentRunner {
             "spawn_agent" => {
                 let lines = output.lines().count();
                 format!("sub-agent returned {} lines", lines)
+            }
+            "todo_write" => {
+                let preview = &output[..output.len().min(80)];
+                preview.to_string()
             }
             _ => {
                 let preview = &output[..output.len().min(60)];

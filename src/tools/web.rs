@@ -4,27 +4,49 @@ use std::path::Path;
 use crate::agent::api_client::ToolDef;
 
 pub fn definitions() -> Vec<ToolDef> {
-    vec![ToolDef {
-        name: "web_fetch".to_string(),
-        description: "Fetch content from a URL and return it as text. Useful for reading \
-                       documentation, GitHub issues/PRs, Stack Overflow answers, and API docs. \
-                       HTML is converted to readable text."
-            .to_string(),
-        input_schema: json!({
-            "type": "object",
-            "properties": {
-                "url": {
-                    "type": "string",
-                    "description": "The URL to fetch content from"
+    vec![
+        ToolDef {
+            name: "web_fetch".to_string(),
+            description: "Fetch content from a URL and return it as text. Useful for reading \
+                           documentation, GitHub issues/PRs, Stack Overflow answers, and API docs. \
+                           HTML is converted to readable text."
+                .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The URL to fetch content from"
+                    },
+                    "max_length": {
+                        "type": "integer",
+                        "description": "Maximum characters to return (default: 10000)"
+                    }
                 },
-                "max_length": {
-                    "type": "integer",
-                    "description": "Maximum characters to return (default: 10000)"
-                }
-            },
-            "required": ["url"]
-        }),
-    }]
+                "required": ["url"]
+            }),
+        },
+        ToolDef {
+            name: "web_search".to_string(),
+            description: "Search the web using DuckDuckGo and return results. Use this to find \
+                           up-to-date information, documentation, or answers to questions."
+                .to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query"
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maximum number of results to return (default: 8)"
+                    }
+                },
+                "required": ["query"]
+            }),
+        },
+    ]
 }
 
 pub fn web_fetch(args: &Value, _workdir: &Path) -> Result<String, String> {
@@ -68,6 +90,157 @@ pub fn web_fetch(args: &Value, _workdir: &Path) -> Result<String, String> {
     } else {
         Ok(text)
     }
+}
+
+pub fn web_search(args: &Value, _workdir: &Path) -> Result<String, String> {
+    let query = args["query"]
+        .as_str()
+        .ok_or("Missing 'query' argument")?;
+    let max_results = args["max_results"].as_u64().unwrap_or(8) as usize;
+
+    // Use DuckDuckGo HTML search (no API key needed)
+    let encoded_query = query
+        .replace(' ', "+")
+        .replace('&', "%26")
+        .replace('=', "%3D");
+    let url = format!("https://html.duckduckgo.com/html/?q={}", encoded_query);
+
+    let output = std::process::Command::new("curl")
+        .arg("-sL")
+        .arg("--max-time")
+        .arg("10")
+        .arg("-H")
+        .arg("User-Agent: Mozilla/5.0 (compatible; NinjaBot/1.0)")
+        .arg(&url)
+        .output()
+        .map_err(|e| format!("Failed to run curl: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Search failed: {}", stderr.trim()));
+    }
+
+    let body = String::from_utf8_lossy(&output.stdout).to_string();
+
+    if body.is_empty() {
+        return Ok("No search results found.".to_string());
+    }
+
+    // Parse DuckDuckGo HTML results
+    let results = parse_ddg_results(&body, max_results);
+
+    if results.is_empty() {
+        Ok("No search results found.".to_string())
+    } else {
+        Ok(results.join("\n\n"))
+    }
+}
+
+/// Parse DuckDuckGo HTML search results.
+fn parse_ddg_results(html: &str, max_results: usize) -> Vec<String> {
+    let mut results = Vec::new();
+
+    // DuckDuckGo HTML results are in <a class="result__a" href="...">title</a>
+    // followed by <a class="result__snippet">snippet</a>
+    let mut pos = 0;
+    while results.len() < max_results {
+        // Find result link
+        let link_marker = "class=\"result__a\"";
+        let link_pos = match html[pos..].find(link_marker) {
+            Some(p) => pos + p,
+            None => break,
+        };
+
+        // Extract href
+        let href_start = match html[..link_pos].rfind("href=\"") {
+            Some(p) => p + 6,
+            None => { pos = link_pos + link_marker.len(); continue; }
+        };
+        let href_end = match html[href_start..link_pos].find('"') {
+            Some(p) => href_start + p,
+            None => { pos = link_pos + link_marker.len(); continue; }
+        };
+        let href = &html[href_start..href_end];
+
+        // Extract title (text between > and </a>)
+        let title_start = match html[link_pos..].find('>') {
+            Some(p) => link_pos + p + 1,
+            None => { pos = link_pos + link_marker.len(); continue; }
+        };
+        let title_end = match html[title_start..].find("</a>") {
+            Some(p) => title_start + p,
+            None => { pos = link_pos + link_marker.len(); continue; }
+        };
+        let title = html_to_text(&html[title_start..title_end]);
+
+        // Extract snippet
+        let snippet_marker = "class=\"result__snippet\"";
+        let snippet_text = if let Some(sp) = html[title_end..].find(snippet_marker) {
+            let snippet_pos = title_end + sp;
+            let snippet_start = match html[snippet_pos..].find('>') {
+                Some(p) => snippet_pos + p + 1,
+                None => snippet_pos,
+            };
+            let snippet_end = match html[snippet_start..].find("</a>") {
+                Some(p) => snippet_start + p,
+                None => match html[snippet_start..].find("</span>") {
+                    Some(p) => snippet_start + p,
+                    None => snippet_start,
+                },
+            };
+            if snippet_end > snippet_start {
+                html_to_text(&html[snippet_start..snippet_end])
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        };
+
+        // Decode DuckDuckGo redirect URL
+        let actual_url = if href.contains("duckduckgo.com") {
+            if let Some(uddg_pos) = href.find("uddg=") {
+                let url_start = uddg_pos + 5;
+                let url_end = href[url_start..].find('&').map(|p| url_start + p).unwrap_or(href.len());
+                url_decode(&href[url_start..url_end])
+            } else {
+                href.to_string()
+            }
+        } else {
+            href.to_string()
+        };
+
+        if !title.trim().is_empty() {
+            let mut result = format!("{}. {}\n   {}", results.len() + 1, title.trim(), actual_url);
+            if !snippet_text.trim().is_empty() {
+                result.push_str(&format!("\n   {}", snippet_text.trim()));
+            }
+            results.push(result);
+        }
+
+        pos = title_end;
+    }
+
+    results
+}
+
+/// Basic URL decoding for search result URLs.
+fn url_decode(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars();
+    while let Some(ch) = chars.next() {
+        if ch == '%' {
+            let hex: String = chars.by_ref().take(2).collect();
+            if let Ok(byte) = u8::from_str_radix(&hex, 16) {
+                result.push(byte as char);
+            }
+        } else if ch == '+' {
+            result.push(' ');
+        } else {
+            result.push(ch);
+        }
+    }
+    result
 }
 
 /// Convert HTML to readable plain text by stripping tags and decoding entities.
