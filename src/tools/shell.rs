@@ -29,10 +29,14 @@ pub fn shell_exec(args: &Value, workdir: &Path) -> Result<String, String> {
     let command = args["command"]
         .as_str()
         .ok_or("Missing 'command' argument")?;
+    let timeout_secs = args["timeout_secs"].as_u64().unwrap_or(120);
+
+    // Wrap command with timeout
+    let timed_cmd = format!("timeout {} bash -c {}", timeout_secs, shell_escape(command));
 
     let output = Command::new("bash")
         .arg("-c")
-        .arg(command)
+        .arg(&timed_cmd)
         .current_dir(workdir)
         .output()
         .map_err(|e| format!("Failed to execute command: {}", e))?;
@@ -59,7 +63,10 @@ pub fn shell_exec(args: &Value, workdir: &Path) -> Result<String, String> {
     }
 
     let exit_code = output.status.code().unwrap_or(-1);
-    if exit_code != 0 {
+    // timeout exits with 124
+    if exit_code == 124 {
+        result.push_str(&format!("\n\nCommand timed out after {}s", timeout_secs));
+    } else if exit_code != 0 {
         result.push_str(&format!("\nExit code: {}", exit_code));
     }
 
@@ -68,4 +75,9 @@ pub fn shell_exec(args: &Value, workdir: &Path) -> Result<String, String> {
     }
 
     Ok(result)
+}
+
+/// Escape a command string for passing to bash -c via 'single quotes'
+fn shell_escape(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
 }

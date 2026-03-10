@@ -3,7 +3,7 @@ mod tools;
 
 use clap::Parser;
 use colored::Colorize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Ninja — a model-agnostic CLI coding agent via OpenRouter
 #[derive(Parser, Debug)]
@@ -199,8 +199,14 @@ async fn run_interactive(cli: &Cli) {
                 }
                 if line.starts_with("/cd ") {
                     let path = line.trim_start_matches("/cd ").trim();
-                    let new_path = PathBuf::from(path);
+                    let new_path = if Path::new(path).is_absolute() {
+                        PathBuf::from(path)
+                    } else {
+                        std::env::current_dir().unwrap_or_default().join(path)
+                    };
+                    let new_path = new_path.canonicalize().unwrap_or(new_path);
                     if new_path.exists() && new_path.is_dir() {
+                        runner.set_workdir(new_path.clone());
                         println!("  Workdir → {}", new_path.display().to_string().green());
                     } else {
                         println!("  {} Directory not found: {}", "Error:".red(), path);
@@ -221,10 +227,11 @@ async fn run_interactive(cli: &Cli) {
 
                 // Print stats
                 let stats = format!(
-                    "[{} iterations | {}in/{}out tokens | {:.1}s]",
+                    "[{} iterations | {}in/{}out tokens | ${:.4} | {:.1}s]",
                     rollout.iteration_count,
                     rollout.total_input_tokens,
                     rollout.total_output_tokens,
+                    rollout.estimated_cost_usd,
                     rollout.total_duration_ms as f64 / 1000.0,
                 );
                 println!("\n{}\n", stats.dimmed());

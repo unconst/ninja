@@ -48,6 +48,8 @@ pub struct Rollout {
     pub iteration_count: u64,
     /// Model used
     pub model: String,
+    /// Estimated cost in USD (based on model pricing)
+    pub estimated_cost_usd: f64,
 }
 
 impl Rollout {
@@ -62,7 +64,26 @@ impl Rollout {
             tool_call_count: 0,
             iteration_count: 0,
             model: model.to_string(),
+            estimated_cost_usd: 0.0,
         }
+    }
+
+    /// Estimate cost based on model and token counts.
+    /// Prices are per 1M tokens (approximate OpenRouter prices).
+    pub fn estimate_cost(&mut self) {
+        let (input_price, output_price) = match self.model.as_str() {
+            m if m.contains("opus") => (15.0, 75.0),
+            m if m.contains("sonnet") => (3.0, 15.0),
+            m if m.contains("haiku") => (0.25, 1.25),
+            m if m.contains("gpt-4o") => (2.5, 10.0),
+            m if m.contains("gpt-4") => (10.0, 30.0),
+            m if m.contains("gpt-3.5") => (0.5, 1.5),
+            m if m.contains("deepseek") => (0.14, 0.28),
+            _ => (3.0, 15.0), // default to sonnet-level pricing
+        };
+        self.estimated_cost_usd =
+            (self.total_input_tokens as f64 * input_price / 1_000_000.0)
+            + (self.total_output_tokens as f64 * output_price / 1_000_000.0);
     }
 
     pub fn add_entry(&mut self, entry: RolloutEntry) {

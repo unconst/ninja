@@ -50,6 +50,13 @@ impl AgentRunner {
         }
     }
 
+    /// Update the working directory (used by /cd in REPL mode).
+    pub fn set_workdir(&mut self, path: PathBuf) {
+        self.config.workdir = path;
+        // Reset system prompt so it's rebuilt with new workdir
+        self.system_prompt = None;
+    }
+
     /// Select the appropriate model for the current iteration based on routing strategy.
     /// Returns true if the model was changed.
     fn route_model(&mut self) -> bool {
@@ -313,6 +320,7 @@ impl AgentRunner {
         }
 
         rollout.total_duration_ms = start.elapsed().as_millis() as u64;
+        rollout.estimate_cost();
         rollout
     }
 
@@ -508,12 +516,13 @@ impl AgentRunner {
         }
 
         rollout.total_duration_ms = start.elapsed().as_millis() as u64;
+        rollout.estimate_cost();
         rollout
     }
 
     /// Build the system prompt for the agent.
     fn build_system_prompt(&self, env_info: &str) -> String {
-        format!(
+        let mut prompt = format!(
             "You are Ninja, a powerful autonomous coding agent. You solve software engineering tasks \
              by reading, understanding, and modifying code.\n\n\
              Working directory: {}\n\
@@ -560,7 +569,28 @@ impl AgentRunner {
              - When done, list every file you changed and briefly summarize each change",
             self.config.workdir.display(),
             env_info
-        )
+        );
+
+        // Append NINJA.md project config if present
+        for config_name in &["NINJA.md", ".ninja.md", "CLAUDE.md"] {
+            let config_path = self.config.workdir.join(config_name);
+            if config_path.exists() {
+                if let Ok(content) = std::fs::read_to_string(&config_path) {
+                    let truncated = if content.len() > 5000 {
+                        format!("{}...\n(truncated)", &content[..5000])
+                    } else {
+                        content
+                    };
+                    prompt.push_str(&format!(
+                        "\n\n## Project Configuration ({})\n{}",
+                        config_name, truncated
+                    ));
+                }
+                break; // Only use the first config file found
+            }
+        }
+
+        prompt
     }
 
     /// Validate the initial environment and gather context information
