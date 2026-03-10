@@ -886,6 +886,19 @@ impl AgentRunner {
              - git_diff: Show changes in working directory (supports staged, stat_only, file_path)\n\
              - git_log: Show recent commit history\n\
              - git_commit: Stage and commit changes (supports 'all' or specific 'files' list)\n\n\
+             ## Example Workflows\n\
+             **Example 1: Targeted edit with context**\n\
+             1. read_file(path: \"src/auth.py\") → see full file\n\
+             2. edit_file(path: \"src/auth.py\", old_string: \"def login(user):\\n    token = create_token(user)\", \
+             new_string: \"def login(user):\\n    if not user.is_active:\\n        raise AuthError('inactive')\\n    token = create_token(user)\")\n\
+             → Include 2+ context lines in old_string to ensure uniqueness.\n\n\
+             **Example 2: Adding new code to a required file**\n\
+             Task says REQUIRED FILES: helpers.py, app.py. After fixing app.py, you read helpers.py and see no \
+             obvious changes. DON'T skip it. The solution requires ADDING a new class/function there:\n\
+             1. read_file(path: \"helpers.py\") → see existing code\n\
+             2. edit_file(path: \"helpers.py\", old_string: \"<last line of file>\", \
+             new_string: \"<last line of file>\\n\\n\\nclass NewHelper:\\n    ...\")\n\
+             → Every REQUIRED FILE must appear in your git diff.\n\n\
              ## Strategy — STRICT ITERATION BUDGET\n\
              You have a limited number of iterations. Follow this phased approach:\n\n\
              **Phase 1: EXPLORE (iterations 1-5 MAX)**\n\
