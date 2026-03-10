@@ -102,24 +102,22 @@ fn resolve_path(path_str: &str, workdir: &Path) -> PathBuf {
 }
 
 /// Acquire an advisory file lock for exclusive write access.
-/// Uses a .lock file adjacent to the target. Returns the lock file handle
-/// (lock is released when the handle is dropped).
+/// Lock files are stored in /tmp/ninja-locks/ to avoid polluting the working directory.
+/// Returns the lock file handle (lock is released when the handle is dropped).
 fn acquire_file_lock(path: &Path) -> Result<fs::File, String> {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
     use std::os::unix::io::AsRawFd;
 
-    let lock_path = path.with_extension(
-        format!(
-            "{}.lock",
-            path.extension()
-                .map(|e| e.to_string_lossy().to_string())
-                .unwrap_or_default()
-        ),
-    );
+    let lock_dir = Path::new("/tmp/ninja-locks");
+    let _ = fs::create_dir_all(lock_dir);
 
-    // Create parent dir for lock file if needed
-    if let Some(parent) = lock_path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
+    // Hash the canonical path to get a unique lock file name
+    let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let mut hasher = DefaultHasher::new();
+    canonical.hash(&mut hasher);
+    let hash = hasher.finish();
+    let lock_path = lock_dir.join(format!("{:016x}.lock", hash));
 
     let lock_file = fs::OpenOptions::new()
         .create(true)
