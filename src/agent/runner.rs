@@ -386,6 +386,8 @@ impl AgentRunner {
 
         let mut cumulative_input_tokens: u64 = 0;
         let mut completion_check_done = false;
+        let mut last_write_iteration: usize = 0; // Track last iteration with a write/edit tool
+        let mut idle_nudge_done = false;
 
         for iteration in 0..self.config.max_iterations {
             rollout.iteration_count = (iteration + 1) as u64;
@@ -598,12 +600,33 @@ impl AgentRunner {
             }
 
             // Update routing state based on what tools were used
-            self.last_was_read_only = Self::all_tools_read_only(&response.tool_calls);
+            let all_read = Self::all_tools_read_only(&response.tool_calls);
+            self.last_was_read_only = all_read;
+
+            // Track last write/edit iteration
+            if !all_read {
+                last_write_iteration = iteration;
+            }
 
             messages.push(Message {
                 role: "user".to_string(),
                 content: MessageContent::Blocks(result_blocks),
             });
+
+            // If 10+ iterations since last write and past iteration 20, nudge the agent to finish
+            if !idle_nudge_done && iteration > 20 && iteration - last_write_iteration >= 10 {
+                idle_nudge_done = true;
+                messages.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(
+                        "[SYSTEM] IDLE DETECTION — You haven't written or edited any files in the last 10 \
+                         iterations. If your changes are complete, stop and provide your final summary. \
+                         Don't continue reading/verifying indefinitely. If there are remaining changes, \
+                         make them NOW.".to_string()
+                    ),
+                });
+                rollout.log_error("Idle write detection: 10+ iterations without edits");
+            }
 
             // Shrink old tool results to prevent cumulative context bloat.
             // Keep last 6 messages intact (current turn + a bit of recent context).
