@@ -235,8 +235,7 @@ async fn run_interactive(cli: &Cli) {
 
                 let _ = rl.add_history_entry(&line);
 
-                println!();
-                println!("{}", "Working...".dimmed());
+                eprintln!();
 
                 let rollout = runner.run_turn(&line).await;
 

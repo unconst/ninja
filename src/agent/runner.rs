@@ -242,12 +242,14 @@ impl AgentRunner {
             let mut result_blocks = Vec::new();
 
             if response.tool_calls.len() > 1 {
-                // Concurrent execution for all tool calls (model scheduled them independently)
+                // Concurrent execution for all tool calls
                 for tc in &response.tool_calls {
-                    let tool_desc = self.format_tool_description(&tc.name, &tc.input);
-                    eprintln!("  {} {} {}", "▶".cyan(), tool_desc, "(concurrent)".dimmed());
                     rollout.log_tool_call(&tc.name, &tc.input.to_string());
                 }
+                let tool_descs: Vec<String> = response.tool_calls.iter()
+                    .map(|tc| self.format_tool_description(&tc.name, &tc.input))
+                    .collect();
+                eprintln!("  {} {}", "▶".cyan(), tool_descs.join(" | "));
 
                 let parallel_start = Instant::now();
                 let mut handles = Vec::new();
@@ -278,10 +280,7 @@ impl AgentRunner {
 
                     if is_error {
                         let preview = safe_truncate(&output, 100);
-                        eprintln!("    {} {} ({:.1}s)", "✗".red(), preview, tool_duration.as_secs_f64());
-                    } else {
-                        let summary = self.summarize_tool_result(&tool_name, &output);
-                        eprintln!("    {} {} ({:.1}s)", "✓".green(), summary.dimmed(), tool_duration.as_secs_f64());
+                        eprintln!("    {} {}", "✗".red(), preview);
                     }
 
                     let truncated = if output.len() > 15000 {
@@ -297,9 +296,7 @@ impl AgentRunner {
                 }
 
                 let parallel_elapsed = parallel_start.elapsed();
-                if self.config.verbose {
-                    eprintln!("  {} tools completed in {:.1}s (concurrent)", response.tool_calls.len(), parallel_elapsed.as_secs_f64());
-                }
+                eprintln!("    {} {} tools {}", "✓".green(), response.tool_calls.len(), format!("({:.1}s)", parallel_elapsed.as_secs_f64()).dimmed());
             } else {
                 // Single tool — sequential execution with recovery
                 for tc in &response.tool_calls {
@@ -318,10 +315,7 @@ impl AgentRunner {
 
                     if is_error {
                         let preview = safe_truncate(&output, 100);
-                        eprintln!("    {} {} ({:.1}s)", "✗".red(), preview, tool_duration.as_secs_f64());
-                    } else if self.config.verbose {
-                        let preview = safe_truncate(&output, 150);
-                        eprintln!("    {} ({:.1}s)", preview.dimmed(), tool_duration.as_secs_f64());
+                        eprintln!("    {} {}", "✗".red(), preview);
                     } else {
                         let summary = self.summarize_tool_result(&tc.name, &output);
                         eprintln!("    {} {}", "✓".green(), summary.dimmed());
@@ -564,43 +558,104 @@ impl AgentRunner {
 
             // Execute tool calls with error handling and recovery
             let mut result_blocks = Vec::new();
-            for tc in &response.tool_calls {
-                if self.config.verbose {
-                    eprintln!("  tool: {}({})", tc.name, safe_truncate(&tc.input.to_string(), 100));
+
+            if response.tool_calls.len() > 1 {
+                // Concurrent execution for multiple tool calls
+                for tc in &response.tool_calls {
+                    rollout.log_tool_call(&tc.name, &tc.input.to_string());
+                }
+                let tool_descs: Vec<String> = response.tool_calls.iter()
+                    .map(|tc| self.format_tool_description(&tc.name, &tc.input))
+                    .collect();
+                eprintln!("  {} {}", "▶".cyan(), tool_descs.join(" | "));
+
+                let parallel_start = Instant::now();
+                let mut handles = Vec::new();
+                for tc in &response.tool_calls {
+                    let name = tc.name.clone();
+                    let input = tc.input.clone();
+                    let workdir = self.config.workdir.clone();
+                    handles.push(tokio::task::spawn_blocking(move || {
+                        let start = Instant::now();
+                        let result = tools::execute_tool(&name, &input, &workdir);
+                        let duration = start.elapsed();
+                        (name, result, duration)
+                    }));
                 }
 
-                rollout.log_tool_call(&tc.name, &tc.input.to_string());
+                let results = join_all(handles).await;
 
-                let tool_start = Instant::now();
-                let result = self.execute_tool_with_recovery(&tc.name, &tc.input);
-                let tool_duration = tool_start.elapsed();
+                for (i, join_result) in results.into_iter().enumerate() {
+                    let tc = &response.tool_calls[i];
+                    let (_tool_name, result, tool_duration) = join_result.unwrap_or_else(|e| {
+                        (tc.name.clone(), Err(format!("Task panicked: {}", e)), std::time::Duration::ZERO)
+                    });
+                    let (output, is_error) = match result {
+                        Ok(o) => (o, false),
+                        Err(e) => (e, true),
+                    };
+                    rollout.log_tool_result(&tc.name, &output, tool_duration);
 
-                let (output, is_error) = match result {
-                    Ok(output) => (output, false),
-                    Err(err) => (err, true),
-                };
+                    if is_error {
+                        let preview = safe_truncate(&output, 100);
+                        eprintln!("    {} {}", "✗".red(), preview);
+                    }
 
-                rollout.log_tool_result(&tc.name, &output, tool_duration);
-
-                if self.config.verbose {
-                    let preview = safe_truncate(&output, 200);
-                    eprintln!("  result: {}{}", preview, if output.len() > 200 { "..." } else { "" });
+                    let truncated = if output.len() > 15000 {
+                        let mut t = safe_truncate(&output, 15000).to_string();
+                        t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
+                        t
+                    } else { output };
+                    result_blocks.push(ContentBlock::ToolResult {
+                        tool_use_id: tc.id.clone(),
+                        content: truncated,
+                        is_error: if is_error { Some(true) } else { None },
+                    });
                 }
 
-                // Truncate very long tool outputs to manage context window
-                let truncated_output = if output.len() > 15000 {
-                    let mut t = safe_truncate(&output, 15000).to_string();
-                    t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
-                    t
-                } else {
-                    output
-                };
+                let parallel_elapsed = parallel_start.elapsed();
+                eprintln!("    {} {} tools {}", "✓".green(), response.tool_calls.len(), format!("({:.1}s)", parallel_elapsed.as_secs_f64()).dimmed());
+            } else {
+                // Single tool — sequential with recovery
+                for tc in &response.tool_calls {
+                    let tool_desc = self.format_tool_description(&tc.name, &tc.input);
+                    eprintln!("  {} {}", "▶".cyan(), tool_desc);
 
-                result_blocks.push(ContentBlock::ToolResult {
-                    tool_use_id: tc.id.clone(),
-                    content: truncated_output,
-                    is_error: if is_error { Some(true) } else { None },
-                });
+                    rollout.log_tool_call(&tc.name, &tc.input.to_string());
+
+                    let tool_start = Instant::now();
+                    let result = self.execute_tool_with_recovery(&tc.name, &tc.input);
+                    let tool_duration = tool_start.elapsed();
+
+                    let (output, is_error) = match result {
+                        Ok(output) => (output, false),
+                        Err(err) => (err, true),
+                    };
+
+                    rollout.log_tool_result(&tc.name, &output, tool_duration);
+
+                    if is_error {
+                        let preview = safe_truncate(&output, 100);
+                        eprintln!("    {} {}", "✗".red(), preview);
+                    } else {
+                        let summary = self.summarize_tool_result(&tc.name, &output);
+                        eprintln!("    {} {}", "✓".green(), summary.dimmed());
+                    }
+
+                    let truncated_output = if output.len() > 15000 {
+                        let mut t = safe_truncate(&output, 15000).to_string();
+                        t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
+                        t
+                    } else {
+                        output
+                    };
+
+                    result_blocks.push(ContentBlock::ToolResult {
+                        tool_use_id: tc.id.clone(),
+                        content: truncated_output,
+                        is_error: if is_error { Some(true) } else { None },
+                    });
+                }
             }
 
             // Update routing state based on what tools were used
