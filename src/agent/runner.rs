@@ -859,6 +859,9 @@ impl AgentRunner {
                Proceed with confidence based on code analysis.\n\
              - Consider BACKWARD COMPATIBILITY: use try/except blocks when adding new API parameters \
                that may not exist in older library versions.\n\
+             - TRACK FILES: After Phase 1, use todo_write to create a checklist with one entry per \
+               required file. Mark each entry done ONLY after you've confirmed the edit. This prevents \
+               forgetting files in large multi-file tasks.\n\
              - When done, list every file you changed and briefly summarize each change",
             self.config.workdir.display(),
             env_info
