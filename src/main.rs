@@ -53,6 +53,10 @@ struct Cli {
     #[arg(long)]
     rollout: Option<PathBuf>,
 
+    /// Extended thinking budget in tokens (Anthropic models only, min 1024). 0 = disabled.
+    #[arg(long, default_value = "0")]
+    thinking_budget: u64,
+
     /// Interactive REPL mode (default when no prompt given)
     #[arg(short, long)]
     interactive: bool,
@@ -88,6 +92,7 @@ async fn run_oneshot(cli: &Cli, prompt: String) {
         max_iterations: cli.max_iterations,
         verbose: cli.verbose,
         streaming: true,
+        thinking_budget: cli.thinking_budget,
     };
 
     if cli.verbose {
@@ -155,6 +160,7 @@ async fn run_interactive(cli: &Cli) {
         max_iterations: cli.max_iterations,
         verbose: cli.verbose,
         streaming: true,
+        thinking_budget: cli.thinking_budget,
     };
     let mut runner = agent::AgentRunner::new(config);
 
@@ -211,6 +217,7 @@ async fn run_interactive(cli: &Cli) {
                         max_iterations: cli.max_iterations,
                         verbose: cli.verbose,
                         streaming: true,
+                        thinking_budget: cli.thinking_budget,
                     };
                     runner = agent::AgentRunner::new(new_config);
                     println!("{}", "Conversation cleared.".dimmed());
@@ -306,6 +313,7 @@ async fn main() {
                 max_iterations: cli.max_iterations,
                 verbose: cli.verbose,
                 streaming: true,
+                thinking_budget: cli.thinking_budget,
             };
             let mut runner = agent::AgentRunner::new(config);
             let rollout = runner.run(&prompt).await;

@@ -38,6 +38,8 @@ pub struct AgentConfig {
     pub max_iterations: usize,
     pub verbose: bool,
     pub streaming: bool,
+    /// Extended thinking budget in tokens (0 = disabled). Anthropic models only.
+    pub thinking_budget: u64,
 }
 
 /// The main agent runner — drives the model ↔ tool loop.
@@ -56,7 +58,10 @@ pub struct AgentRunner {
 
 impl AgentRunner {
     pub fn new(config: AgentConfig) -> Self {
-        let client = ApiClient::new(&config.api_key, &config.api_base_url, &config.model);
+        let mut client = ApiClient::new(&config.api_key, &config.api_base_url, &config.model);
+        if config.thinking_budget > 0 {
+            client.set_thinking_budget(config.thinking_budget);
+        }
 
         // Initialize MCP connections
         let mut mcp_manager = crate::tools::mcp::McpManager::new();

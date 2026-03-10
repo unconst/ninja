@@ -1,3 +1,4 @@
+use colored::Colorize;
 use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -59,6 +60,8 @@ pub struct ApiResponse {
     pub stop_reason: String,
     pub input_tokens: u64,
     pub output_tokens: u64,
+    /// Tokens used for extended thinking (Anthropic only, subset of output_tokens).
+    pub thinking_tokens: u64,
     pub duration: Duration,
 }
 
@@ -84,6 +87,8 @@ pub struct ApiClient {
     api_key: String,
     api_base_url: String,
     model: String,
+    /// Extended thinking budget in tokens (0 = disabled). Anthropic-only.
+    thinking_budget: u64,
 }
 
 impl ApiClient {
@@ -93,7 +98,12 @@ impl ApiClient {
             api_key: api_key.to_string(),
             api_base_url: api_base_url.to_string(),
             model: model.to_string(),
+            thinking_budget: 0,
         }
+    }
+
+    pub fn set_thinking_budget(&mut self, budget: u64) {
+        self.thinking_budget = budget;
     }
 
     pub fn set_model(&mut self, model: &str) {
@@ -200,6 +210,9 @@ impl ApiClient {
         if let Some(content) = data["content"].as_array() {
             for block in content {
                 match block["type"].as_str() {
+                    Some("thinking") => {
+                        // Extended thinking block — we log but don't include in text output
+                    }
                     Some("text") => {
                         if let Some(t) = block["text"].as_str() {
                             text_parts.push(t.to_string());
@@ -220,6 +233,9 @@ impl ApiClient {
         let usage = &data["usage"];
         let input_tokens = usage["input_tokens"].as_u64().unwrap_or(0);
         let output_tokens = usage["output_tokens"].as_u64().unwrap_or(0);
+        // Anthropic doesn't expose a separate thinking token count in usage;
+        // thinking tokens are included in output_tokens. We set 0 here.
+        let thinking_tokens = 0u64;
 
         ApiResponse {
             text: text_parts.join("\n"),
@@ -227,6 +243,7 @@ impl ApiClient {
             stop_reason,
             input_tokens,
             output_tokens,
+            thinking_tokens,
             duration,
         }
     }
@@ -394,6 +411,7 @@ impl ApiClient {
             stop_reason,
             input_tokens,
             output_tokens,
+            thinking_tokens: 0,
             duration,
         }
     }
@@ -414,9 +432,15 @@ impl ApiClient {
             ApiFormat::Anthropic => {
                 let api_messages = self.build_anthropic_messages(messages);
                 let api_tools = self.build_anthropic_tools(tools);
+                // When thinking is enabled, max_tokens must be > budget_tokens
+                let max_tokens = if self.thinking_budget > 0 {
+                    self.thinking_budget + 16384
+                } else {
+                    16384
+                };
                 let mut body = json!({
                     "model": self.model,
-                    "max_tokens": 16384,
+                    "max_tokens": max_tokens,
                     "messages": api_messages,
                 });
                 if !system.is_empty() {
@@ -434,6 +458,13 @@ impl ApiClient {
                         last["cache_control"] = json!({"type": "ephemeral"});
                     }
                     body["tools"] = json!(cached_tools);
+                }
+                // Extended thinking support
+                if self.thinking_budget > 0 {
+                    body["thinking"] = json!({
+                        "type": "enabled",
+                        "budget_tokens": self.thinking_budget
+                    });
                 }
                 body
             }
@@ -458,10 +489,16 @@ impl ApiClient {
             .header("Content-Type", "application/json");
 
         req = match format {
-            ApiFormat::Anthropic => req
-                .header("x-api-key", &self.api_key)
-                .header("anthropic-version", "2023-06-01")
-                .header("anthropic-beta", "prompt-caching-2024-07-31"),
+            ApiFormat::Anthropic => {
+                let mut r = req
+                    .header("x-api-key", &self.api_key)
+                    .header("anthropic-version", "2023-06-01")
+                    .header("anthropic-beta", "prompt-caching-2024-07-31");
+                if self.thinking_budget > 0 {
+                    r = r.header("anthropic-beta", "interleaved-thinking-2025-05-14");
+                }
+                r
+            }
             ApiFormat::OpenAI => req.header("Authorization", format!("Bearer {}", self.api_key)),
         };
 
@@ -510,9 +547,14 @@ impl ApiClient {
             ApiFormat::Anthropic => {
                 let api_messages = self.build_anthropic_messages(messages);
                 let api_tools = self.build_anthropic_tools(tools);
+                let max_tokens = if self.thinking_budget > 0 {
+                    self.thinking_budget + 16384
+                } else {
+                    16384
+                };
                 let mut body = json!({
                     "model": self.model,
-                    "max_tokens": 16384,
+                    "max_tokens": max_tokens,
                     "messages": api_messages,
                     "stream": true,
                 });
@@ -529,6 +571,12 @@ impl ApiClient {
                         last["cache_control"] = json!({"type": "ephemeral"});
                     }
                     body["tools"] = json!(cached_tools);
+                }
+                if self.thinking_budget > 0 {
+                    body["thinking"] = json!({
+                        "type": "enabled",
+                        "budget_tokens": self.thinking_budget
+                    });
                 }
                 body
             }
@@ -555,10 +603,16 @@ impl ApiClient {
             .header("Content-Type", "application/json");
 
         req = match format {
-            ApiFormat::Anthropic => req
-                .header("x-api-key", &self.api_key)
-                .header("anthropic-version", "2023-06-01")
-                .header("anthropic-beta", "prompt-caching-2024-07-31"),
+            ApiFormat::Anthropic => {
+                let mut r = req
+                    .header("x-api-key", &self.api_key)
+                    .header("anthropic-version", "2023-06-01")
+                    .header("anthropic-beta", "prompt-caching-2024-07-31");
+                if self.thinking_budget > 0 {
+                    r = r.header("anthropic-beta", "interleaved-thinking-2025-05-14");
+                }
+                r
+            }
             ApiFormat::OpenAI => req.header("Authorization", format!("Bearer {}", self.api_key)),
         };
 
@@ -596,11 +650,14 @@ impl ApiClient {
         let mut tool_calls: Vec<ToolCall> = Vec::new();
         let mut input_tokens: u64 = 0;
         let mut output_tokens: u64 = 0;
+        let thinking_tokens: u64 = 0;
         let mut stop_reason = String::from("unknown");
         let mut current_tool_json = String::new();
         let mut current_tool_id = String::new();
         let mut current_tool_name = String::new();
         let mut in_tool_input = false;
+        let mut in_thinking = false;
+        let mut thinking_started = false;
         let mut stderr = std::io::stderr();
 
         let mut stream = resp.bytes_stream();
@@ -632,18 +689,32 @@ impl ApiClient {
                 match event_type {
                     "content_block_start" => {
                         let block = &event["content_block"];
-                        if block["type"].as_str() == Some("tool_use") {
-                            current_tool_id =
-                                block["id"].as_str().unwrap_or("").to_string();
-                            current_tool_name =
-                                block["name"].as_str().unwrap_or("").to_string();
-                            current_tool_json.clear();
-                            in_tool_input = true;
+                        match block["type"].as_str() {
+                            Some("tool_use") => {
+                                current_tool_id =
+                                    block["id"].as_str().unwrap_or("").to_string();
+                                current_tool_name =
+                                    block["name"].as_str().unwrap_or("").to_string();
+                                current_tool_json.clear();
+                                in_tool_input = true;
+                            }
+                            Some("thinking") => {
+                                in_thinking = true;
+                                if !thinking_started {
+                                    thinking_started = true;
+                                    let _ = write!(stderr, "{}", "[thinking...] ".dimmed());
+                                    let _ = stderr.flush();
+                                }
+                            }
+                            _ => {}
                         }
                     }
                     "content_block_delta" => {
                         let delta = &event["delta"];
                         match delta["type"].as_str() {
+                            Some("thinking_delta") => {
+                                // Thinking deltas — count chars as a proxy, actual tokens from usage
+                            }
                             Some("text_delta") => {
                                 if let Some(text) = delta["text"].as_str() {
                                     text_parts.push(text.to_string());
@@ -673,6 +744,9 @@ impl ApiClient {
                             });
                             in_tool_input = false;
                         }
+                        if in_thinking {
+                            in_thinking = false;
+                        }
                     }
                     "message_delta" => {
                         if let Some(sr) = event["delta"]["stop_reason"].as_str() {
@@ -694,7 +768,7 @@ impl ApiClient {
             }
         }
 
-        if !text_parts.is_empty() {
+        if !text_parts.is_empty() || thinking_started {
             let _ = writeln!(stderr);
         }
 
@@ -704,6 +778,7 @@ impl ApiClient {
             stop_reason,
             input_tokens,
             output_tokens,
+            thinking_tokens,
             duration: start.elapsed(),
         })
     }
@@ -833,6 +908,7 @@ impl ApiClient {
             stop_reason,
             input_tokens,
             output_tokens,
+            thinking_tokens: 0,
             duration: start.elapsed(),
         })
     }
