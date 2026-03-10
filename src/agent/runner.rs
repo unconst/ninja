@@ -180,9 +180,18 @@ impl AgentRunner {
                     eprintln!("  result: {}{}", preview, if output.len() > 200 { "..." } else { "" });
                 }
 
+                // Truncate very long tool outputs to manage context window
+                let truncated_output = if output.len() > 15000 {
+                    let mut t = output[..15000].to_string();
+                    t.push_str(&format!("\n\n... (truncated, {} total chars)", output.len()));
+                    t
+                } else {
+                    output
+                };
+
                 result_blocks.push(ContentBlock::ToolResult {
                     tool_use_id: tc.id.clone(),
-                    content: output,
+                    content: truncated_output,
                     is_error: if is_error { Some(true) } else { None },
                 });
             }
