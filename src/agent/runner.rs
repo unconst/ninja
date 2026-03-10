@@ -61,12 +61,29 @@ impl AgentRunner {
                 eprintln!("[iteration {}]", iteration + 1);
             }
 
-            // Call Claude
-            let response = match self.client.chat(&messages, &tool_defs, &system).await {
-                Ok(r) => r,
-                Err(e) => {
-                    rollout.log_error(&format!("API error: {}", e));
-                    eprintln!("API error: {}", e);
+            // Call Claude with retry on transient errors
+            let mut response = None;
+            for attempt in 0..3u32 {
+                match self.client.chat(&messages, &tool_defs, &system).await {
+                    Ok(r) => {
+                        response = Some(r);
+                        break;
+                    }
+                    Err(e) => {
+                        rollout.log_error(&format!("API error (attempt {}): {}", attempt + 1, e));
+                        eprintln!("API error (attempt {}): {}", attempt + 1, e);
+                        if attempt < 2 {
+                            let delay_secs = 2u64.pow(attempt);
+                            eprintln!("  Retrying in {}s...", delay_secs);
+                            tokio::time::sleep(std::time::Duration::from_secs(delay_secs)).await;
+                        }
+                    }
+                }
+            }
+            let response = match response {
+                Some(r) => r,
+                None => {
+                    eprintln!("All API retries exhausted, stopping.");
                     break;
                 }
             };
@@ -258,7 +275,18 @@ impl AgentRunner {
         let result = tools::execute_tool(tool_name, input, &self.config.workdir);
         
         match result {
-            Ok(output) => Ok(output),
+            Ok(output) => {
+                // For edit_file operations, validate the changes were applied correctly
+                if tool_name == "edit_file" {
+                    if let Some(validation_result) = self.validate_file_edit(input, &output) {
+                        Ok(validation_result)
+                    } else {
+                        Ok(output)
+                    }
+                } else {
+                    Ok(output)
+                }
+            },
             Err(error) => {
                 // Apply recovery strategies based on tool type and error
                 if let Some(recovered_output) = self.try_recover_from_error(tool_name, input, &error) {
@@ -266,6 +294,49 @@ impl AgentRunner {
                 } else {
                     Err(error)
                 }
+            }
+        }
+    }
+
+    /// Validate that file edits were applied correctly by reading back the file
+    fn validate_file_edit(&self, input: &serde_json::Value, edit_output: &str) -> Option<String> {
+        let path = input.get("path")?.as_str()?;
+        let expected_content = input.get("content")?.as_str()?;
+        
+        // Only validate if the edit operation reported success
+        if !edit_output.contains("successfully") && !edit_output.contains("written") {
+            return None;
+        }
+        
+        // Read the file back to verify the content
+        let read_input = serde_json::json!({
+            "path": path
+        });
+        
+        match tools::execute_tool("read_file", &read_input, &self.config.workdir) {
+            Ok(actual_content) => {
+                // Check if the content matches what we expected
+                if actual_content.trim() == expected_content.trim() {
+                    // Content matches - edit was successful
+                    Some(format!("{}\n\nValidation: File content verified successfully.", edit_output))
+                } else {
+                    // Content doesn't match - there might be an issue
+                    let content_preview = if actual_content.len() > 500 {
+                        format!("{}...", &actual_content[..500])
+                    } else {
+                        actual_content.clone()
+                    };
+                    
+                    Some(format!(
+                        "{}\n\nValidation Warning: File content differs from expected. Actual content:\n{}",
+                        edit_output,
+                        content_preview
+                    ))
+                }
+            },
+            Err(_) => {
+                // Could not read the file back for validation
+                Some(format!("{}\n\nValidation Warning: Could not read file back to verify changes.", edit_output))
             }
         }
     }
@@ -356,6 +427,7 @@ impl AgentRunner {
         match tool_name {
             "shell" => self.recover_shell_error(input, error),
             "write_file" => self.recover_write_file_error(input, error),
+            "edit_file" => self.recover_edit_file_error(input, error),
             "read_file" => self.recover_read_file_error(input, error),
             _ => None,
         }
@@ -417,6 +489,37 @@ impl AgentRunner {
         if error.contains("Permission denied") {
             return Some(format!(
                 "Permission denied writing to '{}'. Check file permissions or try a different location.",
+                path
+            ));
+        }
+        
+        None
+    }
+
+    /// Recovery strategies for file edit errors
+    fn recover_edit_file_error(&self, input: &serde_json::Value, error: &str) -> Option<String> {
+        let path = input.get("path")?.as_str()?;
+        
+        // Handle file not found error - suggest using write_file instead
+        if error.contains("No such file or directory") || error.contains("cannot find the path") {
+            return Some(format!(
+                "File '{}' not found for editing. Use 'write_file' to create a new file, or check if the file path is correct.",
+                path
+            ));
+        }
+        
+        // Handle permission errors
+        if error.contains("Permission denied") {
+            return Some(format!(
+                "Permission denied editing '{}'. Check file permissions.",
+                path
+            ));
+        }
+        
+        // Handle content too large errors
+        if error.contains("too large") || error.contains("size limit") {
+            return Some(format!(
+                "File '{}' is too large to edit in one operation. Consider using smaller edits or breaking the change into multiple parts.",
                 path
             ));
         }
