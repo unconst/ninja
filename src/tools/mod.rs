@@ -6,6 +6,7 @@ mod navigate;
 mod testing;
 mod subagent;
 mod todo;
+mod think;
 
 use serde_json::Value;
 use std::path::Path;
@@ -23,6 +24,7 @@ pub fn get_tool_definitions() -> Vec<ToolDef> {
     tools.extend(testing::definitions());
     tools.extend(subagent::definitions());
     tools.extend(todo::definitions());
+    tools.extend(think::definitions());
     tools
 }
 
@@ -43,6 +45,7 @@ pub fn execute_tool(name: &str, args: &Value, workdir: &Path) -> Result<String, 
         "run_tests" => testing::run_tests(args, workdir),
         "spawn_agent" => subagent::spawn_agent(args, workdir),
         "todo_write" => todo::todo_write(args, workdir),
+        "think" => think::think(args, workdir),
         _ => Err(format!("Unknown tool: {}", name)),
     }
 }

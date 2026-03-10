@@ -242,7 +242,7 @@ impl AgentRunner {
             let mut result_blocks = Vec::new();
 
             let is_read_only = |name: &str| -> bool {
-                matches!(name, "read_file" | "list_dir" | "glob_search" | "grep_search" | "find_definition" | "find_references" | "web_fetch" | "todo_write")
+                matches!(name, "read_file" | "list_dir" | "glob_search" | "grep_search" | "find_definition" | "find_references" | "web_fetch" | "todo_write" | "think")
             };
 
             // Check if all tool calls are read-only (safe to parallelize)
@@ -671,7 +671,8 @@ impl AgentRunner {
              - find_references: Find all references to a symbol\n\
              - run_tests: Run project tests (auto-detects framework, or provide custom command)\n\
              - spawn_agent: Launch a sub-agent for independent parallel tasks\n\
-             - todo_write: Track progress on multi-step tasks with a structured todo list\n\n\
+             - todo_write: Track progress on multi-step tasks with a structured todo list\n\
+             - think: Reason step-by-step about complex decisions before acting (no side effects)\n\n\
              ## Strategy — STRICT ITERATION BUDGET\n\
              You have a limited number of iterations. Follow this phased approach:\n\n\
              **Phase 1: EXPLORE (iterations 1-5 MAX)**\n\
