@@ -1255,6 +1255,11 @@ impl AgentRunner {
              - **Recover from errors.** If edit_file fails with 'String not found', re-read the \
                file and copy the EXACT text. After 2 failures, use write_file to overwrite. \
                If stuck on one approach for 3+ iterations, switch strategies entirely.\n\
+             - **Efficient renames.** When renaming a symbol across a file, use \
+               edit_file with replace_all=true (e.g., old_string=\"DataProcessor\", \
+               new_string=\"PipelineExecutor\", replace_all=true). This handles all \
+               occurrences in one call — much faster than individual edits. Do this \
+               for EACH file separately.\n\
              - **Track progress.** For multi-step tasks, use todo_write to maintain a checklist.\n\
              - **Externalize state.** Always write your plan to /tmp/.ninja_plan.md before editing. \
                After context compaction, re-read it to stay on track. Also log failed approaches \
