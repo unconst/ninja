@@ -188,112 +188,48 @@ impl AgentRunner {
             }
 
             let remaining = self.config.max_iterations - iteration;
-            if iteration == 5 {
-                self.conversation.push(Message {
-                    role: "user".to_string(),
-                    content: MessageContent::Text(
-                        "[SYSTEM] PHASE CHECK — Iteration 5 reached. You should be DONE exploring by now. \
-                         If you haven't started editing files, START NOW. State your plan briefly, then \
-                         begin implementing. Every iteration spent reading without editing is wasted.".to_string()
-                    ),
-                });
-            } else if iteration == 10 {
+            if iteration == 8 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 if diff_stat.is_empty() {
                     self.conversation.push(Message {
                         role: "user".to_string(),
                         content: MessageContent::Text(
-                            "[SYSTEM] CRITICAL — Iteration 10 and ZERO files modified! You are in analysis paralysis. \
-                             STOP READING FILES IMMEDIATELY. You have spent 10 iterations exploring without writing \
-                             a single line of code. This is unacceptable.\n\n\
-                             DO THIS NOW:\n\
-                             1. Pick the FIRST required file from your plan\n\
-                             2. Open it with read_file\n\
-                             3. Make the edit with edit_file or write_file in this SAME response\n\
-                             4. Move to the next file\n\n\
-                             Do NOT use think, do NOT read more files for context, do NOT re-analyze. \
-                             START EDITING NOW.".to_string()
+                            "[SYSTEM] PROGRESS CHECK — You've used 8 iterations without modifying any files. \
+                             If the task requires code changes, start implementing now. If you're still \
+                             exploring, form a plan and begin editing.".to_string()
                         ),
                     });
-                    rollout.log_error("Analysis paralysis detected: 0 files modified at iteration 10");
-                } else {
-                    self.conversation.push(Message {
-                        role: "user".to_string(),
-                        content: MessageContent::Text(format!(
-                            "[SYSTEM] PROGRESS CHECK — Iteration 10. You've started editing. Good.\n\
-                             Current git diff --stat:\n```\n{}\n```\n\
-                             Keep going — make sure ALL required files get modified.",
-                            diff_stat.lines().take(15).collect::<Vec<_>>().join("\n")
-                        )),
-                    });
                 }
-            } else if iteration == 15 {
-                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
-                let diff_section = if diff_stat.is_empty() {
-                    "CRITICAL: Still ZERO files modified at iteration 15! Start editing immediately or you will fail.".to_string()
-                } else {
-                    format!("Current git diff --stat:\n```\n{}\n```", diff_stat.lines().take(15).collect::<Vec<_>>().join("\n"))
-                };
-                self.conversation.push(Message {
-                    role: "user".to_string(),
-                    content: MessageContent::Text(format!(
-                        "[SYSTEM] MID-RUN CHECK — Iteration 15. How many files from your plan have you \
-                         actually modified? Compare against REQUIRED FILES. If less than half, pick up the pace.\n\n\
-                         {}\n\n\
-                         Focus on the remaining files. Every unmodified required file is a failure.", diff_section
-                    )),
-                });
-            } else if iteration == 25 || iteration == 40 {
+            } else if iteration == 20 || iteration == 40 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 let diff_preview = if diff_stat.is_empty() {
-                    "WARNING: No files modified yet!".to_string()
+                    "No files modified yet.".to_string()
                 } else {
                     diff_stat.lines().take(20).collect::<Vec<_>>().join("\n")
                 };
                 self.conversation.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
-                        "[SYSTEM] REFLECTION — Iteration {}. Pause and assess:\n\
-                         1. Which REQUIRED FILES have you completed vs remaining?\n\
-                         2. Are you stuck on anything? If an edit keeps failing, try a different approach \
-                            (write_file to overwrite, replace_lines by line number, or break the edit into smaller pieces)\n\
+                        "[SYSTEM] PROGRESS — Iteration {}. Check your todo list and assess:\n\
+                         1. What have you completed so far?\n\
+                         2. What remains? Are you stuck on anything?\n\
                          3. What's your plan for the remaining {} iterations?\n\n\
-                         Current git diff --stat:\n```\n{}\n```\n\n\
-                         State your plan briefly, then execute.", iteration + 1, remaining, diff_preview
+                         Current changes:\n```\n{}\n```", iteration + 1, remaining, diff_preview
                     )),
-                });
-            } else if remaining == 10 {
-                self.conversation.push(Message {
-                    role: "user".to_string(),
-                    content: MessageContent::Text(
-                        "[SYSTEM] URGENT — 10 iterations remaining. Review your deliverables checklist — \
-                         make sure all required files have been modified/created. Focus on completing \
-                         any remaining changes now.".to_string()
-                    ),
                 });
             } else if remaining == 5 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 let diff_section = if diff_stat.is_empty() {
-                    "\n\nWARNING: `git diff --stat` shows NO modified files!".to_string()
+                    "WARNING: No files modified yet.".to_string()
                 } else {
-                    format!("\n\nCurrent `git diff --stat`:\n```\n{}\n```", diff_stat)
+                    format!("Current changes:\n```\n{}\n```", diff_stat)
                 };
                 self.conversation.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
-                        "[SYSTEM] FILE CHECK — 5 iterations left. Compare the files below against the REQUIRED \
-                         FILES list from the task. If ANY required file is missing from git diff, you MUST modify \
-                         it NOW.{}\n\n\
-                         Do NOT stop until every required file appears in git diff.", diff_section
+                        "[SYSTEM] 5 iterations remaining. Wrap up your changes. Review your todo list — \
+                         complete any remaining items.\n\n{}", diff_section
                     )),
-                });
-            } else if remaining == 3 {
-                self.conversation.push(Message {
-                    role: "user".to_string(),
-                    content: MessageContent::Text(
-                        "[SYSTEM] FINAL — Only 3 iterations left! Wrap up immediately. If any files from your \
-                         plan are still unmodified, make those changes now.".to_string()
-                    ),
                 });
             }
 
@@ -342,7 +278,7 @@ impl AgentRunner {
             if response.tool_calls.is_empty() {
                 // Completion check: if agent stops early, verify with diff-stat
                 let used_pct = (iteration as f64) / (self.config.max_iterations as f64);
-                if used_pct < 0.6 && !completion_check_done {
+                if used_pct < 0.3 && !completion_check_done {
                     completion_check_done = true;
                     self.conversation.push(Message {
                         role: "assistant".to_string(),
@@ -351,29 +287,22 @@ impl AgentRunner {
 
                     let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                     let diff_context = if diff_stat.is_empty() {
-                        "\n\nWARNING: `git diff --stat` shows NO modified files!".to_string()
+                        "\n\nNo files modified yet.".to_string()
                     } else {
-                        format!(
-                            "\n\nCurrent `git diff --stat`:\n```\n{}\n```\n\
-                             Compare this against the REQUIRED FILES list from the task.",
-                            diff_stat
-                        )
+                        format!("\n\nCurrent changes:\n```\n{}\n```", diff_stat)
                     };
 
                     self.conversation.push(Message {
                         role: "user".to_string(),
                         content: MessageContent::Text(format!(
-                            "[SYSTEM] COMPLETION CHECK — You stopped early. Before finishing, verify:\n\
-                             1. Have you modified ALL files listed in the REQUIRED FILES?\n\
-                             2. Did you create required documentation/changelog entries?\n\
-                             3. Did you update type stubs (.pyi) if needed?\
+                            "[SYSTEM] You stopped very early. Before finishing, double-check:\n\
+                             1. Have you addressed all parts of the task?\n\
+                             2. Check your todo list — are all items done?\
                              {}\n\n\
-                             If any REQUIRED FILE is missing from git diff, modify it now. \
                              If truly done, respond with your summary and no tool calls.",
                             diff_context
                         )),
                     });
-                    rollout.log_error("Completion check injected — agent tried to stop early");
                     continue;
                 }
 
@@ -554,118 +483,48 @@ impl AgentRunner {
 
             // Inject phase transition and urgency reminders
             let remaining = self.config.max_iterations - iteration;
-            if iteration == 5 {
-                messages.push(Message {
-                    role: "user".to_string(),
-                    content: MessageContent::Text(
-                        "[SYSTEM] PHASE CHECK — Iteration 5 reached. You should be DONE exploring by now. \
-                         If you haven't started editing files, START NOW. State your plan briefly, then \
-                         begin implementing. Every iteration spent reading without editing is wasted.".to_string()
-                    ),
-                });
-            } else if iteration == 10 {
-                // Hard check: if no files modified by iteration 10, escalate aggressively
+            if iteration == 8 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 if diff_stat.is_empty() {
                     messages.push(Message {
                         role: "user".to_string(),
                         content: MessageContent::Text(
-                            "[SYSTEM] CRITICAL — Iteration 10 and ZERO files modified! You are in analysis paralysis. \
-                             STOP READING FILES IMMEDIATELY. You have spent 10 iterations exploring without writing \
-                             a single line of code. This is unacceptable.\n\n\
-                             DO THIS NOW:\n\
-                             1. Pick the FIRST required file from your plan\n\
-                             2. Open it with read_file\n\
-                             3. Make the edit with edit_file or write_file in this SAME response\n\
-                             4. Move to the next file\n\n\
-                             Do NOT use think, do NOT read more files for context, do NOT re-analyze. \
-                             START EDITING NOW.".to_string()
+                            "[SYSTEM] PROGRESS CHECK — You've used 8 iterations without modifying any files. \
+                             If the task requires code changes, start implementing now. If you're still \
+                             exploring, form a plan and begin editing.".to_string()
                         ),
                     });
-                    rollout.log_error("Analysis paralysis detected: 0 files modified at iteration 10");
-                } else {
-                    messages.push(Message {
-                        role: "user".to_string(),
-                        content: MessageContent::Text(format!(
-                            "[SYSTEM] PROGRESS CHECK — Iteration 10. You've started editing. Good.\n\
-                             Current git diff --stat:\n```\n{}\n```\n\
-                             Keep going — make sure ALL required files get modified.",
-                            diff_stat.lines().take(15).collect::<Vec<_>>().join("\n")
-                        )),
-                    });
                 }
-            } else if iteration == 15 {
-                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
-                let diff_section = if diff_stat.is_empty() {
-                    "CRITICAL: Still ZERO files modified at iteration 15! Start editing immediately or you will fail.".to_string()
-                } else {
-                    format!("Current git diff --stat:\n```\n{}\n```", diff_stat.lines().take(15).collect::<Vec<_>>().join("\n"))
-                };
-                messages.push(Message {
-                    role: "user".to_string(),
-                    content: MessageContent::Text(format!(
-                        "[SYSTEM] MID-RUN CHECK — Iteration 15. How many files from your plan have you \
-                         actually modified? Compare against REQUIRED FILES. If less than half, pick up the pace.\n\n\
-                         {}\n\n\
-                         Focus on the remaining files. Every unmodified required file is a failure.", diff_section
-                    )),
-                });
-            } else if iteration == 25 || iteration == 40 {
-                // Reflection prompt: ask agent to evaluate progress and consider strategy shifts
+            } else if iteration == 20 || iteration == 40 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 let diff_preview = if diff_stat.is_empty() {
-                    "WARNING: No files modified yet!".to_string()
+                    "No files modified yet.".to_string()
                 } else {
                     diff_stat.lines().take(20).collect::<Vec<_>>().join("\n")
                 };
                 messages.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
-                        "[SYSTEM] REFLECTION — Iteration {}. Pause and assess:\n\
-                         1. Which REQUIRED FILES have you completed vs remaining?\n\
-                         2. Are you stuck on anything? If an edit keeps failing, try a different approach \
-                            (write_file to overwrite, replace_lines by line number, or break the edit into smaller pieces)\n\
-                         3. Would a helper script speed things up? (e.g. a shell one-liner to apply a pattern across files)\n\
-                         4. What's your plan for the remaining {} iterations?\n\n\
-                         Current git diff --stat:\n```\n{}\n```\n\n\
-                         State your plan briefly, then execute.", iteration + 1, remaining, diff_preview
+                        "[SYSTEM] PROGRESS — Iteration {}. Check your todo list and assess:\n\
+                         1. What have you completed so far?\n\
+                         2. What remains? Are you stuck on anything?\n\
+                         3. What's your plan for the remaining {} iterations?\n\n\
+                         Current changes:\n```\n{}\n```", iteration + 1, remaining, diff_preview
                     )),
                 });
-            } else if remaining == 10 {
-                messages.push(Message {
-                    role: "user".to_string(),
-                    content: MessageContent::Text(
-                        "[SYSTEM] URGENT — 10 iterations remaining. Review your deliverables checklist — \
-                         make sure all required files have been modified/created. Focus on completing \
-                         any remaining changes now. Don't waste iterations on testing if dependencies \
-                         are missing.".to_string()
-                    ),
-                });
             } else if remaining == 5 {
-                // Auto-run git diff --stat and include results so agent can see gaps
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 let diff_section = if diff_stat.is_empty() {
-                    "\n\nWARNING: `git diff --stat` shows NO modified files! You have not made any changes yet.".to_string()
+                    "WARNING: No files modified yet.".to_string()
                 } else {
-                    format!("\n\nCurrent `git diff --stat`:\n```\n{}\n```", diff_stat)
+                    format!("Current changes:\n```\n{}\n```", diff_stat)
                 };
                 messages.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
-                        "[SYSTEM] FILE CHECK — 5 iterations left. Compare the files below against the REQUIRED \
-                         FILES list from the task. If ANY required file is missing from git diff, you MUST modify \
-                         it NOW. Remember: if a file is listed as required, the solution ADDS new code to it — \
-                         do not skip it just because you didn't find existing code to change.{}\n\n\
-                         Do NOT stop until every required file appears in git diff.", diff_section
+                        "[SYSTEM] 5 iterations remaining. Wrap up your changes. Review your todo list — \
+                         complete any remaining items.\n\n{}", diff_section
                     )),
-                });
-            } else if remaining == 3 {
-                messages.push(Message {
-                    role: "user".to_string(),
-                    content: MessageContent::Text(
-                        "[SYSTEM] FINAL — Only 3 iterations left! Wrap up immediately. If any files from your \
-                         plan are still unmodified, make those changes now. Summarize what you've done.".to_string()
-                    ),
                 });
             }
 
@@ -746,40 +605,31 @@ impl AgentRunner {
                 // If agent stops early (before using 40% of iterations) and hasn't been
                 // nudged yet, inject a completion check to prevent premature stopping
                 let used_pct = (iteration as f64) / (self.config.max_iterations as f64);
-                if used_pct < 0.6 && !completion_check_done {
+                if used_pct < 0.3 && !completion_check_done {
                     completion_check_done = true;
                     messages.push(Message {
                         role: "assistant".to_string(),
                         content: MessageContent::Text(response.text.clone()),
                     });
 
-                    // Auto-run git diff --stat for the verification
                     let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                     let diff_context = if diff_stat.is_empty() {
-                        "\n\nWARNING: `git diff --stat` shows NO modified files!".to_string()
+                        "\n\nNo files modified yet.".to_string()
                     } else {
-                        format!(
-                            "\n\nCurrent `git diff --stat`:\n```\n{}\n```\n\
-                             Compare this against the REQUIRED FILES list from the task.",
-                            diff_stat
-                        )
+                        format!("\n\nCurrent changes:\n```\n{}\n```", diff_stat)
                     };
 
                     messages.push(Message {
                         role: "user".to_string(),
                         content: MessageContent::Text(format!(
-                            "[SYSTEM] COMPLETION CHECK — You stopped early. Before finishing, verify:\n\
-                             1. Have you modified ALL files listed in the REQUIRED FILES?\n\
-                             2. Did you create required documentation/changelog entries?\n\
-                             3. Did you update type stubs (.pyi) if needed?\n\
-                             4. Check your todo list — are all items marked done?\
+                            "[SYSTEM] You stopped very early. Before finishing, double-check:\n\
+                             1. Have you addressed all parts of the task?\n\
+                             2. Check your todo list — are all items done?\
                              {}\n\n\
-                             If any REQUIRED FILE is missing from git diff, modify it now. \
                              If truly done, respond with your summary and no tool calls.",
                             diff_context
                         )),
                     });
-                    rollout.log_error("Completion check injected — agent tried to stop early");
                     continue;
                 }
                 rollout.final_result = Some(response.text.clone());
@@ -990,19 +840,17 @@ impl AgentRunner {
                 content: MessageContent::Blocks(result_blocks),
             });
 
-            // If 7+ iterations since last write and past iteration 10, nudge the agent to implement
-            if !idle_nudge_done && iteration > 10 && iteration - last_write_iteration >= 7 {
+            // Nudge if 10+ iterations without any file modifications
+            if !idle_nudge_done && iteration > 10 && iteration - last_write_iteration >= 10 {
                 idle_nudge_done = true;
                 messages.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(
-                        "[SYSTEM] IDLE DETECTION — You haven't written or edited any files in the last 10 \
-                         iterations. If your changes are complete, stop and provide your final summary. \
-                         Don't continue reading/verifying indefinitely. If there are remaining changes, \
-                         make them NOW.".to_string()
+                        "[SYSTEM] You haven't modified any files in a while. If your work is complete, \
+                         stop and provide your final summary. If there are remaining changes, proceed \
+                         with implementing them now.".to_string()
                     ),
                 });
-                rollout.log_error("Idle write detection: 10+ iterations without edits");
             }
 
             // Shrink old tool results to prevent cumulative context bloat.
@@ -1018,119 +866,58 @@ impl AgentRunner {
     /// Build the system prompt for the agent.
     fn build_system_prompt(&self, env_info: &str) -> String {
         let mut prompt = format!(
-            "You are Ninja, a powerful autonomous coding agent. You solve software engineering tasks \
-             by reading, understanding, and modifying code.\n\n\
+            "You are Ninja, a fast and capable autonomous coding agent. You solve any software \
+             engineering task — bug fixes, new features, refactors, research, devops, and more.\n\n\
              Working directory: {}\n\
              {}\n\n\
-             ## Available Tools\n\
+             ## Tools\n\
              - read_file: Read file contents (supports offset/limit for large files)\n\
              - write_file: Create or overwrite files\n\
-             - edit_file: Replace exact string matches in files. The old_string MUST be unique \
-               — include surrounding context lines if needed. Set replace_all=true to replace all occurrences.\n\
-             - replace_lines: Replace a range of lines by line number (1-based, inclusive). \
-               More reliable than edit_file for large changes. Always read the file first to get line numbers.\n\
+             - edit_file: Replace exact string matches. old_string MUST be unique — include \
+               surrounding context lines. Set replace_all=true for all occurrences.\n\
+             - replace_lines: Replace a range of lines by number (1-based, inclusive). \
+               More reliable than edit_file for large changes. Read file first for line numbers.\n\
              - list_dir: List directory contents\n\
              - shell_exec: Run shell commands (bash)\n\
              - glob_search: Find files by name pattern\n\
              - grep_search: Search file contents with regex\n\
-             - web_fetch: Fetch content from a URL (documentation, issues, etc.)\n\
-             - web_search: Search the web for information using DuckDuckGo\n\
-             - find_definition: Find where a symbol is defined (function, class, etc.)\n\
+             - web_fetch: Fetch content from a URL\n\
+             - web_search: Search the web for information\n\
+             - find_definition: Find where a symbol is defined\n\
              - find_references: Find all references to a symbol\n\
-             - run_tests: Run project tests (auto-detects framework, or provide custom command). \
-               Use this to verify your changes work. If tests are pre-applied (TDD mode), \
-               run tests early to see failures, then iterate until they pass.\n\
-             - spawn_agent: Launch a sub-agent for independent parallel tasks. Use this to fan out \
-               work across multiple files or research tasks simultaneously.\n\
-             - todo_write: Track progress on multi-step tasks with a structured todo list\n\
-             - think: Reason step-by-step about complex decisions before acting (no side effects)\n\
-             - memory_write: Save important discoveries, patterns, or project notes to persistent memory\n\
-             - oracle: Get a second opinion from a different AI model when you're stuck or unsure. \
-               Include all relevant context in your question since the oracle has no conversation history.\n\
-             - git_status: Show working tree status (modified, staged, untracked files)\n\
-             - git_diff: Show changes in working directory (supports staged, stat_only, file_path)\n\
-             - git_log: Show recent commit history\n\
-             - git_commit: Stage and commit changes (supports 'all' or specific 'files' list)\n\n\
-             ## Example Workflows\n\
-             **Example 1: Targeted edit with context**\n\
-             1. read_file(path: \"src/auth.py\") → see full file\n\
-             2. edit_file(path: \"src/auth.py\", old_string: \"def login(user):\\n    token = create_token(user)\", \
-             new_string: \"def login(user):\\n    if not user.is_active:\\n        raise AuthError('inactive')\\n    token = create_token(user)\")\n\
-             → Include 2+ context lines in old_string to ensure uniqueness.\n\n\
-             **Example 2: Adding new code to a required file**\n\
-             Task says REQUIRED FILES: helpers.py, app.py. After fixing app.py, you read helpers.py and see no \
-             obvious changes. DON'T skip it. The solution requires ADDING a new class/function there:\n\
-             1. read_file(path: \"helpers.py\") → see existing code\n\
-             2. edit_file(path: \"helpers.py\", old_string: \"<last line of file>\", \
-             new_string: \"<last line of file>\\n\\n\\nclass NewHelper:\\n    ...\")\n\
-             → Every REQUIRED FILE must appear in your git diff.\n\n\
-             ## Strategy — STRICT ITERATION BUDGET\n\
-             You have a limited number of iterations. Follow this phased approach:\n\n\
-             **Phase 1: EXPLORE & ANALYZE (iterations 1-5 MAX)**\n\
-             - Read the problem statement carefully. If REQUIRED FILES are listed, read ALL of them \
-               right away (call read_file on each one in your first response — they execute concurrently!)\n\
-             - Use grep_search to locate additional relevant files — read them in FULL\n\
-             - By iteration 3, you MUST produce a STRUCTURED PLAN using think tool. Include:\n\
-               (a) Root cause: What exactly causes the bug / what feature is missing?\n\
-               (b) Change map: For EACH required file, what specific changes are needed (add/modify/delete what)?\n\
-               (c) Dependencies: Are there version constraints, backward-compat needs, or import chains to consider?\n\
-               (d) Risk areas: Which edits might fail? What alternative approaches exist?\n\
-             - Do NOT spend more than 5 iterations exploring. If unsure, start implementing.\n\n\
-             **Phase 2: IMPLEMENT (iterations 6-35)**\n\
-             - Work through the REQUIRED FILES list systematically — do not skip ANY file\n\
-             - Always read a file before editing it — read the ENTIRE file (no offset/limit) for config \
-               files (pyproject.toml, setup.cfg, Cargo.toml, package.json, etc.) since they are small \
-               and you need full context\n\
-             - For edit_file, include enough surrounding context in old_string to make it unique\n\
-             - For large edits (>20 lines), prefer replace_lines over edit_file\n\
-             - After each edit, read back the file to confirm it applied correctly\n\
-             - Consider backward compatibility and edge cases (try/except for version differences, etc.)\n\
-             - Create ALL required files: source code, docs, changelogs, type stubs (.pyi), config\n\
-             - If the REQUIRED FILES list includes files that don't exist yet, CREATE them with write_file. \
-               Common examples: changelog entries (e.g. changelog/NNNN.type.rst), new modules, new test files.\n\n\
-             **Phase 3: VERIFY & FINISH (iterations 36+)**\n\
-             - Review your deliverables checklist — every file must be addressed\n\
-             - Check for INDIRECT CHANGES needed in config files: when you update a linter, formatter, \
-               or dependency version, run the tool to check if new rules/warnings fire. Update \
-               pyproject.toml, setup.cfg, .pre-commit-config.yaml with any new ignores or settings.\n\
-             - When you change file formats (e.g. PNG→SVG), update ALL references in docs/conf.py, \
-               index.rst, README, etc. — don't just add new files, also fix pointers to old ones.\n\
-             - Type stubs (.pyi): if you change a function signature in a .pyx/.py file, update the \
-               corresponding .pyi stub to match.\n\
-             - Run the project's linter or test suite after changes if feasible — new failures often \
-               reveal config files you need to update.\n\
-             - When done, list every file you changed with a brief summary\n\n\
-             ## Rules\n\
-             - BATCH SIMILAR WORK: When multiple documentation, config, or example files need updates, \
-               handle them in quick succession — read + edit each one in the same response. \
-               Don't re-analyze the problem between each doc file.\n\
-             - SPEED OVER PERFECTION: Make changes quickly. Don't over-explore.\n\
-             - PARALLELIZE: When you need to read or research multiple independent files/topics, \
-               use spawn_agent to fan out the work. When you call multiple tools in one response, \
-               they execute concurrently.\n\
-             - Read files FULLY — avoid using offset/limit unless a file is >2000 lines. \
-               Config files are ALWAYS small; read them completely.\n\
-             - Be precise and minimal in changes — don't over-engineer\n\
-             - When editing, prefer small targeted edits over rewriting entire files\n\
-             - If edit_file fails with 'String not found', re-read the file and copy the EXACT text. \
-               After 2 failed attempts on the same file, switch to write_file to overwrite it entirely.\n\
-             - If a test patch is provided, apply it first, then make source changes to pass the tests\n\
-             - If you can't run tests due to missing dependencies, don't waste iterations retrying. \
-               Proceed with confidence based on code analysis.\n\
-             - Consider BACKWARD COMPATIBILITY: use try/except blocks when adding new API parameters \
-               that may not exist in older library versions.\n\
-             - TRACK FILES: After Phase 1, use todo_write to create a checklist with one entry per \
-               required file. Mark each entry done ONLY after you've confirmed the edit. This prevents \
-               forgetting files in large multi-file tasks.\n\
-             - EXTERNALIZE PLAN: For complex tasks (5+ files), write your plan to a scratch file \
-               (e.g. shell_exec: echo \"plan...\" > /tmp/.ninja_plan.md). This lets you re-read it later \
-               if the conversation is compacted and you lose context.\n\
-             - REQUIRED FILES ARE MANDATORY: If a file is listed as REQUIRED, you MUST produce a \
-               git diff for that file — even if you don't see obvious existing code to change. \
-               The solution may require ADDING entirely new code (classes, functions, imports) to that \
-               file. Never mark a required file as 'no changes needed' — re-examine the problem to \
-               find what new code belongs there.\n\
-             - When done, list every file you changed and briefly summarize each change",
+             - run_tests: Run project tests (auto-detects framework, or custom command)\n\
+             - spawn_agent: Launch a sub-agent for independent parallel tasks\n\
+             - todo_write: Track progress on multi-step tasks\n\
+             - think: Reason step-by-step before acting (no side effects)\n\
+             - memory_write: Save discoveries or project notes to persistent memory\n\
+             - oracle: Get a second opinion from a different AI model\n\
+             - git_status, git_diff, git_log, git_commit: Git operations\n\n\
+             ## How to Work\n\
+             1. **Understand first.** Read the task carefully. Explore the codebase to find relevant \
+                files — use grep_search, glob_search, find_definition. Read files fully before editing.\n\
+             2. **Plan briefly.** Use think to form a concrete plan: what to change, where, and why. \
+                For complex tasks (5+ files), write the plan to /tmp/.ninja_plan.md so you can re-read \
+                it after context compaction.\n\
+             3. **Implement directly.** Edit files with precision. Prefer small targeted edits. \
+                For large changes (>20 lines), use replace_lines. Read back after editing to confirm.\n\
+             4. **Verify.** Run tests or linters when available. Check your work makes sense.\n\
+             5. **Summarize.** When done, list every file changed with a brief description.\n\n\
+             ## Principles\n\
+             - **Speed over perfection.** Act decisively. Don't over-explore or over-analyze.\n\
+             - **Parallelize.** Call multiple tools per response — they execute concurrently. \
+               Use spawn_agent to fan out independent sub-tasks.\n\
+             - **Be precise.** Minimal changes. Don't over-engineer or add unnecessary code.\n\
+             - **Read fully.** Don't use offset/limit unless a file is >2000 lines. \
+               Config files are small — always read completely.\n\
+             - **Recover from errors.** If edit_file fails with 'String not found', re-read the \
+               file and copy the EXACT text. After 2 failures, use write_file to overwrite.\n\
+             - **Track progress.** For multi-step tasks, use todo_write to maintain a checklist.\n\
+             - **Externalize state.** For complex tasks, write plans and notes to /tmp files \
+               so you can recover context after compaction.\n\
+             - **Use tests.** If tests exist, run them to verify. If a test patch is provided, \
+               apply it first, then implement to pass the tests.\n\
+             - **Don't give up.** If stuck on an approach, try alternatives. If an edit keeps \
+               failing, try write_file, replace_lines, or break into smaller pieces.",
             self.config.workdir.display(),
             env_info
         );
