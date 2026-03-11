@@ -1006,7 +1006,7 @@ impl AgentRunner {
         let repo_map = Self::generate_repo_map(&self.config.workdir);
         if !repo_map.is_empty() {
             prompt.push_str(&format!(
-                "\n\n## Repository Map\nFiles in the working directory:\n```\n{}\n```",
+                "\n\n## Repository Map\nFiles and symbols in the working directory:\n```\n{}\n```",
                 repo_map.trim()
             ));
         }
@@ -1019,8 +1019,9 @@ impl AgentRunner {
         prompt
     }
 
-    /// Generate a compact repository map (directory tree) for the system prompt.
-    /// Shows top-level structure and key source directories, capped at ~150 lines.
+    /// Generate a symbol-aware repository map for the system prompt.
+    /// For Python files, extracts class/function definitions using AST parsing.
+    /// Shows a compact tree with symbols, capped at ~200 lines.
     fn generate_repo_map(workdir: &Path) -> String {
         use std::collections::BTreeMap;
 
@@ -1041,6 +1042,9 @@ impl AgentRunner {
                 "-not", "-path", "*/.pytest_cache/*",
                 "-not", "-path", "./*.egg-info/*",
                 "-not", "-path", "*/*.egg-info/*",
+                "-not", "-path", "./build/*",
+                "-not", "-path", "./dist/*",
+                "-not", "-path", "./.eggs/*",
                 "-not", "-name", "*.pyc",
                 "-not", "-name", "*.pyo",
             ])
@@ -1052,45 +1056,72 @@ impl AgentRunner {
         };
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let mut files: Vec<&str> = stdout.lines().collect();
+        let mut files: Vec<String> = stdout.lines()
+            .map(|l| l.strip_prefix("./").unwrap_or(l).to_string())
+            .filter(|l| !l.is_empty())
+            .collect();
         files.sort();
 
         if files.is_empty() {
             return String::new();
         }
 
-        // Build directory tree structure
-        let mut tree: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        // Collect Python source files (non-test, non-config) for symbol extraction
+        let py_source_files: Vec<&str> = files.iter()
+            .filter(|f| f.ends_with(".py"))
+            .filter(|f| {
+                // Skip test files, setup/config, and migration files
+                let fname = f.rsplit('/').next().unwrap_or(f);
+                !fname.starts_with("test_")
+                    && !fname.starts_with("conftest")
+                    && fname != "setup.py"
+                    && fname != "noxfile.py"
+                    && fname != "fabfile.py"
+                    && !f.contains("/tests/")
+                    && !f.contains("/test/")
+                    && !f.contains("/migrations/")
+            })
+            .map(|f| f.as_str())
+            .take(80) // Cap to avoid slow AST parsing on huge repos
+            .collect();
+
+        // Extract symbols from Python files using ast module
+        let symbols = Self::extract_python_symbols(workdir, &py_source_files);
+
+        // Build directory tree with symbol annotations
+        let mut tree: BTreeMap<String, Vec<(String, Option<String>)>> = BTreeMap::new();
         for file in &files {
-            let file = file.strip_prefix("./").unwrap_or(file);
             let parts: Vec<&str> = file.rsplitn(2, '/').collect();
-            if parts.len() == 2 {
-                tree.entry(parts[1].to_string())
-                    .or_default()
-                    .push(parts[0].to_string());
+            let (dir, fname) = if parts.len() == 2 {
+                (parts[1].to_string(), parts[0].to_string())
             } else {
-                tree.entry(".".to_string())
-                    .or_default()
-                    .push(parts[0].to_string());
-            }
+                (".".to_string(), parts[0].to_string())
+            };
+            let sym_info = symbols.get(file.as_str()).cloned();
+            tree.entry(dir).or_default().push((fname, sym_info));
         }
 
         let mut result = String::new();
         let mut lines = 0;
-        let max_lines = 150;
+        let max_lines = 200;
 
         for (dir, dir_files) in &tree {
             if lines >= max_lines {
                 result.push_str(&format!("... ({} more directories)\n", tree.len()));
                 break;
             }
-            if dir_files.len() <= 8 {
-                // Show all files for small directories
-                for f in dir_files {
-                    if dir == "." {
-                        result.push_str(&format!("{}\n", f));
+            if dir_files.len() <= 10 {
+                for (fname, sym_info) in dir_files {
+                    let path = if dir == "." {
+                        fname.clone()
                     } else {
-                        result.push_str(&format!("{}/{}\n", dir, f));
+                        format!("{}/{}", dir, fname)
+                    };
+                    if let Some(syms) = sym_info {
+                        // Show file with symbols: path: Class, func, func
+                        result.push_str(&format!("{}: {}\n", path, syms));
+                    } else {
+                        result.push_str(&format!("{}\n", path));
                     }
                     lines += 1;
                     if lines >= max_lines {
@@ -1101,6 +1132,83 @@ impl AgentRunner {
                 // Summarize large directories
                 result.push_str(&format!("{}/  ({} files)\n", dir, dir_files.len()));
                 lines += 1;
+            }
+        }
+
+        result
+    }
+
+    /// Extract top-level class and function definitions from Python files using ast.parse.
+    /// Returns a map of file path -> comma-separated symbol string.
+    fn extract_python_symbols<'a>(
+        workdir: &Path,
+        files: &[&'a str],
+    ) -> std::collections::HashMap<&'a str, String> {
+        use std::collections::HashMap;
+
+        let mut result: HashMap<&str, String> = HashMap::new();
+        if files.is_empty() {
+            return result;
+        }
+
+        // Build a Python script that extracts symbols from multiple files.
+        // We avoid Rust format! here since Python uses {} in .format() calls.
+        let files_json: Vec<String> = files.iter().map(|f| format!("\"{}\"", f)).collect();
+        let files_list = files_json.join(", ");
+        let mut script = String::from(
+            r#"
+import ast, json, sys
+files = ["#,
+        );
+        script.push_str(&files_list);
+        script.push_str(
+            r#"]
+result = {}
+for fpath in files:
+    try:
+        with open(fpath) as f:
+            tree = ast.parse(f.read())
+        symbols = []
+        for node in ast.iter_child_nodes(tree):
+            if isinstance(node, ast.ClassDef):
+                methods = [n.name for n in ast.iter_child_nodes(node) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and not n.name.startswith('_')]
+                if methods:
+                    symbols.append("class {}({})".format(node.name, ", ".join(methods[:5])))
+                else:
+                    symbols.append("class {}".format(node.name))
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if not node.name.startswith('_'):
+                    symbols.append("def {}".format(node.name))
+        if symbols:
+            result[fpath] = ", ".join(symbols[:8])
+    except Exception:
+        pass
+print(json.dumps(result))
+"#,
+        );
+
+        if let Ok(output) = std::process::Command::new("python3")
+            .args(&["-c", &script])
+            .current_dir(workdir)
+            .output()
+        {
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(stdout.trim()) {
+                    if let Some(obj) = parsed.as_object() {
+                        for (key, val) in obj {
+                            if let Some(syms) = val.as_str() {
+                                // Find the matching file reference
+                                for &f in files {
+                                    if f == key {
+                                        result.insert(f, syms.to_string());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
