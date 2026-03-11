@@ -2002,10 +2002,10 @@ print(json.dumps(result))
         }
 
         format!(
-            "\n\nWARNING: This edit changed the file's public API:\n{}\n\
-             If other files call these functions, they will break with AttributeError or TypeError. \
-             You MUST preserve ALL original functions with their EXACT signatures AND return types. \
-             Read the calling code (grep for function names) and fix the mismatches.",
+            "\n\nNOTE: This edit changed the file's public API:\n{}\n\
+             Verify this is intentional. If the task asks you to remove these functions, this is fine. \
+             Otherwise, callers may break with AttributeError or TypeError — grep for the function \
+             names in other files to check if anything still references them.",
             warnings.join("\n")
         )
     }
