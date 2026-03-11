@@ -876,7 +876,9 @@ impl AgentRunner {
              - web_search: Search the web for information using DuckDuckGo\n\
              - find_definition: Find where a symbol is defined (function, class, etc.)\n\
              - find_references: Find all references to a symbol\n\
-             - run_tests: Run project tests (auto-detects framework, or provide custom command)\n\
+             - run_tests: Run project tests (auto-detects framework, or provide custom command). \
+               Use this to verify your changes work. If tests are pre-applied (TDD mode), \
+               run tests early to see failures, then iterate until they pass.\n\
              - spawn_agent: Launch a sub-agent for independent parallel tasks. Use this to fan out \
                work across multiple files or research tasks simultaneously.\n\
              - todo_write: Track progress on multi-step tasks with a structured todo list\n\
