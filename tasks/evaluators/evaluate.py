@@ -239,11 +239,20 @@ def _eval_script_check(spec: EvalSpec, workdir: str) -> dict:
             env = {**os.environ, "WORKDIR": workdir}
             proc = subprocess.run(
                 ["bash", f.name],
-                capture_output=True, text=True, cwd=workdir, env=env, timeout=60
+                capture_output=True, text=True, cwd=workdir, env=env, timeout=300
             )
-            passed = proc.returncode == 0
+            # Parse "Score: X/Y" from script output if present
+            import re as _re
+            score_match = _re.search(r'Score:\s*(\d+)/(\d+)', proc.stdout)
+            if score_match:
+                num, denom = int(score_match.group(1)), int(score_match.group(2))
+                score = num / denom if denom > 0 else 0.0
+                passed = (num == denom)
+            else:
+                passed = proc.returncode == 0
+                score = 1.0 if passed else 0.0
             return {
-                "score": 1.0 if passed else 0.0,
+                "score": score,
                 "details": proc.stdout[:2000] if passed else (proc.stdout[:2000] or proc.stderr[:2000]),
                 "checks": [{"name": "script_check", "passed": passed, "detail": f"exit {proc.returncode}"}]
             }
