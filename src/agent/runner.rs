@@ -1197,11 +1197,17 @@ impl AgentRunner {
              - **Propagate patterns.** When you make the same type of change (e.g., updating an import, \
                 adding a parameter, changing an API call) in one file, grep for the same pattern in \
                 ALL other files. Don't fix it in one place and forget the rest.\n\
-             - **Preserve existing names.** Do NOT rename fields, methods, attributes, or variables \
-               unless the task explicitly asks you to. When modifying a file, keep all existing \
-               identifiers exactly as they are. Renaming `self.sent` to `self.notifications` or \
-               `op` to `operator` breaks other code that references the original name. Minimal \
-               changes means minimal — change behavior, not names.\n\n\
+             - **Preserve existing names and signatures.** Do NOT rename fields, methods, attributes, \
+               or variables unless the task explicitly asks you to. When rewriting a function or \
+               module, keep ALL existing function signatures exactly as they are — same parameter \
+               names, same parameter order, same defaults. Before rewriting a file with write_file, \
+               read ALL callers first (grep for function names) to understand the calling convention. \
+               Renaming `self.sent` to `self.notifications` or `op` to `operator` or reordering \
+               params breaks other code that references the original API.\n\
+             - **Preserve existing structures.** When the task says 'rename X to Y' or 'change X', \
+               modify the existing data structure in place — do NOT delete it and rewrite from \
+               scratch. Schema dicts, config defaults, class hierarchies should be updated, not \
+               replaced with simplified versions.\n\n\
              ## Principles\n\
              - **Speed over perfection.** Act decisively. Don't over-explore or over-analyze.\n\
              - **Parallelize aggressively.** Call multiple tools per response — they execute concurrently. \
