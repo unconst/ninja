@@ -241,7 +241,10 @@ impl AgentRunner {
                         "[SYSTEM] PROGRESS — Iteration {}. Check your todo list and assess:\n\
                          1. What have you completed so far?\n\
                          2. What remains? Are you stuck on anything?\n\
-                         3. What's your plan for the remaining {} iterations?\n\n\
+                         3. What's your plan for the remaining {} iterations?\n\
+                         4. Have you identified ALL files that need changes? Don't forget: \
+                         docs, changelog, config files (pyproject.toml, setup.cfg), \
+                         CI workflows, type stubs, __init__.py exports, test output files.\n\n\
                          Current changes:\n```\n{}\n```", iteration + 1, remaining, diff_preview
                     )),
                 });
@@ -569,7 +572,10 @@ impl AgentRunner {
                         "[SYSTEM] PROGRESS — Iteration {}. Check your todo list and assess:\n\
                          1. What have you completed so far?\n\
                          2. What remains? Are you stuck on anything?\n\
-                         3. What's your plan for the remaining {} iterations?\n\n\
+                         3. What's your plan for the remaining {} iterations?\n\
+                         4. Have you identified ALL files that need changes? Don't forget: \
+                         docs, changelog, config files (pyproject.toml, setup.cfg), \
+                         CI workflows, type stubs, __init__.py exports, test output files.\n\n\
                          Current changes:\n```\n{}\n```", iteration + 1, remaining, diff_preview
                     )),
                 });
