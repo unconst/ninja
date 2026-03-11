@@ -36,5 +36,5 @@
     "sub_evals": null,
     "pass_threshold": 1.0
   },
-  "capabilities": ["test_generation", "code_understanding", "edge_case_reasoning"]
+  "capabilities": ["code_reading", "code_writing", "test_running"]
 }

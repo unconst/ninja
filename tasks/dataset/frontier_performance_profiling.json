@@ -37,5 +37,5 @@
     "sub_evals": null,
     "pass_threshold": 1.0
   },
-  "capabilities": ["performance_optimization", "profiling", "algorithmic_complexity"]
+  "capabilities": ["code_reading", "code_editing", "root_cause"]
 }
