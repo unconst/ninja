@@ -275,6 +275,26 @@ impl AgentRunner {
                          Current changes:\n```\n{}\n```{}", iteration + 1, remaining, diff_preview, plan_recovery
                     )),
                 });
+            } else if remaining == 10 {
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let files_modified = diff_stat.lines()
+                    .filter(|l| l.contains('|'))
+                    .count();
+                if files_modified >= 3 {
+                    self.conversation.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(format!(
+                            "[SYSTEM] VERIFICATION SWEEP — 10 iterations left, {} files modified.\n\
+                             BEFORE finishing, you MUST do a completeness check:\n\
+                             1. Re-read your plan from /tmp/.ninja_plan.md\n\
+                             2. Run grep_search for any OLD names/patterns that should have been replaced. \
+                             Any remaining reference to old names in .py files is a bug — fix it now.\n\
+                             3. Run tests if available. If tests fail, fix the failures.\n\
+                             4. Check your todo list — any items still pending?\n\n\
+                             Current changes:\n```\n{}\n```", files_modified, diff_stat
+                        )),
+                    });
+                }
             } else if remaining == 5 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 let diff_section = if diff_stat.is_empty() {
@@ -648,6 +668,26 @@ impl AgentRunner {
                          Current changes:\n```\n{}\n```{}{}", iteration + 1, remaining, diff_preview, plan_recovery, edit_stats
                     )),
                 });
+            } else if remaining == 10 {
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let files_modified = diff_stat.lines()
+                    .filter(|l| l.contains('|'))
+                    .count();
+                if files_modified >= 3 {
+                    messages.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(format!(
+                            "[SYSTEM] VERIFICATION SWEEP — 10 iterations left, {} files modified.\n\
+                             BEFORE finishing, you MUST do a completeness check:\n\
+                             1. Re-read your plan from /tmp/.ninja_plan.md\n\
+                             2. Run grep_search for any OLD names/patterns that should have been replaced. \
+                             Any remaining reference to old names in .py files is a bug — fix it now.\n\
+                             3. Run tests if available. If tests fail, fix the failures.\n\
+                             4. Check your todo list — any items still pending?\n\n\
+                             Current changes:\n```\n{}\n```", files_modified, diff_stat
+                        )),
+                    });
+                }
             } else if remaining == 5 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 let diff_section = if diff_stat.is_empty() {
