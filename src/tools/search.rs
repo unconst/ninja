@@ -101,8 +101,16 @@ pub fn glob_search(args: &Value, workdir: &Path) -> Result<String, String> {
     if result.trim().is_empty() {
         Ok("No files found matching the pattern.".to_string())
     } else {
+        let total = result.lines().count();
         let lines: Vec<&str> = result.lines().take(200).collect();
-        Ok(lines.join("\n"))
+        let mut output = lines.join("\n");
+        if total > 200 {
+            output.push_str(&format!(
+                "\n\n... ({} total files, showing first 200. Narrow your pattern to see more.)",
+                total
+            ));
+        }
+        Ok(output)
     }
 }
 

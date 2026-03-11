@@ -187,7 +187,20 @@ pub fn read_file(args: &Value, workdir: &Path) -> Result<String, String> {
         .map(|(i, line)| format!("{:>6}\t{}", start + i + 1, line))
         .collect();
 
-    Ok(numbered.join("\n"))
+    let mut result = numbered.join("\n");
+
+    // Add truncation hint if the file has more lines
+    if end < lines.len() {
+        result.push_str(&format!(
+            "\n\n... (showing lines {}-{} of {}. Use offset={} to read more.)",
+            start + 1,
+            end,
+            lines.len(),
+            end + 1
+        ));
+    }
+
+    Ok(result)
 }
 
 pub fn write_file(args: &Value, workdir: &Path) -> Result<String, String> {
