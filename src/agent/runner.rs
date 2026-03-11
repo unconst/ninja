@@ -226,11 +226,16 @@ impl AgentRunner {
                 let plan_hint = match std::fs::read_to_string("/tmp/.ninja_plan.md") {
                     Ok(plan) if !plan.trim().is_empty() => {
                         let trunc = safe_truncate(plan.trim(), 1000);
+                        let urgency = if files_modified <= 1 {
+                            " CRITICAL: You've barely started editing. Stop perfecting one file and \
+                             make a MINIMAL change to EACH file in your plan before returning to polish."
+                        } else {
+                            ""
+                        };
                         format!("\n\nYour plan:\n```\n{}\n```\n\n\
-                                 You've modified {} file(s) so far. If your plan lists more files, \
-                                 MOVE ON to untouched files NOW. Do NOT perfect one file before \
-                                 touching the others — make a minimal change to each planned file first, \
-                                 then come back to refine.", trunc, files_modified)
+                                 You've modified {} file(s) so far.{} MOVE ON to untouched files NOW. \
+                                 Do NOT perfect one file before touching the others — make a minimal \
+                                 change to each planned file first, then come back to refine.", trunc, files_modified, urgency)
                     }
                     _ => format!("\n\nYou've modified {} file(s) so far. If the task requires changes \
                                   to more files, move on to untouched files NOW.", files_modified),
@@ -583,11 +588,16 @@ impl AgentRunner {
                 let plan_hint = match std::fs::read_to_string("/tmp/.ninja_plan.md") {
                     Ok(plan) if !plan.trim().is_empty() => {
                         let trunc = safe_truncate(plan.trim(), 1000);
+                        let urgency = if files_modified <= 1 {
+                            " CRITICAL: You've barely started editing. Stop perfecting one file and \
+                             make a MINIMAL change to EACH file in your plan before returning to polish."
+                        } else {
+                            ""
+                        };
                         format!("\n\nYour plan:\n```\n{}\n```\n\n\
-                                 You've modified {} file(s) so far. If your plan lists more files, \
-                                 MOVE ON to untouched files NOW. Do NOT perfect one file before \
-                                 touching the others — make a minimal change to each planned file first, \
-                                 then come back to refine.", trunc, files_modified)
+                                 You've modified {} file(s) so far.{} MOVE ON to untouched files NOW. \
+                                 Do NOT perfect one file before touching the others — make a minimal \
+                                 change to each planned file first, then come back to refine.", trunc, files_modified, urgency)
                     }
                     _ => format!("\n\nYou've modified {} file(s) so far. If the task requires changes \
                                   to more files, move on to untouched files NOW.", files_modified),
