@@ -1045,6 +1045,8 @@ impl AgentRunner {
              - todo_write: Track progress on multi-step tasks with a structured todo list\n\
              - think: Reason step-by-step about complex decisions before acting (no side effects)\n\
              - memory_write: Save important discoveries, patterns, or project notes to persistent memory\n\
+             - oracle: Get a second opinion from a different AI model when you're stuck or unsure. \
+               Include all relevant context in your question since the oracle has no conversation history.\n\
              - git_status: Show working tree status (modified, staged, untracked files)\n\
              - git_diff: Show changes in working directory (supports staged, stat_only, file_path)\n\
              - git_log: Show recent commit history\n\

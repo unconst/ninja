@@ -8,6 +8,7 @@ mod testing;
 mod subagent;
 mod todo;
 mod think;
+mod oracle;
 pub mod memory;
 pub mod mcp;
 
@@ -28,6 +29,7 @@ pub fn get_tool_definitions() -> Vec<ToolDef> {
     tools.extend(subagent::definitions());
     tools.extend(todo::definitions());
     tools.extend(think::definitions());
+    tools.extend(oracle::definitions());
     tools.extend(memory::definitions());
     tools.extend(git::definitions());
     tools
@@ -52,6 +54,7 @@ pub fn execute_tool(name: &str, args: &Value, workdir: &Path) -> Result<String, 
         "spawn_agent" => subagent::spawn_agent(args, workdir),
         "todo_write" => todo::todo_write(args, workdir),
         "think" => think::think(args, workdir),
+        "oracle" => oracle::oracle(args, workdir),
         "memory_write" => memory::memory_write(args, workdir),
         "git_status" => git::git_status(args, workdir),
         "git_diff" => git::git_diff(args, workdir),
