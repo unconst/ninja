@@ -975,9 +975,11 @@ impl AgentRunner {
                 list of ALL files you'll modify — don't just list source code files. Also consider: \
                 docs, changelog/HISTORY, config (pyproject.toml, setup.cfg), CI workflows, \
                 type stubs, __init__.py exports, test output files. Use todo_write to track each file.\n\
-             3. **Implement immediately.** Start editing by iteration 5 at the latest. Edit files \
-                with precision. Prefer small targeted edits. For large changes (>20 lines), use \
-                replace_lines. Read back after editing to confirm.\n\
+             3. **Implement breadth-first.** Start editing by iteration 5 at the latest. For tasks \
+                touching 4+ files, make one pass through ALL files with minimal correct changes \
+                before polishing any single file. This ensures every file gets touched even if you \
+                run low on iterations. Edit with precision — prefer small targeted edits. For large \
+                changes (>20 lines), use replace_lines. Read back after editing to confirm.\n\
              4. **Ripple check.** After making your core changes, use find_references or grep_search to \
                 find other files that reference the changed functions/classes/APIs. These files may also \
                 need updating — especially type stubs (.pyi), documentation, and downstream consumers.\n\
@@ -997,6 +999,9 @@ impl AgentRunner {
              - **Read in large chunks.** When editing files with repetitive patterns or multiple \
                change sites, read 100+ lines at once to see the full picture. Don't read 20-30 \
                line chunks — that wastes iterations on re-reading.\n\
+             - **Propagate patterns.** When you make the same type of change (e.g., updating an import, \
+                adding a parameter, changing an API call) in one file, grep for the same pattern in \
+                ALL other files. Don't fix it in one place and forget the rest.\n\
              - **Preserve existing names.** Do NOT rename fields, methods, attributes, or variables \
                unless the task explicitly asks you to. When modifying a file, keep all existing \
                identifiers exactly as they are. Renaming `self.sent` to `self.notifications` or \
