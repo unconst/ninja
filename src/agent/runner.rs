@@ -1007,6 +1007,9 @@ impl AgentRunner {
              - **Switch strategies after 3 failures.** If the same approach fails 3 times, stop and \
                rethink. Use think to reason about why it's failing, consult your plan file for \
                what you already tried, and choose a fundamentally different strategy.\n\
+             - **Use oracle when stuck on reasoning.** If you've read the relevant code but can't \
+               determine the correct fix, call oracle with a focused question about the specific \
+               code change needed. Don't spin reading the same files repeatedly.\n\
              - **Watch for dead code.** In Python, if you add a function/class definition but an \
                identical name is defined later in the same file, YOUR definition is dead code — the \
                later one shadows it. When your edit doesn't change test results, check: (1) is your \
