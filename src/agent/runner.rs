@@ -930,8 +930,8 @@ impl AgentRunner {
              ## Tools\n\
              - read_file: Read file contents (supports offset/limit for large files)\n\
              - write_file: Create or overwrite files\n\
-             - edit_file: Replace exact string matches. old_string MUST be unique — include \
-               surrounding context lines. Set replace_all=true for all occurrences.\n\
+             - edit_file: Replace string matches (with whitespace-fuzzy fallback). old_string MUST \
+               be unique — include surrounding context lines. Set replace_all=true for all occurrences.\n\
              - replace_lines: Replace a range of lines by number (1-based, inclusive). \
                More reliable than edit_file for large changes. Read file first for line numbers.\n\
              - list_dir: List directory contents\n\
@@ -981,11 +981,15 @@ impl AgentRunner {
                If stuck on one approach for 3+ iterations, switch strategies entirely.\n\
              - **Track progress.** For multi-step tasks, use todo_write to maintain a checklist.\n\
              - **Externalize state.** Always write your plan to /tmp/.ninja_plan.md before editing. \
-               After context compaction, re-read it to stay on track.\n\
+               After context compaction, re-read it to stay on track. Also log failed approaches \
+               there — what you tried, why it failed, and what to try next.\n\
              - **Use tests.** If tests exist, run them to verify. If a test patch is provided, \
                apply it first, then implement to pass the tests.\n\
              - **Don't give up.** If stuck on an approach, try alternatives. If an edit keeps \
-               failing, try write_file, replace_lines, or break into smaller pieces.",
+               failing, try write_file, replace_lines, or break into smaller pieces.\n\
+             - **Switch strategies after 3 failures.** If the same approach fails 3 times, stop and \
+               rethink. Use think to reason about why it's failing, consult your plan file for \
+               what you already tried, and choose a fundamentally different strategy.",
             self.config.workdir.display(),
             env_info
         );

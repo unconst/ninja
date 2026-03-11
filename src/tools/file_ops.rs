@@ -246,7 +246,65 @@ pub fn edit_file(args: &Value, workdir: &Path) -> Result<String, String> {
 
     let count = content.matches(old_string).count();
     if count == 0 {
-        // Show nearby lines to help the agent find the right string
+        // Fuzzy fallback: try whitespace-normalized matching
+        // Normalize both content and old_string by trimming trailing whitespace per line
+        let normalize = |s: &str| -> String {
+            s.lines()
+                .map(|l| l.trim_end())
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+        let norm_content = normalize(&content);
+        let norm_old = normalize(old_string);
+        let fuzzy_count = norm_content.matches(&norm_old).count();
+
+        if fuzzy_count == 1 && !norm_old.is_empty() {
+            // Found exactly one fuzzy match — apply the replacement on normalized content
+            // then reconstruct with the new string
+            if let Some(norm_pos) = norm_content.find(&norm_old) {
+                // Map normalized position back to original content position
+                // by counting characters in original lines up to the match
+                let norm_lines_before = norm_content[..norm_pos].matches('\n').count();
+                let orig_lines: Vec<&str> = content.lines().collect();
+                let norm_lines: Vec<&str> = norm_content.lines().collect();
+                let old_lines: Vec<&str> = old_string.lines().collect();
+                let old_line_count = old_lines.len();
+
+                if norm_lines_before + old_line_count <= orig_lines.len() {
+                    // Replace the original lines in the matching range
+                    let mut result = String::new();
+                    for (i, line) in orig_lines.iter().enumerate() {
+                        if i < norm_lines_before {
+                            result.push_str(line);
+                            result.push('\n');
+                        } else if i == norm_lines_before {
+                            result.push_str(new_string);
+                            if !new_string.ends_with('\n') {
+                                result.push('\n');
+                            }
+                        } else if i >= norm_lines_before + old_line_count {
+                            result.push_str(line);
+                            if i < orig_lines.len() - 1 || content.ends_with('\n') {
+                                result.push('\n');
+                            }
+                        }
+                    }
+                    // Preserve trailing newline behavior
+                    if content.ends_with('\n') && !result.ends_with('\n') {
+                        result.push('\n');
+                    }
+                    fs::write(&path, &result)
+                        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+                    return Ok(format!(
+                        "File edited: {} (1 replacement via whitespace-normalized match at line {})",
+                        path.display(),
+                        norm_lines_before + 1
+                    ));
+                }
+            }
+        }
+
+        // No fuzzy match either — show hints
         let first_line = old_string.lines().next().unwrap_or(old_string);
         let similar: Vec<(usize, &str)> = content
             .lines()
