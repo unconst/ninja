@@ -27,7 +27,7 @@ class FrontierGenerator(TaskGenerator):
     def category(self) -> TaskCategory:
         return TaskCategory.DIAGNOSTIC
 
-    def generate(self, count: int = 13, difficulty: str = "hard") -> list[Task]:
+    def generate(self, count: int = 14, difficulty: str = "hard") -> list[Task]:
         generators = [
             self._adversarial_code_review,
             self._incomplete_spec_implementation,
@@ -42,6 +42,7 @@ class FrontierGenerator(TaskGenerator):
             self._visitor_pattern_extension,
             self._red_herring_backtrack,
             self._state_machine_protocol,
+            self._large_file_plugin_registry,
         ]
 
         tasks = []
@@ -4953,4 +4954,1264 @@ print('CACHE_OK')
             ],
             source="frontier_generator",
             estimated_minutes=10,
+        )
+
+    def _large_file_plugin_registry(self, difficulty: str) -> Task:
+        """Plugin registry system with large files (150-200+ lines each).
+
+        Key difficulty: Realistic file sizes mean the agent can't hold everything
+        in working memory. Must navigate large files, understand the plugin
+        lifecycle, and thread a new middleware type through 5 files without
+        breaking existing functionality.
+
+        This matches SWE-bench difficulty where files are 200-500+ lines.
+        """
+        registry_py = textwrap.dedent('''\
+            """Plugin registry — discovers, registers, and manages plugin lifecycle.
+
+            Supports three plugin types: transformer, validator, and hook.
+            Each type has its own registration path and execution semantics.
+            """
+            import importlib
+            import logging
+            from enum import Enum
+            from typing import Any, Callable, Dict, List, Optional, Type
+
+            logger = logging.getLogger(__name__)
+
+
+            class PluginType(Enum):
+                """Supported plugin types."""
+                TRANSFORMER = "transformer"
+                VALIDATOR = "validator"
+                HOOK = "hook"
+
+
+            class PluginError(Exception):
+                """Base error for plugin system."""
+                pass
+
+
+            class PluginNotFoundError(PluginError):
+                """Raised when a requested plugin is not registered."""
+                pass
+
+
+            class DuplicatePluginError(PluginError):
+                """Raised when registering a plugin with an existing name."""
+                pass
+
+
+            class DependencyError(PluginError):
+                """Raised when plugin dependencies cannot be resolved."""
+                pass
+
+
+            class PluginRegistry:
+                """Central registry for all plugins.
+
+                Manages plugin registration, dependency resolution, and lifecycle.
+                Plugins are stored by type and name for efficient lookup.
+                """
+
+                def __init__(self):
+                    self._plugins: Dict[PluginType, Dict[str, Any]] = {
+                        ptype: {} for ptype in PluginType
+                    }
+                    self._load_order: List[str] = []
+                    self._initialized: Dict[str, bool] = {}
+                    self._metadata: Dict[str, Dict[str, Any]] = {}
+
+                def register(self, plugin_instance, plugin_type: PluginType,
+                             name: str, metadata: Optional[Dict] = None):
+                    """Register a plugin instance.
+
+                    Args:
+                        plugin_instance: The plugin object
+                        plugin_type: Type category for the plugin
+                        name: Unique identifier for the plugin
+                        metadata: Optional metadata (version, author, dependencies)
+
+                    Raises:
+                        DuplicatePluginError: If name already registered under same type
+                    """
+                    if name in self._plugins[plugin_type]:
+                        raise DuplicatePluginError(
+                            f"Plugin '{name}' already registered as {plugin_type.value}"
+                        )
+                    self._plugins[plugin_type][name] = plugin_instance
+                    self._initialized[name] = False
+                    self._metadata[name] = metadata or {}
+                    self._load_order.append(name)
+                    logger.info(f"Registered plugin: {name} ({plugin_type.value})")
+
+                def unregister(self, name: str, plugin_type: PluginType):
+                    """Remove a plugin from the registry."""
+                    if name not in self._plugins[plugin_type]:
+                        raise PluginNotFoundError(
+                            f"Plugin '{name}' not found in {plugin_type.value}"
+                        )
+                    del self._plugins[plugin_type][name]
+                    self._initialized.pop(name, None)
+                    self._metadata.pop(name, None)
+                    if name in self._load_order:
+                        self._load_order.remove(name)
+
+                def get(self, name: str, plugin_type: PluginType) -> Any:
+                    """Get a registered plugin by name and type."""
+                    if name not in self._plugins[plugin_type]:
+                        raise PluginNotFoundError(
+                            f"Plugin '{name}' not found in {plugin_type.value}"
+                        )
+                    return self._plugins[plugin_type][name]
+
+                def get_all(self, plugin_type: PluginType) -> Dict[str, Any]:
+                    """Get all plugins of a given type."""
+                    return dict(self._plugins[plugin_type])
+
+                def get_ordered(self, plugin_type: PluginType) -> List[Any]:
+                    """Get plugins of a type in registration order."""
+                    ordered = []
+                    for name in self._load_order:
+                        if name in self._plugins[plugin_type]:
+                            ordered.append(self._plugins[plugin_type][name])
+                    return ordered
+
+                def resolve_dependencies(self, plugin_type: PluginType) -> List[str]:
+                    """Resolve plugin load order based on declared dependencies.
+
+                    Uses topological sort. Raises DependencyError on cycles.
+                    """
+                    plugins = self._plugins[plugin_type]
+                    # Build adjacency list
+                    graph: Dict[str, List[str]] = {name: [] for name in plugins}
+                    for name in plugins:
+                        deps = self._metadata.get(name, {}).get("dependencies", [])
+                        for dep in deps:
+                            if dep not in plugins:
+                                raise DependencyError(
+                                    f"Plugin '{name}' depends on '{dep}' which is not registered"
+                                )
+                            graph[name].append(dep)
+
+                    # Topological sort (Kahn's algorithm)
+                    # graph[name] = list of deps that name depends on
+                    # Build reverse adjacency: dep -> list of names that depend on dep
+                    reverse = {name: [] for name in graph}
+                    in_degree = {name: len(deps) for name, deps in graph.items()}
+                    for name, deps in graph.items():
+                        for dep in deps:
+                            reverse[dep].append(name)
+
+                    # Start with nodes that have no dependencies
+                    queue = [n for n in graph if in_degree[n] == 0]
+                    result = []
+                    while queue:
+                        queue.sort()  # deterministic ordering
+                        node = queue.pop(0)
+                        result.append(node)
+                        for dependent in reverse[node]:
+                            in_degree[dependent] -= 1
+                            if in_degree[dependent] == 0:
+                                queue.append(dependent)
+
+                    if len(result) != len(graph):
+                        raise DependencyError("Circular dependency detected")
+                    return result
+
+                def initialize_all(self, plugin_type: PluginType):
+                    """Initialize all plugins of a type in dependency order."""
+                    order = self.resolve_dependencies(plugin_type)
+                    for name in order:
+                        plugin = self._plugins[plugin_type][name]
+                        if hasattr(plugin, 'initialize') and not self._initialized.get(name):
+                            plugin.initialize(self)
+                            self._initialized[name] = True
+                            logger.info(f"Initialized plugin: {name}")
+
+                def shutdown_all(self):
+                    """Shut down all plugins in reverse load order."""
+                    for name in reversed(self._load_order):
+                        for ptype in PluginType:
+                            if name in self._plugins[ptype]:
+                                plugin = self._plugins[ptype][name]
+                                if hasattr(plugin, 'shutdown'):
+                                    plugin.shutdown()
+                                    logger.info(f"Shut down plugin: {name}")
+
+                @property
+                def stats(self) -> Dict[str, int]:
+                    """Return count of plugins per type."""
+                    return {
+                        ptype.value: len(plugins)
+                        for ptype, plugins in self._plugins.items()
+                    }
+
+                def __repr__(self):
+                    total = sum(len(p) for p in self._plugins.values())
+                    return f"<PluginRegistry plugins={total}>"
+        ''')
+
+        loader_py = textwrap.dedent('''\
+            """Plugin loader — reads configurations and instantiates plugins.
+
+            Handles plugin discovery from config dicts, validation of plugin
+            configurations, and dynamic instantiation.
+            """
+            import logging
+            from typing import Any, Dict, List, Optional, Type
+            from .registry import PluginRegistry, PluginType, PluginError
+
+            logger = logging.getLogger(__name__)
+
+
+            class LoaderError(Exception):
+                """Error during plugin loading."""
+                pass
+
+
+            class PluginSchema:
+                """Validates plugin configuration against a schema."""
+
+                REQUIRED_FIELDS = {
+                    PluginType.TRANSFORMER: ["name", "transform_fn"],
+                    PluginType.VALIDATOR: ["name", "validate_fn"],
+                    PluginType.HOOK: ["name", "event", "callback"],
+                }
+
+                OPTIONAL_FIELDS = {
+                    PluginType.TRANSFORMER: ["priority", "enabled", "config"],
+                    PluginType.VALIDATOR: ["strict", "enabled", "config"],
+                    PluginType.HOOK: ["priority", "once", "enabled", "config"],
+                }
+
+                @classmethod
+                def validate(cls, config: Dict, plugin_type: PluginType) -> List[str]:
+                    """Validate a plugin config dict. Returns list of error messages."""
+                    errors = []
+                    required = cls.REQUIRED_FIELDS.get(plugin_type, [])
+                    for field in required:
+                        if field not in config:
+                            errors.append(f"Missing required field: {field}")
+
+                    # Check name format
+                    if "name" in config:
+                        name = config["name"]
+                        if not isinstance(name, str) or not name.isidentifier():
+                            errors.append(
+                                f"Invalid plugin name: {name!r} (must be a valid identifier)"
+                            )
+
+                    # Check enabled flag
+                    if "enabled" in config and not isinstance(config["enabled"], bool):
+                        errors.append("'enabled' must be a boolean")
+
+                    # Type-specific validation
+                    if plugin_type == PluginType.TRANSFORMER:
+                        if "priority" in config:
+                            p = config["priority"]
+                            if not isinstance(p, (int, float)) or p < 0 or p > 1000:
+                                errors.append("Transformer priority must be 0-1000")
+                        if "transform_fn" in config and not callable(config["transform_fn"]):
+                            errors.append("transform_fn must be callable")
+
+                    elif plugin_type == PluginType.VALIDATOR:
+                        if "strict" in config and not isinstance(config["strict"], bool):
+                            errors.append("'strict' must be a boolean")
+                        if "validate_fn" in config and not callable(config["validate_fn"]):
+                            errors.append("validate_fn must be callable")
+
+                    elif plugin_type == PluginType.HOOK:
+                        if "event" in config:
+                            if not isinstance(config["event"], str):
+                                errors.append("Hook 'event' must be a string")
+                        if "priority" in config:
+                            p = config["priority"]
+                            if not isinstance(p, (int, float)):
+                                errors.append("Hook priority must be numeric")
+                        if "callback" in config and not callable(config["callback"]):
+                            errors.append("callback must be callable")
+
+                    return errors
+
+
+            class PluginLoader:
+                """Loads plugins from configuration and registers them."""
+
+                def __init__(self, registry: PluginRegistry):
+                    self.registry = registry
+                    self._loaded: List[str] = []
+                    self._errors: List[Dict[str, str]] = []
+
+                def load_from_config(self, configs: List[Dict],
+                                     plugin_type: PluginType) -> int:
+                    """Load plugins from a list of config dicts.
+
+                    Args:
+                        configs: List of plugin configuration dicts
+                        plugin_type: Type to register plugins under
+
+                    Returns:
+                        Number of successfully loaded plugins
+                    """
+                    loaded = 0
+                    for config in configs:
+                        # Skip disabled plugins
+                        if not config.get("enabled", True):
+                            logger.info(f"Skipping disabled plugin: {config.get('name', '?')}")
+                            continue
+
+                        # Validate
+                        errors = PluginSchema.validate(config, plugin_type)
+                        if errors:
+                            self._errors.append({
+                                "plugin": config.get("name", "unknown"),
+                                "errors": errors
+                            })
+                            logger.warning(
+                                f"Plugin validation failed: {config.get('name')}: {errors}"
+                            )
+                            continue
+
+                        try:
+                            instance = self._create_instance(config, plugin_type)
+                            metadata = {
+                                "config": config.get("config", {}),
+                                "dependencies": config.get("dependencies", []),
+                            }
+                            self.registry.register(
+                                instance, plugin_type, config["name"], metadata
+                            )
+                            self._loaded.append(config["name"])
+                            loaded += 1
+                        except PluginError as e:
+                            self._errors.append({
+                                "plugin": config.get("name", "unknown"),
+                                "errors": [str(e)]
+                            })
+                            logger.error(f"Failed to load plugin: {e}")
+
+                    return loaded
+
+                def _create_instance(self, config: Dict, plugin_type: PluginType) -> Any:
+                    """Create a plugin instance from config.
+
+                    For transformer: wraps transform_fn
+                    For validator: wraps validate_fn
+                    For hook: wraps callback
+                    """
+                    if plugin_type == PluginType.TRANSFORMER:
+                        return TransformerWrapper(
+                            name=config["name"],
+                            transform_fn=config["transform_fn"],
+                            priority=config.get("priority", 500),
+                        )
+                    elif plugin_type == PluginType.VALIDATOR:
+                        return ValidatorWrapper(
+                            name=config["name"],
+                            validate_fn=config["validate_fn"],
+                            strict=config.get("strict", False),
+                        )
+                    elif plugin_type == PluginType.HOOK:
+                        return HookWrapper(
+                            name=config["name"],
+                            event=config["event"],
+                            callback=config["callback"],
+                            priority=config.get("priority", 0),
+                            once=config.get("once", False),
+                        )
+                    else:
+                        raise LoaderError(f"Unknown plugin type: {plugin_type}")
+
+                @property
+                def errors(self) -> List[Dict]:
+                    return list(self._errors)
+
+                @property
+                def loaded_names(self) -> List[str]:
+                    return list(self._loaded)
+
+
+            class TransformerWrapper:
+                """Wraps a transform function as a plugin."""
+                def __init__(self, name, transform_fn, priority=500):
+                    self.name = name
+                    self.transform_fn = transform_fn
+                    self.priority = priority
+
+                def transform(self, data):
+                    return self.transform_fn(data)
+
+                def __repr__(self):
+                    return f"<Transformer:{self.name} p={self.priority}>"
+
+
+            class ValidatorWrapper:
+                """Wraps a validation function as a plugin."""
+                def __init__(self, name, validate_fn, strict=False):
+                    self.name = name
+                    self.validate_fn = validate_fn
+                    self.strict = strict
+
+                def validate(self, data):
+                    return self.validate_fn(data)
+
+                def __repr__(self):
+                    return f"<Validator:{self.name} strict={self.strict}>"
+
+
+            class HookWrapper:
+                """Wraps a callback function as a hook plugin."""
+                def __init__(self, name, event, callback, priority=0, once=False):
+                    self.name = name
+                    self.event = event
+                    self.callback = callback
+                    self.priority = priority
+                    self.once = once
+                    self._fired = False
+
+                def fire(self, *args, **kwargs):
+                    if self.once and self._fired:
+                        return None
+                    self._fired = True
+                    return self.callback(*args, **kwargs)
+
+                def __repr__(self):
+                    return f"<Hook:{self.name} event={self.event}>"
+        ''')
+
+        hooks_py = textwrap.dedent('''\
+            """Event dispatch system — fires hooks and manages event lifecycle.
+
+            Provides publish/subscribe mechanism for plugin communication.
+            Supports synchronous dispatch with priority ordering.
+            """
+            import logging
+            from typing import Any, Callable, Dict, List, Optional
+            from .registry import PluginRegistry, PluginType
+
+            logger = logging.getLogger(__name__)
+
+
+            class EventResult:
+                """Container for event dispatch results."""
+
+                def __init__(self, event_name: str):
+                    self.event_name = event_name
+                    self.results: List[Dict[str, Any]] = []
+                    self.stopped = False
+
+                def add(self, plugin_name: str, result: Any, error: Optional[Exception] = None):
+                    self.results.append({
+                        "plugin": plugin_name,
+                        "result": result,
+                        "error": error,
+                    })
+
+                @property
+                def success_count(self) -> int:
+                    return sum(1 for r in self.results if r["error"] is None)
+
+                @property
+                def error_count(self) -> int:
+                    return sum(1 for r in self.results if r["error"] is not None)
+
+                @property
+                def all_succeeded(self) -> bool:
+                    return self.error_count == 0 and len(self.results) > 0
+
+                def __repr__(self):
+                    return (
+                        f"<EventResult {self.event_name}: "
+                        f"{self.success_count} ok, {self.error_count} errors>"
+                    )
+
+
+            class EventDispatcher:
+                """Dispatches events to registered hook plugins.
+
+                Hooks are called in priority order (lower priority first).
+                A hook can stop propagation by returning {"stop": True}.
+                """
+
+                def __init__(self, registry: PluginRegistry):
+                    self.registry = registry
+                    self._history: List[str] = []
+                    self._interceptors: Dict[str, List[Callable]] = {}
+
+                def dispatch(self, event_name: str, *args, **kwargs) -> EventResult:
+                    """Dispatch an event to all registered hooks for that event.
+
+                    Args:
+                        event_name: Name of the event to fire
+                        *args, **kwargs: Arguments passed to hook callbacks
+
+                    Returns:
+                        EventResult with outcomes from each hook
+                    """
+                    self._history.append(event_name)
+                    result = EventResult(event_name)
+
+                    # Get all hook plugins
+                    hooks = self.registry.get_all(PluginType.HOOK)
+
+                    # Filter by event and sort by priority
+                    matching = [
+                        (name, hook) for name, hook in hooks.items()
+                        if hook.event == event_name
+                    ]
+                    matching.sort(key=lambda x: x[1].priority)
+
+                    # Run interceptors first
+                    for interceptor in self._interceptors.get(event_name, []):
+                        try:
+                            interceptor(event_name, args, kwargs)
+                        except Exception as e:
+                            logger.warning(f"Interceptor error for {event_name}: {e}")
+
+                    # Fire hooks
+                    for name, hook in matching:
+                        try:
+                            hook_result = hook.fire(*args, **kwargs)
+                            result.add(name, hook_result)
+
+                            # Check for stop propagation
+                            if isinstance(hook_result, dict) and hook_result.get("stop"):
+                                result.stopped = True
+                                logger.debug(f"Event {event_name} stopped by {name}")
+                                break
+                        except Exception as e:
+                            result.add(name, None, error=e)
+                            logger.error(f"Hook {name} error on {event_name}: {e}")
+
+                    return result
+
+                def add_interceptor(self, event_name: str, interceptor: Callable):
+                    """Add an interceptor that runs before hooks for an event."""
+                    if event_name not in self._interceptors:
+                        self._interceptors[event_name] = []
+                    self._interceptors[event_name].append(interceptor)
+
+                @property
+                def history(self) -> List[str]:
+                    """Return list of dispatched event names in order."""
+                    return list(self._history)
+
+                def clear_history(self):
+                    """Clear the event history."""
+                    self._history.clear()
+
+
+            class Pipeline:
+                """Runs data through transformer plugins in priority order.
+
+                Transformers are applied sequentially — each one receives the
+                output of the previous one. Validators run after all transforms.
+                """
+
+                def __init__(self, registry: PluginRegistry):
+                    self.registry = registry
+
+                def run(self, data: Any, validate: bool = True) -> Any:
+                    """Run data through the transform pipeline.
+
+                    Args:
+                        data: Input data to transform
+                        validate: Whether to run validators after transform
+
+                    Returns:
+                        Transformed (and optionally validated) data
+                    """
+                    # Get transformers sorted by priority
+                    transformers = self.registry.get_ordered(PluginType.TRANSFORMER)
+                    transformers.sort(key=lambda t: t.priority)
+
+                    # Apply transforms
+                    current = data
+                    for t in transformers:
+                        try:
+                            current = t.transform(current)
+                        except Exception as e:
+                            logger.error(f"Transform {t.name} failed: {e}")
+                            raise
+
+                    # Validate
+                    if validate:
+                        validators = self.registry.get_ordered(PluginType.VALIDATOR)
+                        for v in validators:
+                            valid = v.validate(current)
+                            if not valid:
+                                if v.strict:
+                                    raise ValueError(
+                                        f"Validation failed: {v.name} rejected data"
+                                    )
+                                else:
+                                    logger.warning(f"Validation warning from {v.name}")
+
+                    return current
+        ''')
+
+        config_py = textwrap.dedent('''\
+            """Configuration for the plugin system.
+
+            Provides defaults, environment-based overrides, and schema validation
+            for plugin system configuration.
+            """
+            import os
+            import logging
+            from typing import Any, Dict, List, Optional
+
+            logger = logging.getLogger(__name__)
+
+
+            # Default configuration values
+            DEFAULTS = {
+                "max_plugins_per_type": 50,
+                "enable_dependency_resolution": True,
+                "strict_validation": False,
+                "log_level": "INFO",
+                "auto_initialize": True,
+                "allow_duplicate_hooks": False,
+                "transformer_timeout": 30,
+                "validator_timeout": 10,
+                "hook_timeout": 5,
+            }
+
+
+            class PluginConfig:
+                """Configuration container for the plugin system.
+
+                Supports defaults, dict-based overrides, and environment variables.
+                Environment variables are prefixed with PLUGIN_ and uppercased.
+                """
+
+                def __init__(self, overrides: Optional[Dict[str, Any]] = None):
+                    self._config: Dict[str, Any] = dict(DEFAULTS)
+                    if overrides:
+                        self._config.update(overrides)
+                    self._load_env_overrides()
+
+                def _load_env_overrides(self):
+                    """Load overrides from environment variables."""
+                    for key in DEFAULTS:
+                        env_key = f"PLUGIN_{key.upper()}"
+                        env_val = os.environ.get(env_key)
+                        if env_val is not None:
+                            # Type coerce based on default type
+                            default_type = type(DEFAULTS[key])
+                            try:
+                                if default_type == bool:
+                                    self._config[key] = env_val.lower() in ("true", "1", "yes")
+                                elif default_type == int:
+                                    self._config[key] = int(env_val)
+                                else:
+                                    self._config[key] = env_val
+                            except (ValueError, TypeError):
+                                logger.warning(
+                                    f"Could not parse env {env_key}={env_val!r}"
+                                )
+
+                def get(self, key: str, default: Any = None) -> Any:
+                    """Get a configuration value."""
+                    return self._config.get(key, default)
+
+                def set(self, key: str, value: Any):
+                    """Set a configuration value."""
+                    self._config[key] = value
+
+                def validate(self) -> List[str]:
+                    """Validate configuration. Returns list of error messages."""
+                    errors = []
+
+                    max_per_type = self._config.get("max_plugins_per_type")
+                    if not isinstance(max_per_type, int) or max_per_type < 1:
+                        errors.append("max_plugins_per_type must be positive integer")
+
+                    for timeout_key in ["transformer_timeout", "validator_timeout", "hook_timeout"]:
+                        val = self._config.get(timeout_key)
+                        if not isinstance(val, (int, float)) or val <= 0:
+                            errors.append(f"{timeout_key} must be positive number")
+
+                    log_level = self._config.get("log_level", "")
+                    valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+                    if log_level not in valid_levels:
+                        errors.append(
+                            f"Invalid log_level: {log_level!r}. Must be one of {valid_levels}"
+                        )
+
+                    return errors
+
+                def as_dict(self) -> Dict[str, Any]:
+                    """Return configuration as a plain dict."""
+                    return dict(self._config)
+
+                def __repr__(self):
+                    return f"<PluginConfig {len(self._config)} keys>"
+
+
+            def create_default_config() -> PluginConfig:
+                """Create a PluginConfig with all defaults."""
+                return PluginConfig()
+
+
+            def merge_configs(*configs: Dict[str, Any]) -> Dict[str, Any]:
+                """Merge multiple config dicts, later ones take precedence."""
+                result = dict(DEFAULTS)
+                for cfg in configs:
+                    result.update(cfg)
+                return result
+        ''')
+
+        base_py = textwrap.dedent('''\
+            """Base plugin classes and built-in plugins.
+
+            Provides abstract base classes for each plugin type and a few
+            built-in utility plugins for common operations.
+            """
+            from typing import Any, Callable, Dict, List, Optional
+
+
+            class BasePlugin:
+                """Abstract base for all plugins."""
+
+                name: str = "unnamed"
+                version: str = "0.0.0"
+
+                def initialize(self, registry):
+                    """Called when plugin system initializes this plugin."""
+                    pass
+
+                def shutdown(self):
+                    """Called when plugin system shuts down."""
+                    pass
+
+                def __repr__(self):
+                    return f"<{self.__class__.__name__}:{self.name}>"
+
+
+            class TransformerPlugin(BasePlugin):
+                """Base class for transformer plugins."""
+
+                priority: int = 500
+
+                def transform(self, data: Any) -> Any:
+                    raise NotImplementedError
+
+
+            class ValidatorPlugin(BasePlugin):
+                """Base class for validator plugins."""
+
+                strict: bool = False
+
+                def validate(self, data: Any) -> bool:
+                    raise NotImplementedError
+
+
+            class HookPlugin(BasePlugin):
+                """Base class for hook plugins."""
+
+                event: str = ""
+                priority: int = 0
+                once: bool = False
+
+                def fire(self, *args, **kwargs) -> Any:
+                    raise NotImplementedError
+
+
+            # ---- Built-in plugins ----
+
+            class StripWhitespace(TransformerPlugin):
+                """Strips leading/trailing whitespace from string data."""
+                name = "strip_whitespace"
+                priority = 100
+
+                def transform(self, data):
+                    if isinstance(data, str):
+                        return data.strip()
+                    if isinstance(data, dict):
+                        return {k: v.strip() if isinstance(v, str) else v
+                                for k, v in data.items()}
+                    return data
+
+
+            class LowercaseTransformer(TransformerPlugin):
+                """Converts string data to lowercase."""
+                name = "lowercase"
+                priority = 200
+
+                def transform(self, data):
+                    if isinstance(data, str):
+                        return data.lower()
+                    if isinstance(data, dict):
+                        return {k: v.lower() if isinstance(v, str) else v
+                                for k, v in data.items()}
+                    return data
+
+
+            class NonEmptyValidator(ValidatorPlugin):
+                """Validates that data is not empty."""
+                name = "non_empty"
+
+                def validate(self, data):
+                    if data is None:
+                        return False
+                    if isinstance(data, (str, list, dict)):
+                        return len(data) > 0
+                    return True
+
+
+            class TypeValidator(ValidatorPlugin):
+                """Validates that data is a specific type."""
+                name = "type_check"
+                strict = True
+
+                def __init__(self, expected_type: type):
+                    self.expected_type = expected_type
+
+                def validate(self, data):
+                    return isinstance(data, self.expected_type)
+
+
+            class LoggingHook(HookPlugin):
+                """Logs events for debugging."""
+                name = "debug_logger"
+                event = "*"
+                priority = -100
+
+                def __init__(self):
+                    self.log: List[Dict] = []
+
+                def fire(self, *args, **kwargs):
+                    entry = {"args": args, "kwargs": kwargs}
+                    self.log.append(entry)
+                    return entry
+        ''')
+
+        init_py = '"""Extensible plugin system with registry, loader, and event dispatch."""\nfrom .registry import PluginRegistry, PluginType, PluginError\nfrom .loader import PluginLoader\nfrom .hooks import EventDispatcher, Pipeline\nfrom .config import PluginConfig\n'
+
+        test_py = textwrap.dedent('''\
+            """Tests for the plugin system middleware extension.
+
+            This file tests the existing plugin system AND the new middleware
+            functionality that must be added.
+            """
+            import sys, os
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+            from pluginsys.registry import PluginRegistry, PluginType, DuplicatePluginError
+            from pluginsys.loader import PluginLoader, PluginSchema
+            from pluginsys.hooks import EventDispatcher, Pipeline
+            from pluginsys.config import PluginConfig
+            from pluginsys.base import (
+                StripWhitespace, LowercaseTransformer, NonEmptyValidator, LoggingHook
+            )
+
+
+            # ===== Existing functionality tests (must still pass) =====
+
+            def test_registry_basic():
+                """Basic register/get/unregister."""
+                reg = PluginRegistry()
+                plugin = StripWhitespace()
+                reg.register(plugin, PluginType.TRANSFORMER, "strip")
+                assert reg.get("strip", PluginType.TRANSFORMER) is plugin
+                reg.unregister("strip", PluginType.TRANSFORMER)
+                try:
+                    reg.get("strip", PluginType.TRANSFORMER)
+                    assert False, "Should raise PluginNotFoundError"
+                except Exception:
+                    pass
+
+            def test_registry_duplicate():
+                """Duplicate registration should raise."""
+                reg = PluginRegistry()
+                reg.register(StripWhitespace(), PluginType.TRANSFORMER, "strip")
+                try:
+                    reg.register(LowercaseTransformer(), PluginType.TRANSFORMER, "strip")
+                    assert False, "Should raise DuplicatePluginError"
+                except DuplicatePluginError:
+                    pass
+
+            def test_registry_stats():
+                reg = PluginRegistry()
+                reg.register(StripWhitespace(), PluginType.TRANSFORMER, "s1")
+                reg.register(LowercaseTransformer(), PluginType.TRANSFORMER, "s2")
+                reg.register(NonEmptyValidator(), PluginType.VALIDATOR, "v1")
+                stats = reg.stats
+                assert stats["transformer"] == 2
+                assert stats["validator"] == 1
+                assert stats["hook"] == 0
+
+            def test_loader_basic():
+                reg = PluginRegistry()
+                loader = PluginLoader(reg)
+                configs = [
+                    {"name": "upper_fn", "transform_fn": lambda x: x.upper(), "priority": 100},
+                    {"name": "disabled_fn", "transform_fn": lambda x: x, "enabled": False},
+                ]
+                loaded = loader.load_from_config(configs, PluginType.TRANSFORMER)
+                assert loaded == 1
+                assert "upper_fn" in loader.loaded_names
+
+            def test_loader_validation_errors():
+                reg = PluginRegistry()
+                loader = PluginLoader(reg)
+                # Missing required field
+                configs = [{"priority": 100}]
+                loaded = loader.load_from_config(configs, PluginType.TRANSFORMER)
+                assert loaded == 0
+                assert len(loader.errors) == 1
+
+            def test_event_dispatch():
+                reg = PluginRegistry()
+                results_collected = []
+                hook = LoggingHook()
+                hook.event = "on_save"
+                reg.register(hook, PluginType.HOOK, "logger")
+                dispatcher = EventDispatcher(reg)
+                result = dispatcher.dispatch("on_save", "file.txt")
+                assert result.success_count == 1
+                assert "on_save" in dispatcher.history
+
+            def test_pipeline_transform():
+                reg = PluginRegistry()
+                reg.register(StripWhitespace(), PluginType.TRANSFORMER, "strip")
+                reg.register(LowercaseTransformer(), PluginType.TRANSFORMER, "lower")
+                pipeline = Pipeline(reg)
+                result = pipeline.run("  HELLO WORLD  ", validate=False)
+                assert result == "hello world"
+
+            def test_pipeline_with_validator():
+                reg = PluginRegistry()
+                reg.register(StripWhitespace(), PluginType.TRANSFORMER, "strip")
+                reg.register(NonEmptyValidator(), PluginType.VALIDATOR, "non_empty")
+                pipeline = Pipeline(reg)
+                result = pipeline.run("  hello  ")
+                assert result == "hello"
+
+            def test_config_defaults():
+                cfg = PluginConfig()
+                assert cfg.get("max_plugins_per_type") == 50
+                assert cfg.get("strict_validation") is False
+
+            def test_config_overrides():
+                cfg = PluginConfig({"max_plugins_per_type": 100, "strict_validation": True})
+                assert cfg.get("max_plugins_per_type") == 100
+                assert cfg.get("strict_validation") is True
+
+            def test_config_validate():
+                cfg = PluginConfig({"max_plugins_per_type": -1})
+                errors = cfg.validate()
+                assert any("max_plugins_per_type" in e for e in errors)
+
+            def test_dependency_resolution():
+                reg = PluginRegistry()
+                reg.register(StripWhitespace(), PluginType.TRANSFORMER, "strip",
+                             metadata={"dependencies": ["lower"]})
+                reg.register(LowercaseTransformer(), PluginType.TRANSFORMER, "lower")
+                order = reg.resolve_dependencies(PluginType.TRANSFORMER)
+                assert order.index("lower") < order.index("strip")
+
+
+            # ===== NEW: Middleware tests (agent must implement these) =====
+
+            def test_middleware_plugin_type_exists():
+                """PluginType should have a MIDDLEWARE member."""
+                assert hasattr(PluginType, 'MIDDLEWARE')
+                assert PluginType.MIDDLEWARE.value == "middleware"
+
+            def test_registry_supports_middleware():
+                """Registry should accept middleware plugin type."""
+                reg = PluginRegistry()
+                class FakeMiddleware:
+                    name = "fake"
+                reg.register(FakeMiddleware(), PluginType.MIDDLEWARE, "fake")
+                assert reg.get("fake", PluginType.MIDDLEWARE) is not None
+                assert reg.stats["middleware"] == 1
+
+            def test_middleware_schema_validation():
+                """PluginSchema should validate middleware configs."""
+                errors = PluginSchema.validate(
+                    {"name": "timing", "process_fn": lambda req, nxt: nxt(req)},
+                    PluginType.MIDDLEWARE
+                )
+                assert len(errors) == 0
+
+                # Missing process_fn should error
+                errors = PluginSchema.validate(
+                    {"name": "bad"},
+                    PluginType.MIDDLEWARE
+                )
+                assert any("process_fn" in e for e in errors)
+
+            def test_middleware_loader():
+                """Loader should handle middleware configs."""
+                reg = PluginRegistry()
+                loader = PluginLoader(reg)
+                configs = [
+                    {
+                        "name": "timing",
+                        "process_fn": lambda req, nxt: nxt(req),
+                        "priority": 10,
+                    },
+                    {
+                        "name": "auth",
+                        "process_fn": lambda req, nxt: nxt(req) if req.get("authorized") else {"error": "unauthorized"},
+                        "priority": 5,
+                    },
+                ]
+                loaded = loader.load_from_config(configs, PluginType.MIDDLEWARE)
+                assert loaded == 2
+
+            def test_middleware_wrapper():
+                """MiddlewareWrapper should have process method and priority."""
+                from pluginsys.loader import MiddlewareWrapper
+                mw = MiddlewareWrapper(
+                    name="test",
+                    process_fn=lambda req, nxt: nxt(req),
+                    priority=10,
+                )
+                assert mw.name == "test"
+                assert mw.priority == 10
+                # Test that process works
+                result = mw.process({"data": 1}, lambda r: r)
+                assert result == {"data": 1}
+
+            def test_middleware_chain_basic():
+                """MiddlewareChain should execute middlewares in priority order."""
+                from pluginsys.hooks import MiddlewareChain
+                reg = PluginRegistry()
+                loader = PluginLoader(reg)
+
+                call_order = []
+
+                def make_mw(label, priority):
+                    def process(req, nxt):
+                        call_order.append(f"before_{label}")
+                        result = nxt(req)
+                        call_order.append(f"after_{label}")
+                        return result
+                    return {"name": label, "process_fn": process, "priority": priority}
+
+                configs = [make_mw("second", 20), make_mw("first", 10), make_mw("third", 30)]
+                loader.load_from_config(configs, PluginType.MIDDLEWARE)
+
+                chain = MiddlewareChain(reg)
+                handler = lambda req: {"status": "ok", "data": req["value"]}
+                result = chain.execute({"value": 42}, handler)
+
+                assert result == {"status": "ok", "data": 42}
+                assert call_order == [
+                    "before_first", "before_second", "before_third",
+                    "after_third", "after_second", "after_first"
+                ]
+
+            def test_middleware_chain_short_circuit():
+                """A middleware can short-circuit by not calling next."""
+                from pluginsys.hooks import MiddlewareChain
+                reg = PluginRegistry()
+                loader = PluginLoader(reg)
+
+                def auth_mw(req, nxt):
+                    if not req.get("token"):
+                        return {"error": "no token"}
+                    return nxt(req)
+
+                def logging_mw(req, nxt):
+                    return nxt(req)
+
+                configs = [
+                    {"name": "auth", "process_fn": auth_mw, "priority": 1},
+                    {"name": "log", "process_fn": logging_mw, "priority": 10},
+                ]
+                loader.load_from_config(configs, PluginType.MIDDLEWARE)
+
+                chain = MiddlewareChain(reg)
+                handler = lambda req: {"status": "ok"}
+
+                # Without token — should short-circuit
+                result = chain.execute({"path": "/api"}, handler)
+                assert result == {"error": "no token"}
+
+                # With token — should pass through
+                result = chain.execute({"path": "/api", "token": "abc"}, handler)
+                assert result == {"status": "ok"}
+
+            def test_middleware_chain_modifies_request():
+                """Middleware can modify the request before passing it on."""
+                from pluginsys.hooks import MiddlewareChain
+                reg = PluginRegistry()
+                loader = PluginLoader(reg)
+
+                def enrich_mw(req, nxt):
+                    req["enriched"] = True
+                    return nxt(req)
+
+                configs = [
+                    {"name": "enrich", "process_fn": enrich_mw, "priority": 1},
+                ]
+                loader.load_from_config(configs, PluginType.MIDDLEWARE)
+
+                chain = MiddlewareChain(reg)
+                handler = lambda req: {"enriched": req.get("enriched", False)}
+                result = chain.execute({}, handler)
+                assert result["enriched"] is True
+
+            def test_middleware_chain_empty():
+                """With no middleware, chain should just call the handler directly."""
+                from pluginsys.hooks import MiddlewareChain
+                reg = PluginRegistry()
+                chain = MiddlewareChain(reg)
+                handler = lambda req: {"direct": True}
+                result = chain.execute({"x": 1}, handler)
+                assert result == {"direct": True}
+
+            def test_middleware_base_class():
+                """There should be a MiddlewarePlugin base class."""
+                from pluginsys.base import MiddlewarePlugin
+                class MyMiddleware(MiddlewarePlugin):
+                    name = "my_mw"
+                    priority = 5
+                    def process(self, request, next_handler):
+                        return next_handler(request)
+                mw = MyMiddleware()
+                assert mw.name == "my_mw"
+                assert mw.priority == 5
+                result = mw.process({"x": 1}, lambda r: r)
+                assert result == {"x": 1}
+
+            def test_full_integration():
+                """End-to-end: register middleware + transformers + hooks, run pipeline."""
+                reg = PluginRegistry()
+                loader = PluginLoader(reg)
+
+                # Load transformers
+                loader.load_from_config([
+                    {"name": "upper", "transform_fn": lambda x: x.upper()},
+                ], PluginType.TRANSFORMER)
+
+                # Load middleware
+                call_log = []
+                def logging_mw(req, nxt):
+                    call_log.append("mw_start")
+                    res = nxt(req)
+                    call_log.append("mw_end")
+                    return res
+
+                loader.load_from_config([
+                    {"name": "logger", "process_fn": logging_mw, "priority": 1},
+                ], PluginType.MIDDLEWARE)
+
+                # Verify both types are registered
+                assert reg.stats["transformer"] == 1
+                assert reg.stats["middleware"] == 1
+
+                # Run middleware chain
+                from pluginsys.hooks import MiddlewareChain
+                chain = MiddlewareChain(reg)
+                result = chain.execute(
+                    {"text": "hello"},
+                    lambda req: {"result": req["text"].upper()}
+                )
+                assert result == {"result": "HELLO"}
+                assert call_log == ["mw_start", "mw_end"]
+
+
+            if __name__ == "__main__":
+                test_fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+                passed = 0
+                failed = 0
+                for fn in test_fns:
+                    try:
+                        fn()
+                        print(f"  PASS: {fn.__name__}")
+                        passed += 1
+                    except Exception as e:
+                        print(f"  FAIL: {fn.__name__}: {e}")
+                        failed += 1
+                print(f"\\n{passed} passed, {failed} failed")
+                if failed:
+                    print("SOME TESTS FAILED")
+                    exit(1)
+                else:
+                    print("ALL TESTS PASSED")
+        ''')
+
+        files = {
+            "pluginsys/__init__.py": init_py,
+            "pluginsys/registry.py": registry_py,
+            "pluginsys/loader.py": loader_py,
+            "pluginsys/hooks.py": hooks_py,
+            "pluginsys/config.py": config_py,
+            "pluginsys/base.py": base_py,
+            "tests/test_plugins.py": test_py,
+        }
+
+        eval_script = textwrap.dedent('''\
+            #!/bin/bash
+            cd "$WORKDIR"
+            OUTPUT=$(python3 tests/test_plugins.py 2>&1)
+            echo "$OUTPUT"
+            if echo "$OUTPUT" | grep -q "ALL TESTS PASSED"; then
+                exit 0
+            else
+                exit 1
+            fi
+        ''')
+
+        return Task(
+            task_id="frontier_large_file_middleware",
+            category=TaskCategory.DIAGNOSTIC,
+            title="Add middleware plugin type to large plugin registry system",
+            difficulty="hard",
+            goal=textwrap.dedent("""\
+                Add middleware support to an existing plugin system.
+
+                The plugin system currently supports three plugin types: transformer, validator,
+                and hook. You need to add a fourth type: **middleware**.
+
+                Middleware should support the standard request/response pattern where each
+                middleware wraps the next, forming a chain. Each middleware receives a request
+                and a `next` callable, and can modify the request before passing it on, or
+                short-circuit by returning a response without calling `next`.
+
+                ## Changes needed:
+
+                1. **registry.py**: Add `MIDDLEWARE = "middleware"` to `PluginType` enum.
+                   The registry already handles arbitrary PluginTypes, but its `__init__`
+                   only creates entries for existing types — make sure MIDDLEWARE gets one too.
+
+                2. **loader.py**:
+                   - Add middleware to `PluginSchema.REQUIRED_FIELDS` (requires: name, process_fn)
+                   - Add middleware to `PluginSchema.OPTIONAL_FIELDS` (optional: priority, enabled, config)
+                   - Add middleware validation in `PluginSchema.validate()`
+                   - Add `MiddlewareWrapper` class (similar to TransformerWrapper but wraps process_fn)
+                   - Handle MIDDLEWARE in `PluginLoader._create_instance()`
+
+                3. **hooks.py**: Add `MiddlewareChain` class:
+                   - Constructor takes a `PluginRegistry`
+                   - `execute(request, handler)` method that builds a chain of middleware
+                   - Middlewares are sorted by priority (lower first)
+                   - Each middleware calls `process(request, next)` where next calls the next middleware
+                   - The final next calls the handler
+
+                4. **base.py**: Add `MiddlewarePlugin` base class (like TransformerPlugin but
+                   with `process(request, next_handler)` method and `priority` attribute).
+
+                Run tests: `python3 tests/test_plugins.py`
+            """),
+            hints=None,
+            environment=EnvironmentSetup(seed_files=files),
+            ground_truth="Add MIDDLEWARE to PluginType enum. Update PluginRegistry.__init__ to include it. Add MiddlewareWrapper to loader.py. Add MiddlewareChain to hooks.py that builds a nested function chain. Add MiddlewarePlugin to base.py.",
+            eval_spec=EvalSpec(
+                method=EvalMethod.SCRIPT_CHECK,
+                check_script_content=eval_script,
+            ),
+            capabilities=[
+                Capability.CODE_EDITING,
+                Capability.CODE_READING,
+                Capability.DECOMPOSITION,
+            ],
+            source="frontier_generator",
+            estimated_minutes=12,
         )
