@@ -1,9 +1,9 @@
 {
   "task_id": "frontier_cascading_edits",
   "category": "diagnostic",
-  "title": "Fix 4 bugs in Matrix class — edits shift line numbers",
+  "title": "Fix 4 bugs in Matrix class \u2014 edits shift line numbers",
   "difficulty": "hard",
-  "goal": "The `mathlib` package implements a Matrix class for basic linear algebra.\nRun the tests:\n\n```\npython3 tests/test_matrix.py\n```\n\n4 of the 16 tests are failing — one in each of the four core methods:\n`__init__`, `multiply`, `transpose`, and `determinant`.\n\nDebug each failure and fix the Matrix class so that all 16 tests pass.\nThe fixes should be minimal and targeted — do not rewrite the class.\n",
+  "goal": "The `mathlib` package implements a Matrix class for basic linear algebra.\nRun the tests:\n\n```\npython3 tests/test_matrix.py\n```\n\n4 of the 16 tests are failing \u2014 one in each of the four core methods:\n`__init__`, `multiply`, `transpose`, and `determinant`.\n\nDebug each failure and fix the Matrix class so that all 16 tests pass.\nThe fixes should be minimal and targeted \u2014 do not rewrite the class.\n",
   "hints": "Each failing test corresponds to exactly one bug in one method. Read the test output carefully to understand what each test expects.",
   "environment": {
     "env_type": "empty",
@@ -34,7 +34,7 @@
     "output_not_contains": null,
     "test_command": null,
     "check_script": null,
-    "check_script_content": "#!/bin/bash\ncd \"$WORKDIR\"\n\nif [ ! -f \"mathlib/matrix.py\" ]; then\n    echo \"FAIL: mathlib/matrix.py not found\"\n    exit 1\nfi\n\nif [ ! -f \"tests/test_matrix.py\" ]; then\n    echo \"FAIL: tests/test_matrix.py not found\"\n    exit 1\nfi\n\nOUTPUT=$(python3 tests/test_matrix.py 2>&1)\nEXIT_CODE=$?\necho \"$OUTPUT\"\n\nPASSED=$(echo \"$OUTPUT\" | grep -c \"^PASS:\")\nTOTAL=16\n\necho \"\"\necho \"Tests passed: $PASSED/$TOTAL\"\n\nif echo \"$OUTPUT\" | grep -q \"ALL TESTS PASSED\"; then\n    exit 0\nelse\n    exit 1\nfi\n",
+    "check_script_content": "#!/bin/bash\ncd \"$WORKDIR\"\n\nif [ ! -f \"mathlib/matrix.py\" ]; then\n    echo \"FAIL: mathlib/matrix.py not found\"\n    exit 1\nfi\n\nif [ ! -f \"tests/test_matrix.py\" ]; then\n    echo \"FAIL: tests/test_matrix.py not found\"\n    exit 1\nfi\n\nOUTPUT=$(python3 tests/test_matrix.py 2>&1)\nEXIT_CODE=$?\necho \"$OUTPUT\"\n\nPASSED=$(echo \"$OUTPUT\" | grep -c \"^PASS:\")\nTOTAL=16\n\necho \"\"\necho \"Tests passed: $PASSED/$TOTAL\"\necho \"Score: $PASSED/$TOTAL\"\n\nif echo \"$OUTPUT\" | grep -q \"ALL TESTS PASSED\"; then\n    exit 0\nelse\n    exit 1\nfi\n",
     "rubric": null,
     "sub_evals": null,
     "pass_threshold": 1.0

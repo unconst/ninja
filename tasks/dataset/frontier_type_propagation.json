@@ -41,7 +41,7 @@
     "output_not_contains": null,
     "test_command": null,
     "check_script": null,
-    "check_script_content": "#!/bin/bash\ncd \"$WORKDIR\"\nOUTPUT=$(python3 tests/test_tasks.py 2>&1)\necho \"$OUTPUT\"\nPASS_COUNT=$(echo \"$OUTPUT\" | grep -c \"PASS:\")\nFAIL_COUNT=$(echo \"$OUTPUT\" | grep -c \"FAIL:\")\necho \"\"\necho \"Results: $PASS_COUNT passed, $FAIL_COUNT failed out of 20 tests\"\nif echo \"$OUTPUT\" | grep -q \"ALL TESTS PASSED\"; then\n    exit 0\nelse\n    exit 1\nfi\n",
+    "check_script_content": "#!/bin/bash\ncd \"$WORKDIR\"\nOUTPUT=$(python3 tests/test_tasks.py 2>&1)\necho \"$OUTPUT\"\nPASS_COUNT=$(echo \"$OUTPUT\" | grep -c \"PASS:\")\nFAIL_COUNT=$(echo \"$OUTPUT\" | grep -c \"FAIL:\")\necho \"\"\necho \"Results: $PASS_COUNT passed, $FAIL_COUNT failed out of 20 tests\"\necho \"Score: $PASS_COUNT/20\"\nif echo \"$OUTPUT\" | grep -q \"ALL TESTS PASSED\"; then\n    exit 0\nelse\n    exit 1\nfi\n",
     "rubric": null,
     "sub_evals": null,
     "pass_threshold": 1.0
