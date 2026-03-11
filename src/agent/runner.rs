@@ -1504,10 +1504,28 @@ print(json.dumps(result))
             }
         };
 
-        // Lint check for Python files
+        // Lint check for Python files — auto-revert on syntax errors
         if path.ends_with(".py") {
             let lint_msg = self.lint_python_file(&resolved_path);
             if !lint_msg.is_empty() {
+                // Check if there are syntax errors (E9 = invalid syntax in ruff, or SYNTAX ERROR from ast.parse)
+                if lint_msg.contains("invalid-syntax") || lint_msg.contains("SYNTAX ERROR") {
+                    // Revert by restoring the old_string content
+                    if let Some(old_string) = input.get("old_string").and_then(|v| v.as_str()) {
+                        if let Ok(current) = std::fs::read_to_string(&resolved_path) {
+                            let reverted = current.replacen(new_string.trim(), old_string.trim(), 1);
+                            if reverted != current {
+                                let _ = std::fs::write(&resolved_path, &reverted);
+                                return Some(format!(
+                                    "EDIT REVERTED — your edit introduced a syntax error.\n{}\n\n\
+                                     The file has been restored to its previous state. \
+                                     Please fix the syntax in your edit and try again.",
+                                    lint_msg
+                                ));
+                            }
+                        }
+                    }
+                }
                 result.push_str(&lint_msg);
             }
         }
