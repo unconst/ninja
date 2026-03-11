@@ -234,9 +234,10 @@ def _eval_script_check(spec: EvalSpec, workdir: str) -> dict:
         f.flush()
         os.chmod(f.name, 0o755)
         try:
+            env = {**os.environ, "WORKDIR": workdir}
             proc = subprocess.run(
                 ["bash", f.name],
-                capture_output=True, text=True, cwd=workdir, timeout=60
+                capture_output=True, text=True, cwd=workdir, env=env, timeout=60
             )
             passed = proc.returncode == 0
             return {
