@@ -1,0 +1,63 @@
+{
+  "task_id": "data_analysis_03e8f658",
+  "category": "data_analysis",
+  "title": "Create pivot table report from sales data",
+  "difficulty": "medium",
+  "goal": "From sales.csv, create two reports:\n\n1. pivot_region.csv: Rows = regions, Columns = products\n   Values = total revenue. Include a \"Total\" column.\n\n2. pivot_weekly.csv: Rows = week number (1-4), Columns = regions\n   Values = total units sold. Include a \"Total\" column.\n\nFormat all revenue values to 2 decimal places. Sort rows alphabetically\n(or numerically for weeks).\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "sales.csv": "date,region,product,units,revenue\n2024-01-05,North,Widget,10,299.90\n2024-01-05,South,Widget,8,239.92\n2024-01-05,North,Gadget,5,249.95\n2024-01-12,South,Gadget,3,149.97\n2024-01-12,North,Widget,12,359.88\n2024-01-12,East,Widget,6,179.94\n2024-01-19,North,Gadget,7,349.93\n2024-01-19,South,Widget,9,269.91\n2024-01-19,East,Gadget,4,199.96\n2024-01-26,North,Widget,15,449.85\n2024-01-26,South,Gadget,6,299.94\n2024-01-26,East,Widget,8,239.92\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "North total: 1709.51, South total: 959.74, East total: 619.82. Week 1: 24 units total.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "pivot_region.csv",
+          "pivot_weekly.csv"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import csv; r=list(csv.DictReader(open('pivot_region.csv'))); print(len(r)); assert len(r)>=3; print('pivot_ok')\"",
+        "output_contains": [
+          "pivot_ok"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_writing",
+    "script_writing",
+    "file_creation",
+    "decomposition"
+  ],
+  "source": "data_analysis_generator:pivot_report",
+  "generated_at": "2026-03-11T08:21:34.189702+00:00",
+  "estimated_minutes": 8
+}

@@ -1,0 +1,58 @@
+{
+  "task_id": "local_ops_30217328",
+  "category": "local_ops",
+  "title": "Fix broken deployment shell script",
+  "difficulty": "medium",
+  "goal": "The deploy.sh script has several bugs that prevent it from running.\nFix all the bugs so the script runs successfully to completion.\nThere are at least 4 distinct bugs. Fix them all.\n\nTest your fix by running: bash deploy.sh\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "deploy.sh": "#!/bin/bash\n# Deploy script for the application\n\nset -e\n\nDEPLOY_DIR=\"/tmp/myapp_deploy_$$\"\nLOG_FILE=\"$DEPLOY_DIR/deploy.log\n\nmkdir -p $DEPLOY_DIR\n\necho \"Starting deployment...\" > $LOG_FILE\necho \"Date: $(date)\" >> LOG_FILE\n\n# Check if python exists\nif which python3; then\n    PYTHON=python3\nelse if which python; then\n    PYTHON=python\nfi\n\n# Create virtual environment\n$PYTHON -m venv $DEPLOY_DIR/venv\nsource $DEPLOY_DIR/venv/bin/activate\n\n# Install requirements\npip install -r requirements.txt 2>&1 | tee -a $LOG_FILE\n\n# Run tests\npython -m pytest tests/ 2>&1 | tee -a $LOG_FILE\nRESULT=$?\n\nif [ $RESULT -neq 0 ]; then\n    echo \"Tests failed!\" >> $LOG_FILE\n    exit 1\nfi\n\necho \"Deployment complete!\" >> $LOG_FILE\necho \"Deployed to: $DEPLOY_DIR\"\n",
+      "requirements.txt": "pytest==8.0.0\n",
+      "tests/test_basic.py": "def test_placeholder():\n    assert True\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Bugs: 1) unclosed quote on LOG_FILE line, 2) LOG_FILE missing $ prefix, 3) else if should be elif, 4) -neq should be -ne",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "bash deploy.sh 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "Deployment complete!",
+      "Deployed to:"
+    ],
+    "output_not_contains": [
+      "syntax error",
+      "command not found"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_editing",
+    "shell_commands",
+    "error_interp",
+    "root_cause",
+    "script_writing"
+  ],
+  "source": "local_ops_generator:broken_script_fix",
+  "generated_at": "2026-03-11T08:21:34.185244+00:00",
+  "estimated_minutes": 5
+}

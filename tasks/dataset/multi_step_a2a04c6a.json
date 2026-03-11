@@ -1,0 +1,76 @@
+{
+  "task_id": "multi_step_a2a04c6a",
+  "category": "multi_step",
+  "title": "Add test suite to untested project",
+  "difficulty": "medium",
+  "goal": "This project has no tests. Add a comprehensive test suite:\n\n1. Read all source files to understand the codebase\n2. Create a tests/ directory with test files\n3. Write tests for each module in src/\n4. Ensure tests cover:\n   - Calculator: all operations, edge cases (division by zero)\n   - StringUtils: all methods with various inputs\n   - DataStore: add, get, delete, list, persistence\n5. Run the tests and make sure they all pass\n6. Report coverage: which functions are tested\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [
+      "pip install pytest 2>/dev/null || true"
+    ],
+    "seed_files": {
+      "src/__init__.py": "",
+      "src/calculator.py": "class Calculator:\n    def __init__(self):\n        self.history = []\n\n    def add(self, a, b):\n        result = a + b\n        self.history.append(f\"{a} + {b} = {result}\")\n        return result\n\n    def subtract(self, a, b):\n        result = a - b\n        self.history.append(f\"{a} - {b} = {result}\")\n        return result\n\n    def multiply(self, a, b):\n        result = a * b\n        self.history.append(f\"{a} * {b} = {result}\")\n        return result\n\n    def divide(self, a, b):\n        if b == 0:\n            raise ValueError(\"Cannot divide by zero\")\n        result = a / b\n        self.history.append(f\"{a} / {b} = {result}\")\n        return result\n\n    def get_history(self):\n        return list(self.history)\n\n    def clear_history(self):\n        self.history = []\n",
+      "src/string_utils.py": "def reverse_string(s):\n    return s[::-1]\n\ndef is_palindrome(s):\n    cleaned = ''.join(c.lower() for c in s if c.isalnum())\n    return cleaned == cleaned[::-1]\n\ndef word_count(s):\n    if not s or not s.strip():\n        return 0\n    return len(s.split())\n\ndef truncate(s, max_length, suffix='...'):\n    if len(s) <= max_length:\n        return s\n    return s[:max_length - len(suffix)] + suffix\n\ndef to_title_case(s):\n    return ' '.join(w.capitalize() for w in s.split())\n",
+      "src/data_store.py": "import json\nimport os\n\nclass DataStore:\n    def __init__(self, filepath='store.json'):\n        self.filepath = filepath\n        self.data = {}\n        if os.path.exists(filepath):\n            with open(filepath) as f:\n                self.data = json.load(f)\n\n    def set(self, key, value):\n        self.data[key] = value\n        self._save()\n\n    def get(self, key, default=None):\n        return self.data.get(key, default)\n\n    def delete(self, key):\n        if key in self.data:\n            del self.data[key]\n            self._save()\n            return True\n        return False\n\n    def keys(self):\n        return list(self.data.keys())\n\n    def clear(self):\n        self.data = {}\n        self._save()\n\n    def _save(self):\n        with open(self.filepath, 'w') as f:\n            json.dump(self.data, f, indent=2)\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Test files for all 3 modules, all tests pass, coverage includes edge cases",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "tests/"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -m pytest tests/ -v 2>&1 | tail -5",
+        "output_contains": [
+          "passed"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -m pytest tests/ 2>&1 | grep -E '\\d+ passed' | head -1",
+        "output_contains": [
+          "passed"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_writing",
+    "file_creation",
+    "test_running",
+    "decomposition",
+    "multi_file"
+  ],
+  "source": "multi_step_generator:test_infrastructure",
+  "generated_at": "2026-03-11T08:21:34.191385+00:00",
+  "estimated_minutes": 12
+}

@@ -1,0 +1,71 @@
+{
+  "task_id": "data_analysis_8f0df5f5",
+  "category": "data_analysis",
+  "title": "Detect and report sensor data outliers",
+  "difficulty": "medium",
+  "goal": "Analyze sensors.csv which contains temperature, humidity, and pressure\nreadings from IoT sensors. Some readings contain obvious errors/outliers.\n\nWrite a script that:\n1. Identifies outlier values (physically impossible or statistically anomalous)\n2. Creates outliers.json listing each outlier with:\n   - row number, sensor_id, column name, value, reason\n3. Creates cleaned.csv with outliers replaced by interpolated values\n   (average of the preceding and following value for that sensor)\n\nRun the script to produce the output files.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "sensors.csv": "timestamp,sensor_id,temperature,humidity,pressure\n2024-01-01 00:00,S1,22.1,45.0,1013.2\n2024-01-01 01:00,S1,21.8,46.2,1013.1\n2024-01-01 02:00,S1,21.5,47.1,1013.0\n2024-01-01 03:00,S1,999.9,45.5,1013.1\n2024-01-01 04:00,S1,21.0,48.0,1012.9\n2024-01-01 05:00,S1,20.8,-1.0,1012.8\n2024-01-01 00:00,S2,23.5,42.0,1013.5\n2024-01-01 01:00,S2,23.2,43.1,1013.4\n2024-01-01 02:00,S2,23.0,0.0,1013.3\n2024-01-01 03:00,S2,22.8,44.0,1013.2\n2024-01-01 04:00,S2,22.5,43.5,1013.1\n2024-01-01 05:00,S2,22.3,43.0,0.0\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Outliers: S1 temp 999.9 (row 4), S1 humidity -1.0 (row 6), S2 humidity 0.0 (row 9), S2 pressure 0.0 (row 12). Cleaned values should be interpolated.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "outliers.json",
+          "cleaned.csv"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import json; d=json.load(open('outliers.json')); assert len(d)>=3; print(f'found_{len(d)}_outliers')\"",
+        "output_contains": [
+          "found_"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import csv; rows=list(csv.DictReader(open('cleaned.csv'))); assert float(rows[3]['temperature'])<100; print('cleaned_ok')\"",
+        "output_contains": [
+          "cleaned_ok"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_writing",
+    "script_writing",
+    "file_creation",
+    "shell_commands",
+    "root_cause"
+  ],
+  "source": "data_analysis_generator:outlier_detection",
+  "generated_at": "2026-03-11T08:21:34.189387+00:00",
+  "estimated_minutes": 8
+}

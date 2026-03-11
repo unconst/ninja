@@ -1,0 +1,52 @@
+{
+  "task_id": "multi_step_dc78dc35",
+  "category": "multi_step",
+  "title": "Refactor monolithic script into modules",
+  "difficulty": "medium",
+  "goal": "The monolith.py file is a 200+ line single-file script that's hard to maintain.\nRefactor it into a proper multi-module structure:\n\n1. Read and understand the full script\n2. Identify logical components (data loading, processing, reporting)\n3. Split into separate modules under a package directory\n4. Create a new main.py entry point\n5. Ensure `python3 main.py` produces EXACTLY the same output as\n   `python3 monolith.py` (save original output first!)\n6. Keep monolith.py unchanged for comparison\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "monolith.py": "import json\nimport os\nimport sys\nfrom datetime import datetime\n\n# Data loading\ndef load_data(filename):\n    if not os.path.exists(filename):\n        return []\n    with open(filename) as f:\n        return json.load(f)\n\ndef save_data(filename, data):\n    with open(filename, 'w') as f:\n        json.dump(data, f, indent=2)\n\n# Processing\ndef filter_active(records):\n    return [r for r in records if r.get('active', False)]\n\ndef sort_by_field(records, field, reverse=False):\n    return sorted(records, key=lambda r: r.get(field, ''), reverse=reverse)\n\ndef aggregate_by(records, field):\n    groups = {}\n    for r in records:\n        key = r.get(field, 'unknown')\n        if key not in groups:\n            groups[key] = []\n        groups[key].append(r)\n    return groups\n\ndef calculate_stats(values):\n    if not values:\n        return {'count': 0, 'sum': 0, 'avg': 0, 'min': 0, 'max': 0}\n    return {\n        'count': len(values),\n        'sum': sum(values),\n        'avg': round(sum(values) / len(values), 2),\n        'min': min(values),\n        'max': max(values)\n    }\n\n# Reporting\ndef format_header(title):\n    return f\"\\n{'='*40}\\n{title}\\n{'='*40}\"\n\ndef format_table(records, fields):\n    if not records:\n        return \"(no data)\"\n    widths = {f: max(len(f), max(len(str(r.get(f, ''))) for r in records)) for f in fields}\n    header = ' | '.join(f.ljust(widths[f]) for f in fields)\n    sep = '-+-'.join('-' * widths[f] for f in fields)\n    rows = []\n    for r in records:\n        rows.append(' | '.join(str(r.get(f, '')).ljust(widths[f]) for f in fields))\n    return f\"{header}\\n{sep}\\n\" + '\\n'.join(rows)\n\ndef generate_report(data):\n    lines = []\n    lines.append(format_header(\"DATA REPORT\"))\n    lines.append(f\"Generated: {datetime.now().strftime('%Y-%m-%d')}\")\n    lines.append(f\"Total records: {len(data)}\")\n\n    active = filter_active(data)\n    lines.append(f\"Active records: {len(active)}\")\n\n    sorted_data = sort_by_field(active, 'name')\n    lines.append(format_header(\"ACTIVE RECORDS\"))\n    lines.append(format_table(sorted_data, ['name', 'department', 'score']))\n\n    groups = aggregate_by(active, 'department')\n    lines.append(format_header(\"BY DEPARTMENT\"))\n    for dept, members in sorted(groups.items()):\n        scores = [m.get('score', 0) for m in members]\n        stats = calculate_stats(scores)\n        lines.append(f\"  {dept}: {stats['count']} members, avg score: {stats['avg']}\")\n\n    return '\\n'.join(lines)\n\n# Main\nif __name__ == '__main__':\n    sample_data = [\n        {'name': 'Alice', 'department': 'Engineering', 'score': 92, 'active': True},\n        {'name': 'Bob', 'department': 'Marketing', 'score': 78, 'active': True},\n        {'name': 'Charlie', 'department': 'Engineering', 'score': 85, 'active': False},\n        {'name': 'Diana', 'department': 'Sales', 'score': 90, 'active': True},\n        {'name': 'Eve', 'department': 'Engineering', 'score': 95, 'active': True},\n        {'name': 'Frank', 'department': 'Marketing', 'score': 82, 'active': True},\n    ]\n    save_data('data.json', sample_data)\n    data = load_data('data.json')\n    report = generate_report(data)\n    print(report)\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Code split into data_loader.py, processor.py, reporter.py modules. main.py produces identical output to monolith.py.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "script_check",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": "#!/bin/bash\nset -e\n\n# Get original output\nORIGINAL=$(python3 monolith.py 2>&1)\n\n# Get refactored output\nREFACTORED=$(python3 main.py 2>&1)\n\n# Compare (ignore whitespace differences)\nif [ \"$(echo \"$ORIGINAL\" | tr -s ' ')\" = \"$(echo \"$REFACTORED\" | tr -s ' ')\" ]; then\n    echo \"Output matches! Refactoring preserved behavior.\"\n\n    # Check that modules exist\n    if [ -f main.py ] && find . -name \"*.py\" -not -name monolith.py -not -name main.py | grep -q .; then\n        echo \"Module structure created.\"\n        echo \"All checks passed!\"\n        exit 0\n    else\n        echo \"FAIL: No module files found\"\n        exit 1\n    fi\nelse\n    echo \"FAIL: Output differs!\"\n    diff <(echo \"$ORIGINAL\") <(echo \"$REFACTORED\") || true\n    exit 1\nfi\n",
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_writing",
+    "code_editing",
+    "file_creation",
+    "shell_commands",
+    "decomposition",
+    "multi_file",
+    "prioritization"
+  ],
+  "source": "multi_step_generator:refactor_and_verify",
+  "generated_at": "2026-03-11T08:21:34.191656+00:00",
+  "estimated_minutes": 12
+}

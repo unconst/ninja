@@ -1,0 +1,51 @@
+{
+  "task_id": "multi_step_6bf756d4",
+  "category": "multi_step",
+  "title": "Bootstrap Python CLI tool from specification",
+  "difficulty": "medium",
+  "goal": "Read the spec.md file. It describes a CLI tool called \"taskr\" for managing\na JSON-based todo list. Implement it completely:\n\n1. Read and understand the full spec\n2. Create the project structure\n3. Implement the CLI with all commands\n4. Write the data persistence layer\n5. Add input validation\n6. Verify each command works\n\nThe tool must pass all the test scenarios described in the spec.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "spec.md": "# taskr - CLI Todo Manager\n\n## Overview\nA command-line todo list manager that stores tasks in a JSON file.\n\n## Usage\n```\npython taskr.py add \"Buy groceries\"\npython taskr.py add \"Read book\" --priority high\npython taskr.py list\npython taskr.py list --status pending\npython taskr.py done 1\npython taskr.py delete 1\npython taskr.py stats\n```\n\n## Commands\n\n### add <title> [--priority low|medium|high]\nAdd a new task. Default priority is \"medium\".\nPrints: \"Added task #<id>: <title>\"\n\n### list [--status pending|done|all] [--priority low|medium|high]\nList tasks with optional filters. Default shows all.\nFormat: \"#<id> [<status>] [<priority>] <title>\"\n\n### done <id>\nMark task as done. Prints: \"Completed task #<id>: <title>\"\n\n### delete <id>\nDelete a task. Prints: \"Deleted task #<id>: <title>\"\n\n### stats\nPrint statistics:\n- Total tasks\n- Pending tasks\n- Completed tasks\n- Tasks by priority\n\n## Data Storage\nTasks stored in `tasks.json` in the current directory.\nEach task: {id, title, priority, status, created_at}\nIDs auto-increment starting from 1.\n\n## Test Scenarios\n1. Add 3 tasks with different priorities\n2. List all tasks\n3. Mark one as done\n4. List only pending tasks (should show 2)\n5. Show stats\n6. Delete a task\n7. Show stats again\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "taskr.py implements all 5 commands correctly, data persists in tasks.json, all test scenarios pass",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "script_check",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": "#!/bin/bash\nset -e\nrm -f tasks.json\n\n# Test add\nOUT1=$(python3 taskr.py add \"Buy groceries\" --priority high 2>&1)\necho \"$OUT1\" | grep -qi \"added.*#1\"\n\nOUT2=$(python3 taskr.py add \"Read book\" 2>&1)\necho \"$OUT2\" | grep -qi \"added.*#2\"\n\nOUT3=$(python3 taskr.py add \"Exercise\" --priority low 2>&1)\necho \"$OUT3\" | grep -qi \"added.*#3\"\n\n# Test list\nLIST=$(python3 taskr.py list 2>&1)\necho \"$LIST\" | grep -q \"Buy groceries\"\necho \"$LIST\" | grep -q \"Read book\"\n\n# Test done\nDONE=$(python3 taskr.py done 1 2>&1)\necho \"$DONE\" | grep -qi \"completed.*#1\"\n\n# Test list pending\nPENDING=$(python3 taskr.py list --status pending 2>&1)\necho \"$PENDING\" | grep -q \"Read book\"\n# Buy groceries should NOT appear in pending\nif echo \"$PENDING\" | grep -q \"Buy groceries\"; then\n    echo \"FAIL: completed task in pending list\"\n    exit 1\nfi\n\n# Test stats\nSTATS=$(python3 taskr.py stats 2>&1)\necho \"$STATS\" | grep -qi \"total\"\n\n# Test delete\nDEL=$(python3 taskr.py delete 2 2>&1)\necho \"$DEL\" | grep -qi \"deleted.*#2\"\n\necho \"All tests passed!\"\n",
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "doc_reading",
+    "code_writing",
+    "file_creation",
+    "shell_commands",
+    "decomposition",
+    "prioritization",
+    "test_running"
+  ],
+  "source": "multi_step_generator:project_bootstrap",
+  "generated_at": "2026-03-11T08:21:34.191136+00:00",
+  "estimated_minutes": 12
+}

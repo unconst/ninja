@@ -27,6 +27,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from tasks.schema import Task, TaskCategory
 from tasks.generators.local_ops import LocalOpsGenerator
 from tasks.generators.env_debug import EnvDebugGenerator
+from tasks.generators.data_analysis import DataAnalysisGenerator
+from tasks.generators.multi_step import MultiStepGenerator
 from tasks.evaluators.evaluate import evaluate_task
 from tasks.coverage import CoverageTracker
 
@@ -34,6 +36,8 @@ from tasks.coverage import CoverageTracker
 GENERATORS = {
     "local_ops": LocalOpsGenerator(),
     "env_debug": EnvDebugGenerator(),
+    "data_analysis": DataAnalysisGenerator(),
+    "multi_step": MultiStepGenerator(),
 }
 
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "dataset")

@@ -1,0 +1,62 @@
+{
+  "task_id": "env_debug_0a138490",
+  "category": "env_debug",
+  "title": "Fix broken Python import chain",
+  "difficulty": "medium",
+  "goal": "Running `python3 main.py` produces an ImportError.\nDiagnose the import chain and fix all issues so the program runs\nand prints \"Application started successfully\".\n\nDo NOT restructure the project. Fix the minimum necessary to make imports work.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "main.py": "from app.server import create_app\n\nif __name__ == '__main__':\n    app = create_app()\n    print(\"Application started successfully\")\n",
+      "app/__init__.py": "",
+      "app/server.py": "from app.config import Settings\nfrom app.database import get_connection\n\ndef create_app():\n    settings = Settings()\n    db = get_connection(settings.db_url)\n    return {'settings': settings, 'db': db}\n",
+      "app/config.py": "from app.utils.validators import validate_url\n\nclass Settings:\n    def __init__(self):\n        self.db_url = \"sqlite:///app.db\"\n        validate_url(self.db_url)\n",
+      "app/utils/validators.py": "def validate_url(url):\n    if not url:\n        raise ValueError(\"Empty URL\")\n    return True\n",
+      "app/database.py": "from app.modls import Base\n\ndef get_connection(url):\n    return {'url': url, 'connected': True}\n",
+      "app/models.py": "class Base:\n    pass\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Two fixes: 1) create app/utils/__init__.py, 2) fix typo in database.py: 'modls' -> 'models'",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 main.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "Application started successfully"
+    ],
+    "output_not_contains": [
+      "Error",
+      "Traceback"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "error_interp",
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "file_creation",
+    "multi_file",
+    "hypothesis_test"
+  ],
+  "source": "env_debug_generator:broken_python_imports",
+  "generated_at": "2026-03-11T08:21:34.187796+00:00",
+  "estimated_minutes": 5
+}

@@ -1,0 +1,69 @@
+{
+  "task_id": "env_debug_1ff3f75b",
+  "category": "env_debug",
+  "title": "Fix path resolution issues in multi-module project",
+  "difficulty": "medium",
+  "goal": "Running `python3 run.py` fails with a FileNotFoundError.\nThe project uses relative paths that break depending on the working directory.\nFix the path handling so that run.py works regardless of where it's\ninvoked from. It should print \"All templates loaded successfully\".\n\nTest from both the project root AND from a parent directory:\n  python3 run.py\n  cd /tmp && python3 /path/to/run.py\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "run.py": "from app.loader import load_templates\n\nif __name__ == '__main__':\n    templates = load_templates()\n    print(f\"All templates loaded successfully\")\n",
+      "app/__init__.py": "",
+      "app/loader.py": "import os\n\ndef load_templates():\n    template_dir = \"templates\"  # Bug: relative to CWD, not to project\n    templates = {}\n    for fname in os.listdir(template_dir):\n        if fname.endswith('.txt'):\n            with open(os.path.join(template_dir, fname)) as f:\n                templates[fname] = f.read()\n    return templates\n",
+      "templates/welcome.txt": "Welcome, {name}!",
+      "templates/error.txt": "Error: {message}",
+      "templates/footer.txt": "Copyright 2024"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Fix loader.py to use __file__-relative paths: os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'templates')",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "command_output",
+        "check_command": "python3 run.py 2>&1",
+        "output_contains": [
+          "All templates loaded successfully"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "cd /tmp && python3 $OLDPWD/run.py 2>&1",
+        "output_contains": [
+          "All templates loaded successfully"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "error_interp",
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "multi_file"
+  ],
+  "source": "env_debug_generator:path_issue",
+  "generated_at": "2026-03-11T08:21:34.188074+00:00",
+  "estimated_minutes": 5
+}

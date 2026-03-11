@@ -1,0 +1,68 @@
+{
+  "task_id": "data_analysis_4842f69c",
+  "category": "data_analysis",
+  "title": "Clean and normalize user registration data",
+  "difficulty": "medium",
+  "goal": "The users.csv file has messy data with inconsistent formats and missing values.\nWrite a cleaning script and produce a clean_users.csv with:\n\n1. Standardize phone numbers to format: (555) 123-4567 (or empty if invalid/missing)\n2. Validate emails (must have @ and a domain with a dot)\n3. Standardize dates to YYYY-MM-DD format\n4. Normalize plan names to lowercase: 'basic' or 'premium' (set 'unknown' to empty)\n5. Flag rows with missing required fields (Name, Email) in a separate issues.csv\n   with columns: row_number, field, issue\n\nEmpty/invalid values should be set to empty string, not removed.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "users.csv": "Name,Email,Phone,Signup Date,Plan\nAlice Smith,alice@example.com,(555) 123-4567,2024-01-15,premium\nBob Jones,bob@example,555.234.5678,Jan 20 2024,basic\nCharlie Brown,charlie@example.com,5553456789,2024-02-01,Premium\n,diana@example.com,(555) 456-7890,2024-02-15,basic\nEve Wilson,eve@example.com,(555) 567-8901,2024/03/01,BASIC\nFrank,,5556789012,March 15 2024,premium\nGrace Lee,grace@example.com,(555) 678-9012,2024-04-01,basic\nHenry Ford,henry@example.com,(555) 789-0123,2024-04-15,unknown\nIris Chang,iris@example.com,N/A,04-30-2024,premium\nJack Ma,jack@example.com,(555) 890-1234,,basic\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "clean_users.csv with normalized phones, validated emails (bob@example invalid), standardized dates, lowercase plans. issues.csv with missing name (row 4), missing email (row 7), invalid email (row 2), missing date (row 10).",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "clean_users.csv",
+          "issues.csv"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import csv; r=list(csv.DictReader(open('clean_users.csv'))); assert r[0]['Plan']=='premium'; assert r[4]['Plan']=='basic'; print('plans_ok')\"",
+        "output_contains": [
+          "plans_ok"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "wc -l < issues.csv",
+        "output_contains": []
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_writing",
+    "script_writing",
+    "file_creation",
+    "decomposition"
+  ],
+  "source": "data_analysis_generator:data_cleaning",
+  "generated_at": "2026-03-11T08:21:34.189448+00:00",
+  "estimated_minutes": 8
+}

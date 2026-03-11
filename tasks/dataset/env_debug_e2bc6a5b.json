@@ -1,0 +1,56 @@
+{
+  "task_id": "env_debug_e2bc6a5b",
+  "category": "env_debug",
+  "title": "Fix application failing due to missing config",
+  "difficulty": "medium",
+  "goal": "The application crashes on startup with a cryptic error.\nRun `python3 app.py` to see the error. Diagnose why it fails\nand fix the configuration so the app starts and prints\n\"App initialized: all checks passed\".\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [
+      "pip install pyyaml 2>/dev/null || true"
+    ],
+    "seed_files": {
+      "app.py": "import yaml\nimport sys\n\ndef load_config():\n    with open('config/app.yaml') as f:\n        config = yaml.safe_load(f)\n    required = ['database.host', 'database.port', 'database.name',\n               'cache.backend', 'cache.ttl',\n               'auth.secret_key', 'auth.algorithm']\n    missing = []\n    for key in required:\n        parts = key.split('.')\n        val = config\n        for part in parts:\n            if isinstance(val, dict):\n                val = val.get(part)\n            else:\n                val = None\n        if val is None:\n            missing.append(key)\n    if missing:\n        print(f\"Missing config keys: {', '.join(missing)}\", file=sys.stderr)\n        sys.exit(1)\n    return config\n\nif __name__ == '__main__':\n    config = load_config()\n    print(\"App initialized: all checks passed\")\n",
+      "config/app.yaml": "database:\n  host: localhost\n  port: 5432\n\ncache:\n  backend: redis\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Add missing keys to config/app.yaml: database.name, cache.ttl, auth.secret_key, auth.algorithm",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 app.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "App initialized: all checks passed"
+    ],
+    "output_not_contains": [
+      "Missing config keys"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "error_interp",
+    "code_reading",
+    "config_reading",
+    "config_editing",
+    "root_cause"
+  ],
+  "source": "env_debug_generator:missing_config",
+  "generated_at": "2026-03-11T08:21:34.187933+00:00",
+  "estimated_minutes": 5
+}

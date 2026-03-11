@@ -1,0 +1,78 @@
+{
+  "task_id": "local_ops_be017603",
+  "category": "local_ops",
+  "title": "Reorganize flat project into standard structure",
+  "difficulty": "medium",
+  "goal": "This project has all files dumped in the root directory with no organization.\nReorganize it into a proper Python project structure:\n\n- Move source code into a `src/` directory\n- Move tests into a `tests/` directory\n- Move config files into a `config/` directory\n- Move SQL files into a `migrations/` directory\n- Keep requirements.txt and deploy.sh at root\n- Update any imports that break due to the reorganization\n- Make sure the test can still find the app module\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [
+      "pip install flask pytest pyyaml 2>/dev/null || true"
+    ],
+    "seed_files": {
+      "app.py": "from flask import Flask\napp = Flask(__name__)\n@app.route('/')\ndef index():\n    return 'Hello World'\nif __name__ == '__main__':\n    app.run()\n",
+      "test_app.py": "import pytest\nfrom app import app\ndef test_index():\n    client = app.test_client()\n    resp = client.get('/')\n    assert resp.status_code == 200\n",
+      "utils.py": "import os\ndef get_config():\n    return {'debug': os.environ.get('DEBUG', 'false')}\n",
+      "config.yaml": "debug: true\nport: 5000\ndb_url: sqlite:///app.db\n",
+      "requirements.txt": "flask==3.0.0\npytest==8.0.0\npyyaml==6.0\n",
+      "setup_db.sql": "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);\n",
+      "notes.txt": "TODO: add authentication\nTODO: add logging\n",
+      "deploy.sh": "#!/bin/bash\npip install -r requirements.txt\npython app.py\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Files moved to src/, tests/, config/, migrations/ with imports updated",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "src/app.py",
+          "src/utils.py",
+          "tests/test_app.py",
+          "config/config.yaml",
+          "migrations/setup_db.sql",
+          "requirements.txt",
+          "deploy.sh"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "test ! -f app.py && test ! -f utils.py && echo 'cleaned'",
+        "output_contains": [
+          "cleaned"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "dir_nav",
+    "file_creation",
+    "code_editing",
+    "shell_commands",
+    "decomposition"
+  ],
+  "source": "local_ops_generator:file_reorganization",
+  "generated_at": "2026-03-11T08:21:34.185081+00:00",
+  "estimated_minutes": 5
+}

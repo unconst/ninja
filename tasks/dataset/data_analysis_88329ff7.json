@@ -1,0 +1,70 @@
+{
+  "task_id": "data_analysis_88329ff7",
+  "category": "data_analysis",
+  "title": "Analyze web traffic time series and detect anomaly",
+  "difficulty": "medium",
+  "goal": "Analyze metrics.csv containing daily web metrics (pageviews, signups, revenue).\n\nCreate analysis.json with:\n1. \"summary\": avg_pageviews, avg_signups, avg_revenue (for the full period)\n2. \"weekday_vs_weekend\": compare average metrics for weekdays vs weekends\n3. \"anomalies\": list of dates with any metric more than 2 standard deviations\n   from the mean, with the anomalous metric name and value\n4. \"trend\": whether pageviews are \"increasing\", \"decreasing\", or \"stable\"\n   over the period (use first vs last week averages)\n\nUse only the Python standard library.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "metrics.csv": "date,pageviews,signups,revenue\n2024-01-01,1063,49,1422.01\n2024-01-02,970,46,1351.86\n2024-01-03,1088,50,1517.17\n2024-01-04,1039,47,1418.58\n2024-01-05,908,40,1158.97\n2024-01-06,559,30,909.9\n2024-01-07,643,30,921.3\n2024-01-08,1079,56,1671.39\n2024-01-09,1014,54,1597.28\n2024-01-10,901,42,1279.39\n2024-01-11,987,48,1405.07\n2024-01-12,1095,54,1579.68\n2024-01-13,597,25,735.65\n2024-01-14,588,33,966.12\n2024-01-15,911,47,1413.15\n2024-01-16,996,45,1354.75\n2024-01-17,3500,180,5398.2\n2024-01-18,992,53,1558.7\n2024-01-19,917,40,1215.73\n2024-01-20,697,33,1038.19\n2024-01-21,559,23,677.78\n2024-01-22,1016,55,1682.86\n2024-01-23,941,47,1395.06\n2024-01-24,1071,52,1579.66\n2024-01-25,1074,58,1696.56\n2024-01-26,1062,50,1502.91\n2024-01-27,562,25,745.98\n2024-01-28,569,33,1008.49\n2024-01-29,956,52,1541.91\n2024-01-30,1096,49,1442.41\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Anomaly on 2024-01-17 (all metrics spike). Weekend traffic ~60% of weekday. Trend should be stable.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "analysis.json"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import json; d=json.load(open('analysis.json')); assert 'summary' in d; assert 'anomalies' in d; assert len(d['anomalies'])>=1; print('analysis_ok')\"",
+        "output_contains": [
+          "analysis_ok"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import json; d=json.load(open('analysis.json')); dates=[a.get('date','') for a in d['anomalies']]; assert '2024-01-17' in dates; print('anomaly_detected')\"",
+        "output_contains": [
+          "anomaly_detected"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_writing",
+    "script_writing",
+    "file_creation",
+    "decomposition",
+    "root_cause"
+  ],
+  "source": "data_analysis_generator:time_series_analysis",
+  "generated_at": "2026-03-11T08:21:34.189657+00:00",
+  "estimated_minutes": 10
+}

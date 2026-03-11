@@ -1,0 +1,83 @@
+{
+  "task_id": "multi_step_52ccea28",
+  "category": "multi_step",
+  "title": "Migrate SQLite database to JSON API format",
+  "difficulty": "medium",
+  "goal": "Migrate data from a SQLite database to a JSON-based API format.\nSteps:\n\n1. Run `python3 create_db.py` to create the legacy SQLite database\n2. Read the database schema and understand the relationships\n3. Export to a new format:\n   - users.json: array of user objects with department NAME (not code)\n     and is_active as boolean (not integer)\n   - departments.json: array with department objects including a\n     \"employees\" array of employee names and a \"manager_name\" field\n4. Create a verify.py script that:\n   - Reads both JSON files\n   - Checks data integrity (all users accounted for, valid references)\n   - Prints \"Migration verified: X users, Y departments\"\n5. Run verify.py to confirm\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [
+      "python3 create_db.py"
+    ],
+    "seed_files": {
+      "create_db.py": "import sqlite3\nimport os\n\ndb_path = 'legacy.db'\nif os.path.exists(db_path):\n    os.remove(db_path)\n\nconn = sqlite3.connect(db_path)\nc = conn.cursor()\n\nc.execute('''CREATE TABLE users (\n    id INTEGER PRIMARY KEY,\n    fullname TEXT,\n    email TEXT,\n    dept_code TEXT,\n    hire_date TEXT,\n    salary REAL,\n    is_active INTEGER\n)''')\n\nc.execute('''CREATE TABLE departments (\n    code TEXT PRIMARY KEY,\n    name TEXT,\n    budget REAL,\n    manager_id INTEGER\n)''')\n\nusers = [\n    (1, 'Alice Smith', 'alice@corp.com', 'ENG', '2020-03-15', 95000, 1),\n    (2, 'Bob Jones', 'bob@corp.com', 'MKT', '2019-07-01', 72000, 1),\n    (3, 'Charlie Brown', 'charlie@corp.com', 'ENG', '2018-01-10', 105000, 1),\n    (4, 'Diana Prince', 'diana@corp.com', 'SAL', '2021-06-20', 68000, 0),\n    (5, 'Eve Wilson', 'eve@corp.com', 'ENG', '2020-11-01', 98000, 1),\n    (6, 'Frank Castle', 'frank@corp.com', 'MKT', '2022-02-14', 75000, 1),\n]\nc.executemany('INSERT INTO users VALUES (?,?,?,?,?,?,?)', users)\n\ndepts = [\n    ('ENG', 'Engineering', 500000, 3),\n    ('MKT', 'Marketing', 200000, 2),\n    ('SAL', 'Sales', 150000, 4),\n]\nc.executemany('INSERT INTO departments VALUES (?,?,?,?)', depts)\n\nconn.commit()\nconn.close()\nprint('Database created successfully')\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "users.json has 6 users with department names, departments.json has 3 depts with employee lists and manager names",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "users.json",
+          "departments.json",
+          "verify.py"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import json; u=json.load(open('users.json')); assert len(u)==6; assert all('department' in x or 'dept' in str(x).lower() for x in u); print('users_ok')\"",
+        "output_contains": [
+          "users_ok"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import json; d=json.load(open('departments.json')); assert len(d)==3; print('depts_ok')\"",
+        "output_contains": [
+          "depts_ok"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 verify.py 2>&1",
+        "output_contains": [
+          "Migration verified"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_writing",
+    "code_reading",
+    "file_creation",
+    "shell_commands",
+    "decomposition",
+    "multi_file",
+    "script_writing"
+  ],
+  "source": "multi_step_generator:migration_pipeline",
+  "generated_at": "2026-03-11T08:21:34.191235+00:00",
+  "estimated_minutes": 12
+}

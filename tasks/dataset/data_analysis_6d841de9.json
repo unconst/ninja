@@ -1,0 +1,73 @@
+{
+  "task_id": "data_analysis_6d841de9",
+  "category": "data_analysis",
+  "title": "Join data files and compute sales report",
+  "difficulty": "medium",
+  "goal": "You have three CSV files: orders.csv, products.csv, and customers.csv.\nWrite a script that joins them and produces:\n\n1. sales_report.csv with columns:\n   customer_name, customer_tier, total_orders, total_spent, favorite_category\n   (sorted by total_spent descending)\n\n2. product_summary.csv with columns:\n   product_name, category, units_sold, revenue\n   (sorted by revenue descending)\n\nCalculate total_spent as sum(quantity * price). favorite_category is the\ncategory they spent the most on.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "orders.csv": "order_id,customer_id,product_id,quantity,order_date\n1001,C1,P1,2,2024-01-10\n1002,C2,P3,1,2024-01-11\n1003,C1,P2,3,2024-01-12\n1004,C3,P1,1,2024-01-15\n1005,C2,P2,2,2024-01-16\n1006,C1,P3,1,2024-01-20\n1007,C3,P3,4,2024-01-22\n1008,C2,P1,1,2024-01-25\n",
+      "products.csv": "product_id,name,price,category\nP1,Widget A,29.99,widgets\nP2,Gadget B,49.99,gadgets\nP3,Doohickey C,19.99,accessories\n",
+      "customers.csv": "customer_id,name,email,tier\nC1,Alice,alice@example.com,gold\nC2,Bob,bob@example.com,silver\nC3,Charlie,charlie@example.com,bronze\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Alice: 3 orders, $209.93 total (2*29.99+3*49.99+1*19.99). Bob: 3 orders, $149.96. Charlie: 2 orders, $109.95. Product: Gadget B revenue=$249.95 (5 units).",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "sales_report.csv",
+          "product_summary.csv"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import csv; r=list(csv.DictReader(open('sales_report.csv'))); assert r[0]['customer_name']=='Alice'; print('top_customer_ok')\"",
+        "output_contains": [
+          "top_customer_ok"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import csv; r=list(csv.DictReader(open('product_summary.csv'))); assert len(r)==3; print('products_ok')\"",
+        "output_contains": [
+          "products_ok"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_writing",
+    "script_writing",
+    "file_creation",
+    "multi_file",
+    "decomposition"
+  ],
+  "source": "data_analysis_generator:join_and_aggregate",
+  "generated_at": "2026-03-11T08:21:34.189506+00:00",
+  "estimated_minutes": 8
+}

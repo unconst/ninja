@@ -1,0 +1,60 @@
+{
+  "task_id": "env_debug_6c42c133",
+  "category": "env_debug",
+  "title": "Fix and recover corrupt JSON data files",
+  "difficulty": "medium",
+  "goal": "The data/ directory contains JSON files that a data pipeline reads.\nRunning `python3 pipeline.py` fails because some JSON files are corrupt.\n\n1. Find which files are corrupt\n2. Fix the JSON syntax errors (preserving all data)\n3. Run pipeline.py to verify it completes successfully\n   and prints \"Pipeline complete: processed N records\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "pipeline.py": "import json\nimport os\nimport sys\n\ndef process_data():\n    data_dir = 'data'\n    total = 0\n    for fname in sorted(os.listdir(data_dir)):\n        if not fname.endswith('.json'):\n            continue\n        path = os.path.join(data_dir, fname)\n        with open(path) as f:\n            records = json.load(f)\n        if not isinstance(records, list):\n            print(f\"Error: {fname} is not a list\", file=sys.stderr)\n            sys.exit(1)\n        total += len(records)\n    print(f\"Pipeline complete: processed {total} records\")\n\nif __name__ == '__main__':\n    process_data()\n",
+      "data/batch_001.json": "[{\"id\": 1, \"value\": \"alpha\"}, {\"id\": 2, \"value\": \"beta\"}]",
+      "data/batch_002.json": "[{\"id\": 3, \"value\": \"gamma\"}, {\"id\": 4, \"value\": \"delta\",}]",
+      "data/batch_003.json": "[{\"id\": 5, \"value\": \"epsilon\"}, {\"id\": 6, \"value\": \"zeta\"}]",
+      "data/batch_004.json": "[{\"id\": 7, \"value\": \"eta\"} {\"id\": 8, \"value\": \"theta\"}]",
+      "data/batch_005.json": "[{\"id\": 9, \"value\": \"iota\"}, {\"id\": 10, \"value\": \"kappa\"}]"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Fix batch_002.json (trailing comma) and batch_004.json (missing comma). Total: 10 records.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 pipeline.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "Pipeline complete: processed 10 records"
+    ],
+    "output_not_contains": [
+      "Error",
+      "Traceback"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "error_interp",
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "file_search",
+    "hypothesis_test"
+  ],
+  "source": "env_debug_generator:corrupt_json",
+  "generated_at": "2026-03-11T08:21:34.187987+00:00",
+  "estimated_minutes": 5
+}
