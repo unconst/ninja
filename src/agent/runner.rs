@@ -968,7 +968,14 @@ impl AgentRunner {
              - **Bias toward action.** When uncertain between exploring more and editing, choose \
                editing. You can always fix mistakes — but you can't recover wasted iterations.\n\
              - **Multiple tools per response.** Call several tools at once — they run concurrently. \
-               Read multiple files at once. Make independent edits at once.\n\n\
+               Read multiple files at once. Make independent edits at once.\n\
+             - **Never fabricate fixes.** If you cannot determine the correct change for a file, \
+               do NOT edit a different file as a substitute. Re-read the target file fully, use \
+               think to reason about what's needed, try the oracle tool. A wrong edit in the \
+               wrong file is worse than no edit at all.\n\
+             - **Read in large chunks.** When editing files with repetitive patterns or multiple \
+               change sites, read 100+ lines at once to see the full picture. Don't read 20-30 \
+               line chunks — that wastes iterations on re-reading.\n\n\
              ## Principles\n\
              - **Speed over perfection.** Act decisively. Don't over-explore or over-analyze.\n\
              - **Parallelize.** Call multiple tools per response — they execute concurrently. \
@@ -989,7 +996,12 @@ impl AgentRunner {
                failing, try write_file, replace_lines, or break into smaller pieces.\n\
              - **Switch strategies after 3 failures.** If the same approach fails 3 times, stop and \
                rethink. Use think to reason about why it's failing, consult your plan file for \
-               what you already tried, and choose a fundamentally different strategy.",
+               what you already tried, and choose a fundamentally different strategy.\n\
+             - **Watch for dead code.** In Python, if you add a function/class definition but an \
+               identical name is defined later in the same file, YOUR definition is dead code — the \
+               later one shadows it. When your edit doesn't change test results, check: (1) is your \
+               code actually being called? (2) grep for duplicate definitions. (3) add a print() to \
+               verify execution reaches your code.",
             self.config.workdir.display(),
             env_info
         );
