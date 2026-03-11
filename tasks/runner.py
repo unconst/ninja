@@ -163,11 +163,10 @@ def cmd_run(args):
         "--workdir", workdir,
         "--rollout", rollout_path,
         "--max-iterations", str(args.max_iterations),
-        "--timeout", str(args.timeout),
     ]
 
     start = time.time()
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=args.timeout + 60)
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=args.timeout)
     elapsed = time.time() - start
 
     print(f"  Agent finished in {elapsed:.1f}s (exit {proc.returncode})")
