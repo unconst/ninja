@@ -488,6 +488,27 @@ impl AgentRunner {
                          files.".to_string()
                     ),
                 });
+            } else if iteration == 25 || iteration == 40 {
+                // Reflection prompt: ask agent to evaluate progress and consider strategy shifts
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let diff_preview = if diff_stat.is_empty() {
+                    "WARNING: No files modified yet!".to_string()
+                } else {
+                    diff_stat.lines().take(20).collect::<Vec<_>>().join("\n")
+                };
+                messages.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(format!(
+                        "[SYSTEM] REFLECTION — Iteration {}. Pause and assess:\n\
+                         1. Which REQUIRED FILES have you completed vs remaining?\n\
+                         2. Are you stuck on anything? If an edit keeps failing, try a different approach \
+                            (write_file to overwrite, replace_lines by line number, or break the edit into smaller pieces)\n\
+                         3. Would a helper script speed things up? (e.g. a shell one-liner to apply a pattern across files)\n\
+                         4. What's your plan for the remaining {} iterations?\n\n\
+                         Current git diff --stat:\n```\n{}\n```\n\n\
+                         State your plan briefly, then execute.", iteration + 1, remaining, diff_preview
+                    )),
+                });
             } else if remaining == 10 {
                 messages.push(Message {
                     role: "user".to_string(),
@@ -921,11 +942,15 @@ impl AgentRunner {
              → Every REQUIRED FILE must appear in your git diff.\n\n\
              ## Strategy — STRICT ITERATION BUDGET\n\
              You have a limited number of iterations. Follow this phased approach:\n\n\
-             **Phase 1: EXPLORE (iterations 1-5 MAX)**\n\
+             **Phase 1: EXPLORE & ANALYZE (iterations 1-5 MAX)**\n\
              - Read the problem statement carefully. If REQUIRED FILES are listed, read ALL of them \
                right away (call read_file on each one in your first response — they execute concurrently!)\n\
              - Use grep_search to locate additional relevant files — read them in FULL\n\
-             - By iteration 3, you MUST have a written plan: list EVERY file that needs changes\n\
+             - By iteration 3, you MUST produce a STRUCTURED PLAN using think tool. Include:\n\
+               (a) Root cause: What exactly causes the bug / what feature is missing?\n\
+               (b) Change map: For EACH required file, what specific changes are needed (add/modify/delete what)?\n\
+               (c) Dependencies: Are there version constraints, backward-compat needs, or import chains to consider?\n\
+               (d) Risk areas: Which edits might fail? What alternative approaches exist?\n\
              - Do NOT spend more than 5 iterations exploring. If unsure, start implementing.\n\n\
              **Phase 2: IMPLEMENT (iterations 6-35)**\n\
              - Work through the REQUIRED FILES list systematically — do not skip ANY file\n\
@@ -973,6 +998,9 @@ impl AgentRunner {
              - TRACK FILES: After Phase 1, use todo_write to create a checklist with one entry per \
                required file. Mark each entry done ONLY after you've confirmed the edit. This prevents \
                forgetting files in large multi-file tasks.\n\
+             - EXTERNALIZE PLAN: For complex tasks (5+ files), write your plan to a scratch file \
+               (e.g. shell_exec: echo \"plan...\" > /tmp/.ninja_plan.md). This lets you re-read it later \
+               if the conversation is compacted and you lose context.\n\
              - REQUIRED FILES ARE MANDATORY: If a file is listed as REQUIRED, you MUST produce a \
                git diff for that file — even if you don't see obvious existing code to change. \
                The solution may require ADDING entirely new code (classes, functions, imports) to that \
