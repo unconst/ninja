@@ -1,0 +1,58 @@
+{
+  "task_id": "frontier_build_detective",
+  "category": "diagnostic",
+  "title": "Fix broken build system with 3 interacting config issues",
+  "difficulty": "hard",
+  "goal": "The build is broken. Running `make build` fails with multiple errors.\n\nThis project has a C extension for Python built using a Makefile + setup.py + pyproject.toml build system. Debug the build system and fix ALL issues so that `make build` succeeds and `make test` passes.\n\nHint: There are at least 3 distinct issues across the build configuration files (Makefile, setup.py, pyproject.toml). The C code and test code are correct — only the build configuration needs fixing.",
+  "hints": "Bug 1: setup.py Extension name 'mylib._fastmath' does not match the actual source layout — the extension module needs to be 'src.mylib._fastmath' or the package configuration needs adjusting. Bug 2: pyproject.toml requires numpy>=2.0 but setup.py requires numpy>=1.24,<2.0 — conflicting constraints. Bug 3: include_dirs in setup.py points to 'src/include' but headers are actually in 'include/'.",
+  "environment": {
+    "env_type": "empty",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [
+      "apt-get update -qq && apt-get install -y -qq python3-dev build-essential > /dev/null 2>&1 || true",
+      "pip install setuptools build pytest numpy 2>/dev/null || true"
+    ],
+    "seed_files": {
+      "Makefile": ".PHONY: build test clean\n\nbuild:\n\tpip install -e .\n\ntest: build\n\tpython3 -m pytest tests/ -v\n\nclean:\n\trm -rf build/ dist/ *.egg-info\n\tfind . -name '*.so' -delete\n\tfind . -name '*.pyc' -delete\n\trm -rf __pycache__\n",
+      "pyproject.toml": "[build-system]\nrequires = [\"setuptools>=68.0\", \"numpy>=2.0\"]\nbuild-backend = \"setuptools.build_meta\"\n\n[project]\nname = \"mylib\"\nversion = \"0.1.0\"\ndescription = \"A small library with a C extension for fast math operations\"\nrequires-python = \">=3.8\"\ndependencies = [\n    \"numpy>=1.24\",\n]\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n",
+      "setup.py": "\"\"\"Build configuration for mylib C extension.\"\"\"\nfrom setuptools import setup, Extension, find_packages\nimport numpy\n\next_modules = [\n    Extension(\n        'mylib._fastmath',\n        sources=['src/mylib/_fastmath.c'],\n        include_dirs=[\n            'src/include',\n            numpy.get_include(),\n        ],\n        language='c',\n    ),\n]\n\nsetup(\n    name='mylib',\n    version='0.1.0',\n    packages=find_packages(where='src'),\n    package_dir={'': 'src'},\n    ext_modules=ext_modules,\n    install_requires=[\n        'numpy>=1.24,<2.0',\n    ],\n    python_requires='>=3.8',\n)\n",
+      "include/fastmath.h": "#ifndef FASTMATH_H\n#define FASTMATH_H\n\n#include <Python.h>\n\n/*\n * Fast math operations implemented as a C extension.\n * Provides optimized array operations for numerical computing.\n */\n\n/* Compute the sum of a list of numbers. */\nstatic PyObject* fastmath_fast_sum(PyObject* self, PyObject* args);\n\n/* Module method definitions. */\nstatic PyMethodDef FastmathMethods[];\n\n/* Module definition. */\nstatic struct PyModuleDef fastmathmodule;\n\n/* Module initialization function. */\nPyMODINIT_FUNC PyInit__fastmath(void);\n\n#endif /* FASTMATH_H */\n",
+      "src/mylib/_fastmath.c": "#include \"fastmath.h\"\n\n/*\n * fast_sum: Compute the sum of a Python list of numbers.\n *\n * Accepts a single argument: a Python list of int/float.\n * Returns the sum as a Python float.\n */\nstatic PyObject* fastmath_fast_sum(PyObject* self, PyObject* args) {\n    PyObject* input_list;\n    if (!PyArg_ParseTuple(args, \"O\", &input_list)) {\n        return NULL;\n    }\n\n    if (!PyList_Check(input_list)) {\n        PyErr_SetString(PyExc_TypeError, \"Argument must be a list\");\n        return NULL;\n    }\n\n    Py_ssize_t size = PyList_Size(input_list);\n    double total = 0.0;\n\n    for (Py_ssize_t i = 0; i < size; i++) {\n        PyObject* item = PyList_GetItem(input_list, i);\n        if (PyLong_Check(item)) {\n            total += (double)PyLong_AsLong(item);\n        } else if (PyFloat_Check(item)) {\n            total += PyFloat_AsDouble(item);\n        } else {\n            PyErr_SetString(PyExc_TypeError,\n                \"List items must be int or float\");\n            return NULL;\n        }\n    }\n\n    return PyFloat_FromDouble(total);\n}\n\nstatic PyMethodDef FastmathMethods[] = {\n    {\"fast_sum\", fastmath_fast_sum, METH_VARARGS,\n     \"Compute the sum of a list of numbers.\"},\n    {NULL, NULL, 0, NULL}\n};\n\nstatic struct PyModuleDef fastmathmodule = {\n    PyModuleDef_HEAD_INIT,\n    \"_fastmath\",\n    \"Fast math operations C extension module.\",\n    -1,\n    FastmathMethods\n};\n\nPyMODINIT_FUNC PyInit__fastmath(void) {\n    return PyModule_Create(&fastmathmodule);\n}\n",
+      "src/mylib/__init__.py": "\"\"\"mylib - A small library with fast math operations.\"\"\"\n\ntry:\n    from ._fastmath import fast_sum\nexcept ImportError as e:\n    raise ImportError(\n        f\"Failed to import C extension '_fastmath'. \"\n        f\"Make sure you ran 'make build' first. Error: {e}\"\n    )\n\n__version__ = '0.1.0'\n__all__ = ['fast_sum']\n",
+      "tests/__init__.py": "",
+      "tests/test_build.py": "\"\"\"Tests for the mylib C extension.\"\"\"\nimport pytest\n\n\ndef test_import_mylib():\n    \"\"\"Test that mylib can be imported.\"\"\"\n    import mylib\n    assert hasattr(mylib, 'fast_sum')\n    assert hasattr(mylib, '__version__')\n\n\ndef test_fast_sum_integers():\n    \"\"\"Test fast_sum with a list of integers.\"\"\"\n    from mylib import fast_sum\n    result = fast_sum([1, 2, 3, 4, 5])\n    assert result == 15.0\n\n\ndef test_fast_sum_floats():\n    \"\"\"Test fast_sum with a list of floats.\"\"\"\n    from mylib import fast_sum\n    result = fast_sum([1.5, 2.5, 3.0])\n    assert abs(result - 7.0) < 1e-9\n\n\ndef test_fast_sum_mixed():\n    \"\"\"Test fast_sum with mixed int and float.\"\"\"\n    from mylib import fast_sum\n    result = fast_sum([1, 2.5, 3, 4.5])\n    assert abs(result - 11.0) < 1e-9\n\n\ndef test_fast_sum_empty():\n    \"\"\"Test fast_sum with an empty list.\"\"\"\n    from mylib import fast_sum\n    result = fast_sum([])\n    assert result == 0.0\n\n\ndef test_fast_sum_single():\n    \"\"\"Test fast_sum with a single element.\"\"\"\n    from mylib import fast_sum\n    assert fast_sum([42]) == 42.0\n\n\ndef test_fast_sum_negative():\n    \"\"\"Test fast_sum with negative numbers.\"\"\"\n    from mylib import fast_sum\n    result = fast_sum([-1, -2, 3])\n    assert result == 0.0\n\n\ndef test_fast_sum_type_error():\n    \"\"\"Test that fast_sum raises TypeError for non-list input.\"\"\"\n    from mylib import fast_sum\n    with pytest.raises(TypeError):\n        fast_sum(\"not a list\")\n\n\ndef test_fast_sum_bad_items():\n    \"\"\"Test that fast_sum raises TypeError for non-numeric items.\"\"\"\n    from mylib import fast_sum\n    with pytest.raises(TypeError):\n        fast_sum([1, \"two\", 3])\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Three bugs must be fixed:\n\n1. **include_dirs wrong path** (setup.py): `include_dirs=['src/include', ...]` should be `include_dirs=['include/', ...]` because the header file fastmath.h is at `include/fastmath.h`, not `src/include/fastmath.h`.\n\n2. **numpy version conflict** (pyproject.toml vs setup.py): pyproject.toml has `requires = [\"setuptools>=68.0\", \"numpy>=2.0\"]` in [build-system] but setup.py has `install_requires=['numpy>=1.24,<2.0']`. These constraints conflict — numpy>=2.0 for build but <2.0 for runtime is contradictory. Fix: align both to a compatible range, e.g., remove the upper bound in setup.py or change pyproject.toml to numpy>=1.24.\n\n3. **Extension module name mismatch** (setup.py): The Extension is named 'mylib._fastmath' but with `package_dir={'': 'src'}`, setuptools expects the source relative to the package root. The extension name and package discovery must be consistent. Since packages are found in 'src/' and package_dir maps '' to 'src', the extension name 'mylib._fastmath' is correct for the install layout, but `build_ext --inplace` places the .so file in the project root as mylib/_fastmath.so which doesn't exist. The fix depends on approach: either adjust the build to work with the src layout, or simplify the layout.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "script_check",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": "#!/bin/bash\nset +e\ncd \"$WORKDIR\"\n\n# Check that make build succeeds\nOUTPUT=$(make build 2>&1)\nif [ $? -ne 0 ]; then\n    echo \"FAIL: make build failed\"\n    echo \"$OUTPUT\"\n    exit 1\nfi\n\n# Check that the extension can be imported and works\nIMPORT_OUTPUT=$(python3 -c \"from mylib._fastmath import fast_sum; result = fast_sum([1,2,3]); assert result == 6.0; print('Extension OK: fast_sum([1,2,3]) =', result)\" 2>&1)\nif [ $? -ne 0 ]; then\n    echo \"FAIL: Extension import or basic test failed\"\n    echo \"$IMPORT_OUTPUT\"\n    exit 1\nfi\necho \"$IMPORT_OUTPUT\"\n\n# Check that make test passes\nOUTPUT=$(make test 2>&1)\nif [ $? -ne 0 ]; then\n    echo \"FAIL: make test failed\"\n    echo \"$OUTPUT\"\n    exit 1\nfi\n\necho \"All checks passed\"\nexit 0\n",
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "build_systems",
+    "config_editing",
+    "root_cause",
+    "error_interp"
+  ],
+  "source": "frontier_generator",
+  "generated_at": "2026-03-11T18:00:00.000000+00:00",
+  "estimated_minutes": 12
+}

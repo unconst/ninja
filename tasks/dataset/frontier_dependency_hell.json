@@ -1,0 +1,56 @@
+{
+  "task_id": "frontier_dependency_hell",
+  "category": "diagnostic",
+  "title": "Untangle Python dependency conflicts preventing pip install",
+  "difficulty": "hard",
+  "goal": "Running `pip install -e .` fails with dependency conflicts.\n\nThis Python project uses `setup.cfg` for package metadata, `requirements.txt` for pinned dev versions, and `constraints.txt` for upper bounds. The dependency specifications contain version conflicts that make installation impossible.\n\nFix the dependency specifications so that:\n1. `pip install -e .` succeeds in a fresh virtual environment\n2. All imports in `src/myapp/` work correctly\n3. `python -m pytest tests/` passes\n\nThe fix should use the most recent compatible versions of all packages. You may need to adjust version constraints across multiple files to make everything consistent.\n\nDo NOT modify the Python source code in `src/` or `tests/` \u2014 only fix the dependency/config files.",
+  "hints": "requests 2.28.x and 2.29.x require urllib3<2.0. To use urllib3>=2.0, you need requests>=2.31. Check what each version of requests actually requires for urllib3.",
+  "environment": {
+    "env_type": "empty",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "setup.cfg": "[metadata]\nname = myapp\nversion = 0.1.0\nauthor = Test Author\nauthor_email = test@example.com\ndescription = A sample app with dependency issues\nlong_description = file: README.md\nlong_description_content_type = text/markdown\n\n[options]\npackage_dir =\n    = src\npackages = find:\npython_requires = >=3.8\ninstall_requires =\n    requests>=2.28,<2.30\n    urllib3>=2.0\n    flask>=3.0\n    werkzeug>=3.0\n\n[options.packages.find]\nwhere = src\n\n[options.extras_require]\ndev =\n    pytest>=8.0\n",
+      "requirements.txt": "# Pinned development dependencies\nrequests==2.28.2\nurllib3==2.0.4\nflask==3.0.0\nwerkzeug==3.0.1\npytest==8.0.0\n",
+      "constraints.txt": "# Upper bounds for stability\nurllib3<2.1\nrequests<2.32\n",
+      "setup.py": "from setuptools import setup\nsetup()\n",
+      "pyproject.toml": "[build-system]\nrequires = [\"setuptools>=64\", \"wheel\"]\nbuild-backend = \"setuptools.build_meta\"\n",
+      "src/myapp/__init__.py": "\"\"\"myapp \u2014 a sample application.\"\"\"\n\n__version__ = \"0.1.0\"\n",
+      "src/myapp/client.py": "\"\"\"HTTP client module using requests with retry support.\"\"\"\n\nimport requests\nfrom urllib3.util.retry import Retry\nfrom requests.adapters import HTTPAdapter\n\n\nclass APIClient:\n    \"\"\"Simple API client with automatic retries.\"\"\"\n\n    def __init__(self, base_url: str, max_retries: int = 3):\n        self.base_url = base_url.rstrip(\"/\")\n        self.session = requests.Session()\n        retry_strategy = Retry(\n            total=max_retries,\n            backoff_factor=0.5,\n            status_forcelist=[429, 500, 502, 503, 504],\n        )\n        adapter = HTTPAdapter(max_retries=retry_strategy)\n        self.session.mount(\"https://\", adapter)\n        self.session.mount(\"http://\", adapter)\n\n    def get(self, endpoint: str, **kwargs) -> requests.Response:\n        \"\"\"Make a GET request to the given endpoint.\"\"\"\n        url = f\"{self.base_url}/{endpoint.lstrip('/')}\"\n        return self.session.get(url, **kwargs)\n\n    def post(self, endpoint: str, data=None, json=None, **kwargs) -> requests.Response:\n        \"\"\"Make a POST request to the given endpoint.\"\"\"\n        url = f\"{self.base_url}/{endpoint.lstrip('/')}\"\n        return self.session.post(url, data=data, json=json, **kwargs)\n\n    @property\n    def versions(self) -> dict:\n        \"\"\"Return version info for key dependencies.\"\"\"\n        import urllib3\n        return {\n            \"requests\": requests.__version__,\n            \"urllib3\": urllib3.__version__,\n        }\n",
+      "tests/test_deps.py": "\"\"\"Tests that verify dependency setup is correct.\"\"\"\nimport sys\nimport os\n\n# Ensure src is on path\nsys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), \"src\"))\n\n\ndef test_import_myapp():\n    \"\"\"myapp package should be importable.\"\"\"\n    import myapp\n    assert hasattr(myapp, \"__version__\")\n    assert myapp.__version__ == \"0.1.0\"\n\n\ndef test_import_client():\n    \"\"\"myapp.client should import without errors.\"\"\"\n    from myapp.client import APIClient\n    assert APIClient is not None\n\n\ndef test_client_versions():\n    \"\"\"Client should report version strings for requests and urllib3.\"\"\"\n    from myapp.client import APIClient\n    client = APIClient(\"https://example.com\")\n    versions = client.versions\n    assert \"requests\" in versions\n    assert \"urllib3\" in versions\n    # Both should be non-empty version strings\n    assert len(versions[\"requests\"]) > 0\n    assert len(versions[\"urllib3\"]) > 0\n\n\ndef test_requests_version():\n    \"\"\"requests should be installed at a version that supports urllib3 2.x.\"\"\"\n    import requests\n    major, minor = [int(x) for x in requests.__version__.split(\".\")[:2]]\n    # requests 2.31+ supports urllib3>=2.0\n    assert major >= 2 and (major > 2 or minor >= 31), \\\n        f\"requests {requests.__version__} is too old; need >=2.31 for urllib3 2.x compat\"\n\n\ndef test_urllib3_version():\n    \"\"\"urllib3 should be version 2.x.\"\"\"\n    import urllib3\n    major = int(urllib3.__version__.split(\".\")[0])\n    assert major >= 2, f\"urllib3 {urllib3.__version__} is not 2.x\"\n\n\ndef test_flask_importable():\n    \"\"\"Flask should be importable.\"\"\"\n    import flask\n    assert hasattr(flask, \"__version__\")\n",
+      "README.md": "# myapp\n\nA sample application demonstrating dependency management.\n\n## Install\n\n```bash\npip install -e .\n```\n\n## Development\n\n```bash\npip install -e \".[dev]\"\npython -m pytest tests/\n```\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "The core conflict: setup.cfg requires requests>=2.28,<2.30 AND urllib3>=2.0 simultaneously, but requests 2.28.x and 2.29.x depend on urllib3<2.0. The fix is to update the requests constraint to >=2.31 (which supports urllib3>=2.0) across all three files: setup.cfg (install_requires), requirements.txt (pinned version), and constraints.txt (upper bound). A valid solution: setup.cfg requests>=2.31, requirements.txt requests==2.31.0 or later, constraints.txt requests<2.33 or similar. The urllib3 and flask/werkzeug constraints can remain as-is since requests 2.31+ is compatible with urllib3>=2.0.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "script_check",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": "#!/bin/bash\nset +e\ncd \"$WORKDIR\"\n\n# Create a fresh venv for testing\nTEST_VENV=\"/tmp/dep_test_$$\"\npython3 -m venv \"$TEST_VENV\"\nsource \"$TEST_VENV/bin/activate\"\n\n# Upgrade pip to avoid old-resolver issues\npip install --upgrade pip setuptools wheel > /dev/null 2>&1\n\n# Attempt pip install -e .\necho \"=== pip install -e . ===\"\nOUTPUT=$(pip install -e . 2>&1)\nRC=$?\nif [ $RC -ne 0 ]; then\n    echo \"FAIL: pip install -e . failed (exit code $RC):\"\n    echo \"$OUTPUT\" | tail -30\n    deactivate\n    rm -rf \"$TEST_VENV\"\n    exit 1\nfi\necho \"pip install succeeded\"\n\n# Install pytest for test running\npip install pytest > /dev/null 2>&1\n\n# Check that all imports work\necho \"=== Import check ===\"\npython3 -c \"from myapp.client import APIClient; print('imports OK')\" 2>&1\nif [ $? -ne 0 ]; then\n    echo \"FAIL: Imports failed\"\n    deactivate\n    rm -rf \"$TEST_VENV\"\n    exit 1\nfi\n\n# Run tests\necho \"=== pytest ===\"\npython3 -m pytest tests/ -x -v 2>&1\nRC=$?\n\ndeactivate\nrm -rf \"$TEST_VENV\"\n\nif [ $RC -ne 0 ]; then\n    echo \"FAIL: Tests failed (exit code $RC)\"\n    exit 1\nfi\n\necho \"All dependency checks passed\"\nexit 0\n",
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "dep_mgmt",
+    "config_editing",
+    "error_interp",
+    "root_cause"
+  ],
+  "source": "frontier_generator",
+  "generated_at": "2026-03-11T18:00:00.000000+00:00",
+  "estimated_minutes": 10
+}
