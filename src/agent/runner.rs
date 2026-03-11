@@ -1229,7 +1229,17 @@ impl AgentRunner {
              - **Preserve existing structures.** When the task says 'rename X to Y' or 'change X', \
                modify the existing data structure in place — do NOT delete it and rewrite from \
                scratch. Schema dicts, config defaults, class hierarchies should be updated, not \
-               replaced with simplified versions.\n\n\
+               replaced with simplified versions.\n\
+             - **Preserve module-level public names.** Module-level constants, registries, and \
+               dict names (e.g., BACKEND_REGISTRY, DEFAULT_CONFIG, ROUTES) are public API — other \
+               files import them by name. When refactoring a module, keep all module-level names \
+               that existed before. If tests or other files do `from module import SOME_NAME`, \
+               that name must still exist and be importable after your changes.\n\
+             - **Minimal test file changes.** When editing test files, ONLY make the specific \
+               change needed (e.g., remove specific test functions, update field names). Do NOT \
+               restructure the test framework (e.g., don't convert standalone functions to \
+               unittest.TestCase), reformat the file, or change the test runner. The output \
+               format of test runs must remain the same.\n\n\
              ## Principles\n\
              - **Speed over perfection.** Act decisively. Don't over-explore or over-analyze.\n\
              - **Parallelize aggressively.** Call multiple tools per response — they execute concurrently. \
