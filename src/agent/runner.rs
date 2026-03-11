@@ -255,8 +255,13 @@ impl AgentRunner {
                 self.conversation.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
-                        "[SYSTEM] 5 iterations remaining. Wrap up your changes. Review your todo list — \
-                         complete any remaining items.\n\n{}", diff_section
+                        "[SYSTEM] 5 iterations remaining. Wrap up your changes.\n\
+                         1. Review your todo list — complete any remaining items.\n\
+                         2. Check: did you update ALL related files? Think about: \
+                         docs, changelog, config files (pyproject.toml, tox.ini), \
+                         CI/workflow files, type stubs, __init__.py exports.\n\
+                         3. If the task mentioned specific files, verify you modified each one.\n\n\
+                         {}", diff_section
                     )),
                 });
             }
@@ -578,8 +583,13 @@ impl AgentRunner {
                 messages.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
-                        "[SYSTEM] 5 iterations remaining. Wrap up your changes. Review your todo list — \
-                         complete any remaining items.\n\n{}", diff_section
+                        "[SYSTEM] 5 iterations remaining. Wrap up your changes.\n\
+                         1. Review your todo list — complete any remaining items.\n\
+                         2. Check: did you update ALL related files? Think about: \
+                         docs, changelog, config files (pyproject.toml, tox.ini), \
+                         CI/workflow files, type stubs, __init__.py exports.\n\
+                         3. If the task mentioned specific files, verify you modified each one.\n\n\
+                         {}", diff_section
                     )),
                 });
             }
