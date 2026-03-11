@@ -215,17 +215,32 @@ impl AgentRunner {
                 }
             } else if iteration == 15 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let files_modified = diff_stat.lines()
+                    .filter(|l| l.contains('|'))
+                    .count();
                 let diff_preview = if diff_stat.is_empty() {
                     "WARNING: Still no files modified.".to_string()
                 } else {
                     diff_stat.lines().take(15).collect::<Vec<_>>().join("\n")
                 };
+                let plan_hint = match std::fs::read_to_string("/tmp/.ninja_plan.md") {
+                    Ok(plan) if !plan.trim().is_empty() => {
+                        let trunc = safe_truncate(plan.trim(), 1000);
+                        format!("\n\nYour plan:\n```\n{}\n```\n\n\
+                                 You've modified {} file(s) so far. If your plan lists more files, \
+                                 MOVE ON to untouched files NOW. Do NOT perfect one file before \
+                                 touching the others — make a minimal change to each planned file first, \
+                                 then come back to refine.", trunc, files_modified)
+                    }
+                    _ => format!("\n\nYou've modified {} file(s) so far. If the task requires changes \
+                                  to more files, move on to untouched files NOW.", files_modified),
+                };
                 self.conversation.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
-                        "[SYSTEM] MID-RUN CHECK — Iteration 15. Progress so far:\n```\n{}\n```\n\n\
-                         If no files are modified yet, you are falling behind. Start editing immediately.",
-                        diff_preview
+                        "[SYSTEM] MID-RUN CHECK — Iteration 15 of {}. Half your budget is used.\n\
+                         Progress so far:\n```\n{}\n```{}",
+                        self.config.max_iterations, diff_preview, plan_hint
                     )),
                 });
             } else if iteration == 20 || iteration == 40 {
@@ -557,17 +572,32 @@ impl AgentRunner {
                 }
             } else if iteration == 15 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let files_modified = diff_stat.lines()
+                    .filter(|l| l.contains('|'))
+                    .count();
                 let diff_preview = if diff_stat.is_empty() {
                     "WARNING: Still no files modified.".to_string()
                 } else {
                     diff_stat.lines().take(15).collect::<Vec<_>>().join("\n")
                 };
+                let plan_hint = match std::fs::read_to_string("/tmp/.ninja_plan.md") {
+                    Ok(plan) if !plan.trim().is_empty() => {
+                        let trunc = safe_truncate(plan.trim(), 1000);
+                        format!("\n\nYour plan:\n```\n{}\n```\n\n\
+                                 You've modified {} file(s) so far. If your plan lists more files, \
+                                 MOVE ON to untouched files NOW. Do NOT perfect one file before \
+                                 touching the others — make a minimal change to each planned file first, \
+                                 then come back to refine.", trunc, files_modified)
+                    }
+                    _ => format!("\n\nYou've modified {} file(s) so far. If the task requires changes \
+                                  to more files, move on to untouched files NOW.", files_modified),
+                };
                 messages.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
-                        "[SYSTEM] MID-RUN CHECK — Iteration 15. Progress so far:\n```\n{}\n```\n\n\
-                         If no files are modified yet, you are falling behind. Start editing immediately.",
-                        diff_preview
+                        "[SYSTEM] MID-RUN CHECK — Iteration 15 of {}. Half your budget is used.\n\
+                         Progress so far:\n```\n{}\n```{}",
+                        self.config.max_iterations, diff_preview, plan_hint
                     )),
                 });
             } else if iteration == 20 || iteration == 30 || iteration == 40 || iteration == 60 {
@@ -1198,11 +1228,14 @@ impl AgentRunner {
              - **Use oracle when stuck on reasoning.** If you've read the relevant code but can't \
                determine the correct fix, call oracle with a focused question about the specific \
                code change needed. Don't spin reading the same files repeatedly.\n\
-             - **Watch for dead code.** In Python, if you add a function/class definition but an \
-               identical name is defined later in the same file, YOUR definition is dead code — the \
-               later one shadows it. When your edit doesn't change test results, check: (1) is your \
-               code actually being called? (2) grep for duplicate definitions. (3) add a print() to \
-               verify execution reaches your code.",
+             - **Watch for dead code and duplicate definitions.** In Python, if a function/class is \
+               defined twice in the same file, the LAST definition wins — earlier ones are dead code. \
+               This applies both to code YOU write and to code that ALREADY EXISTS in the file. \
+               When you find a bug in a function that's defined twice, do NOT just patch the buggy \
+               copy — DELETE the duplicate entirely so only one canonical definition remains. \
+               When your edit doesn't change test results, check: (1) is your code actually being \
+               called? (2) grep the file for duplicate definitions of the same name. (3) add a \
+               print() to verify execution reaches your code.",
             self.config.workdir.display(),
             env_info
         );
