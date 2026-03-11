@@ -1,5 +1,5 @@
 {
-  "task_id": "multi_step_d4d28752",
+  "task_id": "multi_step_2788cd42",
   "category": "multi_step",
   "title": "Add test suite to untested project",
   "difficulty": "medium",
@@ -54,7 +54,7 @@
       },
       {
         "method": "command_output",
-        "check_command": "python3 -m pytest tests/ -p no:xdist -p no:randomly -p no:cacheprovider 2>&1 | grep -E '\\d+ passed' | head -1",
+        "check_command": "python3 -m pytest tests/ -p no:xdist -p no:randomly -p no:cacheprovider 2>&1 | grep -E '[0-9]+ passed' | head -1",
         "output_contains": [
           "passed"
         ]
@@ -71,6 +71,6 @@
     "multi_file"
   ],
   "source": "multi_step_generator:test_infrastructure",
-  "generated_at": "2026-03-11T08:48:16.496500+00:00",
+  "generated_at": "2026-03-11T10:12:20.484740+00:00",
   "estimated_minutes": 12
 }

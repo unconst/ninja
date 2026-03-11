@@ -1,0 +1,46 @@
+{
+  "task_id": "frontier_incomplete_spec",
+  "category": "diagnostic",
+  "title": "Build markdown table formatter with hidden edge cases",
+  "difficulty": "hard",
+  "goal": "# Markdown Table Formatter\n\nBuild a Python module `table_formatter.py` with a function:\n\n```python\ndef format_table(headers: list[str], rows: list[list[str]],\n               alignment: str = \"left\") -> str:\n```\n\nRequirements:\n- Produces a markdown table with proper column alignment\n- `alignment` can be \"left\", \"right\", \"center\", or a per-column\n  string like \"lrc\" (left, right, center for each column)\n- Columns should be padded to the width of the widest cell in that column\n- Headers separated from data by a line of dashes\n\nExample:\n```\nformat_table([\"Name\", \"Age\"], [[\"Alice\", \"30\"], [\"Bob\", \"7\"]])\n```\nShould produce:\n```\n| Name  | Age |\n|-------|-----|\n| Alice | 30  |\n| Bob   | 7   |\n```\n",
+  "hints": "The spec is deliberately incomplete. Think about: empty inputs, mismatched column counts, special characters in cell content.",
+  "environment": {
+    "env_type": "empty",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "test_table.py": "\"\"\"Tests for table_formatter \u2014 including edge cases not in the spec.\"\"\"\nimport sys\nsys.path.insert(0, \".\")\nfrom table_formatter import format_table\n\ndef test_basic():\n    result = format_table([\"Name\", \"Age\"], [[\"Alice\", \"30\"], [\"Bob\", \"7\"]])\n    lines = result.strip().split(\"\\n\")\n    assert len(lines) == 4  # header + separator + 2 rows\n    assert \"Name\" in lines[0]\n    assert \"Age\" in lines[0]\n    assert \"---\" in lines[1]\n    assert \"Alice\" in lines[2]\n    assert \"Bob\" in lines[3]\n    print(\"PASS: test_basic\")\n\ndef test_alignment_left():\n    result = format_table([\"X\"], [[\"hello\"]], alignment=\"left\")\n    # Left-aligned: content padded on right\n    lines = result.strip().split(\"\\n\")\n    assert \":---\" in lines[1] or \"---\" in lines[1]\n    print(\"PASS: test_alignment_left\")\n\ndef test_alignment_right():\n    result = format_table([\"X\"], [[\"hello\"]], alignment=\"right\")\n    lines = result.strip().split(\"\\n\")\n    assert \"---:\" in lines[1]\n    print(\"PASS: test_alignment_right\")\n\ndef test_alignment_center():\n    result = format_table([\"X\"], [[\"hello\"]], alignment=\"center\")\n    lines = result.strip().split(\"\\n\")\n    assert \":---:\" in lines[1] or \":--:\" in lines[1]\n    print(\"PASS: test_alignment_center\")\n\ndef test_per_column_alignment():\n    result = format_table([\"A\", \"B\", \"C\"], [[\"1\", \"2\", \"3\"]], alignment=\"lrc\")\n    lines = result.strip().split(\"\\n\")\n    sep = lines[1]\n    parts = [p.strip() for p in sep.split(\"|\") if p.strip()]\n    # First: left, Second: right, Third: center\n    assert not parts[0].startswith(\":\")  or parts[0].startswith(\":\") and not parts[0].endswith(\":\")\n    assert parts[1].endswith(\":\")  # right has trailing :\n    print(\"PASS: test_per_column_alignment\")\n\ndef test_empty_rows():\n    \"\"\"EDGE CASE: No data rows \u2014 should still produce header + separator.\"\"\"\n    result = format_table([\"A\", \"B\"], [])\n    lines = result.strip().split(\"\\n\")\n    assert len(lines) >= 2  # At least header + separator\n    assert \"A\" in lines[0]\n    print(\"PASS: test_empty_rows\")\n\ndef test_mismatched_columns():\n    \"\"\"EDGE CASE: Row has fewer columns than headers \u2014 should pad with empty.\"\"\"\n    result = format_table([\"A\", \"B\", \"C\"], [[\"1\"]])\n    lines = result.strip().split(\"\\n\")\n    # Should have 3 columns even though row only has 1\n    row = lines[2]\n    parts = [p.strip() for p in row.split(\"|\") if p.strip()]\n    assert len(parts) == 3, f\"Expected 3 columns, got {len(parts)}: {parts}\"\n    assert parts[0] == \"1\"\n    print(\"PASS: test_mismatched_columns\")\n\ndef test_extra_columns():\n    \"\"\"EDGE CASE: Row has MORE columns than headers \u2014 should handle gracefully.\"\"\"\n    result = format_table([\"A\"], [[\"1\", \"2\", \"3\"]])\n    lines = result.strip().split(\"\\n\")\n    # Should at minimum not crash. Two valid behaviors:\n    # 1. Truncate extra columns, or 2. Expand to fit\n    assert len(lines) >= 3  # header + sep + 1 row\n    print(\"PASS: test_extra_columns\")\n\ndef test_pipe_in_content():\n    \"\"\"EDGE CASE: Cell content contains | character \u2014 must be escaped.\"\"\"\n    result = format_table([\"Expr\"], [[\"a|b\"]])\n    lines = result.strip().split(\"\\n\")\n    row = lines[2]\n    # The pipe in content should be escaped so it doesn't create extra columns\n    # Count actual column separators (leading/trailing | plus inner |)\n    inner = row.strip()\n    if inner.startswith(\"|\"):\n        inner = inner[1:]\n    if inner.endswith(\"|\"):\n        inner = inner[:-1]\n    parts = inner.split(\"|\")\n    assert len(parts) == 1, f\"Pipe in content created extra columns: {parts}\"\n    print(\"PASS: test_pipe_in_content\")\n\ndef test_unicode_content():\n    \"\"\"EDGE CASE: Unicode characters \u2014 column width should be visual width.\"\"\"\n    result = format_table([\"Name\"], [[\"\u00d1o\u00f1o\"], [\"Bob\"]])\n    # Should not crash, should produce valid table\n    lines = result.strip().split(\"\\n\")\n    assert len(lines) == 4\n    print(\"PASS: test_unicode_content\")\n\ndef test_newline_in_content():\n    \"\"\"EDGE CASE: Cell with embedded newline \u2014 should be stripped or escaped.\"\"\"\n    result = format_table([\"Note\"], [[\"line1\\nline2\"]])\n    lines = result.strip().split(\"\\n\")\n    # The newline in content should NOT break the table structure\n    # After header + sep, should be exactly 1 data row\n    data_lines = lines[2:]\n    assert len(data_lines) == 1, f\"Newline in content broke table: got {len(data_lines)} data lines\"\n    print(\"PASS: test_newline_in_content\")\n\nif __name__ == \"__main__\":\n    tests = [f for f in dir() if f.startswith(\"test_\")]\n    passed = 0\n    failed = 0\n    for t in sorted(tests):\n        try:\n            eval(f\"{t}()\")\n            passed += 1\n        except Exception as e:\n            print(f\"FAIL: {t}: {e}\")\n            failed += 1\n    print(f\"\\nResults: {passed}/{passed+failed} passed\")\n    if failed > 0:\n        sys.exit(1)\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Must handle: empty rows, mismatched column counts (pad with empty or expand), pipe characters in content (escape as \\|), unicode width, embedded newlines (strip/escape). Naive implementation misses 3+ of these.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "script_check",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": "#!/bin/bash\ncd \"$WORKDIR\"\n\nif [ ! -f \"table_formatter.py\" ]; then\n    echo \"FAIL: table_formatter.py not found\"\n    exit 1\nfi\n\n# Run the tests\nOUTPUT=$(python3 test_table.py 2>&1)\nEXIT=$?\necho \"$OUTPUT\"\n\n# Count passes\nPASSED=$(echo \"$OUTPUT\" | grep -c \"^PASS:\")\nTOTAL=11\n\necho \"\"\necho \"Tests passed: $PASSED/$TOTAL\"\n\n# Need at least 9/11 to pass (allows 2 edge case misses)\nif [ \"$PASSED\" -ge 9 ]; then\n    exit 0\nelse\n    exit 1\nfi\n",
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_writing",
+    "decomposition"
+  ],
+  "source": "frontier_generator",
+  "generated_at": "2026-03-11T10:34:21.349326+00:00",
+  "estimated_minutes": 10
+}

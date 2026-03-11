@@ -1,5 +1,5 @@
 {
-  "task_id": "multi_step_d7b32dfa",
+  "task_id": "multi_step_36f41044",
   "category": "multi_step",
   "title": "Migrate SQLite database to JSON API format",
   "difficulty": "medium",
@@ -78,6 +78,6 @@
     "script_writing"
   ],
   "source": "multi_step_generator:migration_pipeline",
-  "generated_at": "2026-03-11T08:48:16.496347+00:00",
+  "generated_at": "2026-03-11T10:12:20.484590+00:00",
   "estimated_minutes": 12
 }

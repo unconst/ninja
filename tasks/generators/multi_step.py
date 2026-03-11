@@ -409,7 +409,7 @@ class MultiStepGenerator(TaskGenerator):
                      "check_command": "python3 -m pytest tests/ -v -p no:xdist -p no:randomly -p no:cacheprovider 2>&1 | tail -5",
                      "output_contains": ["passed"]},
                     {"method": "command_output",
-                     "check_command": "python3 -m pytest tests/ -p no:xdist -p no:randomly -p no:cacheprovider 2>&1 | grep -E '\\d+ passed' | head -1",
+                     "check_command": "python3 -m pytest tests/ -p no:xdist -p no:randomly -p no:cacheprovider 2>&1 | grep -E '[0-9]+ passed' | head -1",
                      "output_contains": ["passed"]},
                 ]
             ),
@@ -465,7 +465,7 @@ class MultiStepGenerator(TaskGenerator):
                     SERVER_PID=$!
                     sleep 2
 
-                    cleanup() { kill $SERVER_PID 2>/dev/null; wait $SERVER_PID 2>/dev/null; }
+                    cleanup() { kill $SERVER_PID 2>/dev/null; wait $SERVER_PID 2>/dev/null || true; }
                     trap cleanup EXIT
 
                     # Test POST

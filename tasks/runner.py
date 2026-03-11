@@ -35,6 +35,7 @@ from tasks.generators.ambiguous import AmbiguousGenerator
 from tasks.generators.web_search import WebSearchGenerator
 from tasks.generators.diagnostic import DiagnosticGenerator
 from tasks.generators.boundary import BoundaryGenerator
+from tasks.generators.frontier import FrontierGenerator
 from tasks.evaluators.evaluate import evaluate_task
 from tasks.coverage import CoverageTracker
 
@@ -50,6 +51,7 @@ GENERATORS = {
     "web_search": WebSearchGenerator(),
     "diagnostic": DiagnosticGenerator(),
     "boundary": BoundaryGenerator(),
+    "frontier": FrontierGenerator(),
 }
 
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "dataset")

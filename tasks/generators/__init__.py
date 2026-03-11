@@ -9,3 +9,4 @@ from .ambiguous import AmbiguousGenerator
 from .web_search import WebSearchGenerator
 from .diagnostic import DiagnosticGenerator
 from .boundary import BoundaryGenerator
+from .frontier import FrontierGenerator

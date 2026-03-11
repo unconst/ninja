@@ -1,0 +1,49 @@
+{
+  "task_id": "multi_step_724bae6e",
+  "category": "multi_step",
+  "title": "Build REST API server from data model",
+  "difficulty": "medium",
+  "goal": "Build a simple REST API using Python's built-in http.server (no frameworks).\n\nThe API should manage a \"books\" collection with these endpoints:\n- GET /books \u2014 list all books\n- GET /books/<id> \u2014 get one book\n- POST /books \u2014 create a book (JSON body: title, author, year)\n- DELETE /books/<id> \u2014 delete a book\n\nRequirements:\n1. Create server.py implementing the API\n2. Store data in books.json (persist between requests)\n3. Return proper status codes (200, 201, 404)\n4. Return JSON responses with Content-Type header\n5. Create test_api.py that starts the server, runs all CRUD tests,\n   and shuts down the server\n6. Run the tests to verify everything works\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {},
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "server.py with all 4 endpoints working, test_api.py that validates CRUD operations",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "script_check",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": "#!/bin/bash\nset -e\n\n# Start server\npython3 server.py &\nSERVER_PID=$!\nsleep 2\n\ncleanup() { kill $SERVER_PID 2>/dev/null; wait $SERVER_PID 2>/dev/null || true; }\ntrap cleanup EXIT\n\n# Test POST\nCREATED=$(curl -s -w \"\\n%{http_code}\" -X POST http://localhost:8000/books                         -H \"Content-Type: application/json\"                         -d '{\"title\":\"Test Book\",\"author\":\"Author\",\"year\":2024}')\nCODE=$(echo \"$CREATED\" | tail -1)\nif [ \"$CODE\" != \"201\" ]; then echo \"POST failed: $CODE\"; exit 1; fi\n\n# Test GET all\nLIST=$(curl -s http://localhost:8000/books)\nif ! echo \"$LIST\" | python3 -c \"import sys,json; d=json.load(sys.stdin); assert len(d)>=1\"; then\n    echo \"GET /books failed\"; exit 1\nfi\n\n# Test DELETE\nDEL_CODE=$(curl -s -o /dev/null -w \"%{http_code}\" -X DELETE http://localhost:8000/books/1)\n\necho \"All API tests passed!\"\n",
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_writing",
+    "file_creation",
+    "shell_commands",
+    "test_running",
+    "api_interaction",
+    "decomposition",
+    "prioritization"
+  ],
+  "source": "multi_step_generator:api_with_tests",
+  "generated_at": "2026-03-11T10:12:20.484827+00:00",
+  "estimated_minutes": 15
+}

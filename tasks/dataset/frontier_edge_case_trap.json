@@ -1,0 +1,46 @@
+{
+  "task_id": "frontier_edge_case_trap",
+  "category": "diagnostic",
+  "title": "Build duration parser with 13 edge-case tests",
+  "difficulty": "hard",
+  "goal": "Build a Python module `duration_parser.py` with a single function:\n\n```python\ndef parse_duration(s: str) -> int:\n    \"\"\"Parse a human-readable duration string into total seconds.\n\n    Supports: s (seconds), m (minutes), h (hours), d (days)\n    Examples: '30s' -> 30, '1h30m' -> 5400, '2d' -> 172800\n    \"\"\"\n```\n\nA test file `test_duration.py` is provided. Make all tests pass.\n",
+  "hints": "Read ALL the tests before implementing. The edge cases are the hard part.",
+  "environment": {
+    "env_type": "empty",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "test_duration.py": "\"\"\"Tests for duration parser \u2014 deceptively thorough.\"\"\"\nimport sys\nsys.path.insert(0, \".\")\nfrom duration_parser import parse_duration\n\ndef test_basic_seconds():\n    assert parse_duration(\"30s\") == 30\n    assert parse_duration(\"1s\") == 1\n    assert parse_duration(\"0s\") == 0\n    print(\"PASS: test_basic_seconds\")\n\ndef test_basic_minutes():\n    assert parse_duration(\"5m\") == 300\n    assert parse_duration(\"1m\") == 60\n    print(\"PASS: test_basic_minutes\")\n\ndef test_basic_hours():\n    assert parse_duration(\"2h\") == 7200\n    assert parse_duration(\"1h\") == 3600\n    print(\"PASS: test_basic_hours\")\n\ndef test_basic_days():\n    assert parse_duration(\"1d\") == 86400\n    assert parse_duration(\"7d\") == 604800\n    print(\"PASS: test_basic_days\")\n\ndef test_combined():\n    \"\"\"Combined durations like '1h30m' or '2d12h'.\"\"\"\n    assert parse_duration(\"1h30m\") == 5400\n    assert parse_duration(\"1d12h\") == 129600\n    assert parse_duration(\"1h30m45s\") == 5445\n    assert parse_duration(\"2d3h4m5s\") == 183845\n    print(\"PASS: test_combined\")\n\ndef test_whitespace():\n    \"\"\"Should handle whitespace between components.\"\"\"\n    assert parse_duration(\"1h 30m\") == 5400\n    assert parse_duration(\" 2h  30m \") == 9000\n    assert parse_duration(\"1d 2h 3m 4s\") == 93784\n    print(\"PASS: test_whitespace\")\n\ndef test_fractional():\n    \"\"\"Should handle fractional values.\"\"\"\n    assert parse_duration(\"1.5h\") == 5400\n    assert parse_duration(\"0.5d\") == 43200\n    assert parse_duration(\"2.5m\") == 150\n    print(\"PASS: test_fractional\")\n\ndef test_plain_number():\n    \"\"\"Plain number without unit should be treated as seconds.\"\"\"\n    assert parse_duration(\"60\") == 60\n    assert parse_duration(\"3600\") == 3600\n    print(\"PASS: test_plain_number\")\n\ndef test_case_insensitive():\n    \"\"\"Units should be case-insensitive.\"\"\"\n    assert parse_duration(\"1H\") == 3600\n    assert parse_duration(\"30M\") == 1800\n    assert parse_duration(\"5S\") == 5\n    assert parse_duration(\"1D\") == 86400\n    print(\"PASS: test_case_insensitive\")\n\ndef test_invalid_input():\n    \"\"\"Should raise ValueError for invalid input.\"\"\"\n    errors = 0\n    for invalid in [\"\", \"abc\", \"h\", \"1x\", \"-1s\", \"1h-30m\"]:\n        try:\n            parse_duration(invalid)\n            print(f\"  Should have raised ValueError for: {repr(invalid)}\")\n            errors += 1\n        except ValueError:\n            pass  # expected\n    assert errors == 0, f\"{errors} invalid inputs accepted\"\n    print(\"PASS: test_invalid_input\")\n\ndef test_large_values():\n    \"\"\"Should handle large values without overflow.\"\"\"\n    assert parse_duration(\"365d\") == 31536000\n    assert parse_duration(\"9999s\") == 9999\n    print(\"PASS: test_large_values\")\n\ndef test_zero():\n    \"\"\"Zero should work for all units.\"\"\"\n    assert parse_duration(\"0s\") == 0\n    assert parse_duration(\"0m\") == 0\n    assert parse_duration(\"0h\") == 0\n    assert parse_duration(\"0d\") == 0\n    assert parse_duration(\"0\") == 0\n    print(\"PASS: test_zero\")\n\ndef test_repeated_units():\n    \"\"\"Repeated units should be additive: 1h1h = 2h.\"\"\"\n    assert parse_duration(\"1h1h\") == 7200\n    assert parse_duration(\"30s30s\") == 60\n    print(\"PASS: test_repeated_units\")\n\nif __name__ == \"__main__\":\n    tests = [f for f in dir() if f.startswith(\"test_\")]\n    passed = 0\n    failed = 0\n    for t in sorted(tests):\n        try:\n            eval(f\"{t}()\")\n            passed += 1\n        except Exception as e:\n            print(f\"FAIL: {t}: {e}\")\n            failed += 1\n    print(f\"\\nResults: {passed}/{passed+failed} passed\")\n    if failed > 0:\n        sys.exit(1)\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Must handle: combined durations (1h30m), whitespace, fractional values (1.5h), plain numbers as seconds, case-insensitive units, negative/empty/invalid inputs, large values, zero, repeated units (1h1h=2h).",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "script_check",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": "#!/bin/bash\ncd \"$WORKDIR\"\n\nif [ ! -f \"duration_parser.py\" ]; then\n    echo \"FAIL: duration_parser.py not found\"\n    exit 1\nfi\n\nOUTPUT=$(python3 test_duration.py 2>&1)\necho \"$OUTPUT\"\n\nPASSED=$(echo \"$OUTPUT\" | grep -c \"^PASS:\")\nTOTAL=13\n\necho \"\"\necho \"Tests passed: $PASSED/$TOTAL\"\n\n# Need all 13 to pass \u2014 the edge cases ARE the test\nif [ \"$PASSED\" -ge 11 ]; then\n    exit 0\nelse\n    exit 1\nfi\n",
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_writing",
+    "decomposition"
+  ],
+  "source": "frontier_generator",
+  "generated_at": "2026-03-11T10:34:21.350187+00:00",
+  "estimated_minutes": 8
+}
