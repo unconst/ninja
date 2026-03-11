@@ -188,27 +188,111 @@ impl AgentRunner {
             }
 
             let remaining = self.config.max_iterations - iteration;
-            if remaining == 10 {
+            if iteration == 5 {
                 self.conversation.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(
-                        "[SYSTEM] You have 10 iterations remaining. Focus on completing remaining changes.".to_string()
+                        "[SYSTEM] PHASE CHECK — Iteration 5 reached. You should be DONE exploring by now. \
+                         If you haven't started editing files, START NOW. State your plan briefly, then \
+                         begin implementing. Every iteration spent reading without editing is wasted.".to_string()
+                    ),
+                });
+            } else if iteration == 10 {
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                if diff_stat.is_empty() {
+                    self.conversation.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(
+                            "[SYSTEM] CRITICAL — Iteration 10 and ZERO files modified! You are in analysis paralysis. \
+                             STOP READING FILES IMMEDIATELY. You have spent 10 iterations exploring without writing \
+                             a single line of code. This is unacceptable.\n\n\
+                             DO THIS NOW:\n\
+                             1. Pick the FIRST required file from your plan\n\
+                             2. Open it with read_file\n\
+                             3. Make the edit with edit_file or write_file in this SAME response\n\
+                             4. Move to the next file\n\n\
+                             Do NOT use think, do NOT read more files for context, do NOT re-analyze. \
+                             START EDITING NOW.".to_string()
+                        ),
+                    });
+                    rollout.log_error("Analysis paralysis detected: 0 files modified at iteration 10");
+                } else {
+                    self.conversation.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(format!(
+                            "[SYSTEM] PROGRESS CHECK — Iteration 10. You've started editing. Good.\n\
+                             Current git diff --stat:\n```\n{}\n```\n\
+                             Keep going — make sure ALL required files get modified.",
+                            diff_stat.lines().take(15).collect::<Vec<_>>().join("\n")
+                        )),
+                    });
+                }
+            } else if iteration == 15 {
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let diff_section = if diff_stat.is_empty() {
+                    "CRITICAL: Still ZERO files modified at iteration 15! Start editing immediately or you will fail.".to_string()
+                } else {
+                    format!("Current git diff --stat:\n```\n{}\n```", diff_stat.lines().take(15).collect::<Vec<_>>().join("\n"))
+                };
+                self.conversation.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(format!(
+                        "[SYSTEM] MID-RUN CHECK — Iteration 15. How many files from your plan have you \
+                         actually modified? Compare against REQUIRED FILES. If less than half, pick up the pace.\n\n\
+                         {}\n\n\
+                         Focus on the remaining files. Every unmodified required file is a failure.", diff_section
+                    )),
+                });
+            } else if iteration == 25 || iteration == 40 {
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let diff_preview = if diff_stat.is_empty() {
+                    "WARNING: No files modified yet!".to_string()
+                } else {
+                    diff_stat.lines().take(20).collect::<Vec<_>>().join("\n")
+                };
+                self.conversation.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(format!(
+                        "[SYSTEM] REFLECTION — Iteration {}. Pause and assess:\n\
+                         1. Which REQUIRED FILES have you completed vs remaining?\n\
+                         2. Are you stuck on anything? If an edit keeps failing, try a different approach \
+                            (write_file to overwrite, replace_lines by line number, or break the edit into smaller pieces)\n\
+                         3. What's your plan for the remaining {} iterations?\n\n\
+                         Current git diff --stat:\n```\n{}\n```\n\n\
+                         State your plan briefly, then execute.", iteration + 1, remaining, diff_preview
+                    )),
+                });
+            } else if remaining == 10 {
+                self.conversation.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(
+                        "[SYSTEM] URGENT — 10 iterations remaining. Review your deliverables checklist — \
+                         make sure all required files have been modified/created. Focus on completing \
+                         any remaining changes now.".to_string()
                     ),
                 });
             } else if remaining == 5 {
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let diff_section = if diff_stat.is_empty() {
+                    "\n\nWARNING: `git diff --stat` shows NO modified files!".to_string()
+                } else {
+                    format!("\n\nCurrent `git diff --stat`:\n```\n{}\n```", diff_stat)
+                };
                 self.conversation.push(Message {
                     role: "user".to_string(),
-                    content: MessageContent::Text(
-                        "[SYSTEM] FILE CHECK — 5 iterations left. Run `git diff --stat` NOW to see which files \
-                         you've modified. Compare against the REQUIRED FILES list from the task. If ANY required \
-                         file is missing from your diff, modify it NOW.".to_string()
-                    ),
+                    content: MessageContent::Text(format!(
+                        "[SYSTEM] FILE CHECK — 5 iterations left. Compare the files below against the REQUIRED \
+                         FILES list from the task. If ANY required file is missing from git diff, you MUST modify \
+                         it NOW.{}\n\n\
+                         Do NOT stop until every required file appears in git diff.", diff_section
+                    )),
                 });
             } else if remaining == 3 {
                 self.conversation.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(
-                        "[SYSTEM] Only 3 iterations left! Wrap up immediately.".to_string()
+                        "[SYSTEM] FINAL — Only 3 iterations left! Wrap up immediately. If any files from your \
+                         plan are still unmodified, make those changes now.".to_string()
                     ),
                 });
             }
@@ -479,14 +563,52 @@ impl AgentRunner {
                          begin implementing. Every iteration spent reading without editing is wasted.".to_string()
                     ),
                 });
+            } else if iteration == 10 {
+                // Hard check: if no files modified by iteration 10, escalate aggressively
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                if diff_stat.is_empty() {
+                    messages.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(
+                            "[SYSTEM] CRITICAL — Iteration 10 and ZERO files modified! You are in analysis paralysis. \
+                             STOP READING FILES IMMEDIATELY. You have spent 10 iterations exploring without writing \
+                             a single line of code. This is unacceptable.\n\n\
+                             DO THIS NOW:\n\
+                             1. Pick the FIRST required file from your plan\n\
+                             2. Open it with read_file\n\
+                             3. Make the edit with edit_file or write_file in this SAME response\n\
+                             4. Move to the next file\n\n\
+                             Do NOT use think, do NOT read more files for context, do NOT re-analyze. \
+                             START EDITING NOW.".to_string()
+                        ),
+                    });
+                    rollout.log_error("Analysis paralysis detected: 0 files modified at iteration 10");
+                } else {
+                    messages.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(format!(
+                            "[SYSTEM] PROGRESS CHECK — Iteration 10. You've started editing. Good.\n\
+                             Current git diff --stat:\n```\n{}\n```\n\
+                             Keep going — make sure ALL required files get modified.",
+                            diff_stat.lines().take(15).collect::<Vec<_>>().join("\n")
+                        )),
+                    });
+                }
             } else if iteration == 15 {
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let diff_section = if diff_stat.is_empty() {
+                    "CRITICAL: Still ZERO files modified at iteration 15! Start editing immediately or you will fail.".to_string()
+                } else {
+                    format!("Current git diff --stat:\n```\n{}\n```", diff_stat.lines().take(15).collect::<Vec<_>>().join("\n"))
+                };
                 messages.push(Message {
                     role: "user".to_string(),
-                    content: MessageContent::Text(
+                    content: MessageContent::Text(format!(
                         "[SYSTEM] MID-RUN CHECK — Iteration 15. How many files from your plan have you \
-                         actually modified? If less than half, pick up the pace. Focus on the remaining \
-                         files.".to_string()
-                    ),
+                         actually modified? Compare against REQUIRED FILES. If less than half, pick up the pace.\n\n\
+                         {}\n\n\
+                         Focus on the remaining files. Every unmodified required file is a failure.", diff_section
+                    )),
                 });
             } else if iteration == 25 || iteration == 40 {
                 // Reflection prompt: ask agent to evaluate progress and consider strategy shifts
@@ -868,8 +990,8 @@ impl AgentRunner {
                 content: MessageContent::Blocks(result_blocks),
             });
 
-            // If 10+ iterations since last write and past iteration 20, nudge the agent to finish
-            if !idle_nudge_done && iteration > 20 && iteration - last_write_iteration >= 10 {
+            // If 7+ iterations since last write and past iteration 10, nudge the agent to implement
+            if !idle_nudge_done && iteration > 10 && iteration - last_write_iteration >= 7 {
                 idle_nudge_done = true;
                 messages.push(Message {
                     role: "user".to_string(),
