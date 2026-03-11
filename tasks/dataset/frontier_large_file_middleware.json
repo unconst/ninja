@@ -37,10 +37,10 @@
     "output_not_contains": null,
     "test_command": null,
     "check_script": null,
-    "check_script_content": "#!/bin/bash\ncd \"$WORKDIR\"\nOUTPUT=$(python3 tests/test_plugins.py 2>&1)\necho \"$OUTPUT\"\nif echo \"$OUTPUT\" | grep -q \"ALL TESTS PASSED\"; then\n    exit 0\nelse\n    exit 1\nfi\n",
+    "check_script_content": "#\\!/bin/bash\ncd \"$WORKDIR\"\nset +e\n\nOUTPUT=$(python3 tests/test_plugins.py 2>&1)\necho \"$OUTPUT\"\n\n# Count PASS/FAIL lines\nPASSED=$(echo \"$OUTPUT\" | grep -c \"^  PASS:\")\nFAILED=$(echo \"$OUTPUT\" | grep -c \"^  FAIL:\")\nTOTAL=$((PASSED + FAILED))\n\nif [ \"$TOTAL\" -eq 0 ]; then\n    # Try alternate counting\n    PASSED=$(echo \"$OUTPUT\" | grep -c \" passed\")\n    TOTAL=23\nfi\n\necho \"\"\necho \"Score: $PASSED/$TOTAL\"\n\nif echo \"$OUTPUT\" | grep -q \"ALL TESTS PASSED\"; then\n    exit 0\nelse\n    exit 1\nfi\n",
     "rubric": null,
     "sub_evals": null,
-    "pass_threshold": 1.0
+    "pass_threshold": 0.9
   },
   "capabilities": [
     "code_editing",

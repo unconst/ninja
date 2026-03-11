@@ -44,8 +44,7 @@
     "code_reading",
     "root_cause",
     "code_editing",
-    "hypothesis_test",
-    "constraint_satisfaction"
+    "hypothesis_test"
   ],
   "source": "frontier_generator",
   "generated_at": "2026-03-11T19:30:00.000000+00:00",
