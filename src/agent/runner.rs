@@ -1007,8 +1007,10 @@ impl AgentRunner {
                changes means minimal — change behavior, not names.\n\n\
              ## Principles\n\
              - **Speed over perfection.** Act decisively. Don't over-explore or over-analyze.\n\
-             - **Parallelize.** Call multiple tools per response — they execute concurrently. \
-               Use spawn_agent to fan out independent sub-tasks.\n\
+             - **Parallelize aggressively.** Call multiple tools per response — they execute concurrently. \
+               For tasks touching 5+ files, use spawn_agent to edit different files in parallel. \
+               Give each sub-agent a specific file path, the exact change needed, and enough context. \
+               This multiplies your effective iteration budget.\n\
              - **Be precise.** Minimal changes. Don't over-engineer or add unnecessary code.\n\
              - **Read fully.** Don't use offset/limit unless a file is >2000 lines. \
                Config files are small — always read completely.\n\
