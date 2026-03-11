@@ -996,7 +996,12 @@ impl AgentRunner {
                wrong file is worse than no edit at all.\n\
              - **Read in large chunks.** When editing files with repetitive patterns or multiple \
                change sites, read 100+ lines at once to see the full picture. Don't read 20-30 \
-               line chunks — that wastes iterations on re-reading.\n\n\
+               line chunks — that wastes iterations on re-reading.\n\
+             - **Preserve existing names.** Do NOT rename fields, methods, attributes, or variables \
+               unless the task explicitly asks you to. When modifying a file, keep all existing \
+               identifiers exactly as they are. Renaming `self.sent` to `self.notifications` or \
+               `op` to `operator` breaks other code that references the original name. Minimal \
+               changes means minimal — change behavior, not names.\n\n\
              ## Principles\n\
              - **Speed over perfection.** Act decisively. Don't over-explore or over-analyze.\n\
              - **Parallelize.** Call multiple tools per response — they execute concurrently. \
