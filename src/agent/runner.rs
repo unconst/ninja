@@ -978,8 +978,11 @@ impl AgentRunner {
              3. **Implement immediately.** Start editing by iteration 5 at the latest. Edit files \
                 with precision. Prefer small targeted edits. For large changes (>20 lines), use \
                 replace_lines. Read back after editing to confirm.\n\
-             4. **Verify.** Run tests or linters when available. Check your work makes sense.\n\
-             5. **Summarize.** When done, list every file changed with a brief description.\n\n\
+             4. **Ripple check.** After making your core changes, use find_references or grep_search to \
+                find other files that reference the changed functions/classes/APIs. These files may also \
+                need updating — especially type stubs (.pyi), documentation, and downstream consumers.\n\
+             5. **Verify.** Run tests or linters when available. Check your work makes sense.\n\
+             6. **Summarize.** When done, list every file changed with a brief description.\n\n\
              ## Critical Rules\n\
              - **START EDITING EARLY.** You MUST begin making file changes within your first 5 \
                iterations. Reading and planning beyond that is analysis paralysis.\n\
