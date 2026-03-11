@@ -930,6 +930,9 @@ impl AgentRunner {
                reveal config files you need to update.\n\
              - When done, list every file you changed with a brief summary\n\n\
              ## Rules\n\
+             - BATCH SIMILAR WORK: When multiple documentation, config, or example files need updates, \
+               handle them in quick succession — read + edit each one in the same response. \
+               Don't re-analyze the problem between each doc file.\n\
              - SPEED OVER PERFECTION: Make changes quickly. Don't over-explore.\n\
              - PARALLELIZE: When you need to read or research multiple independent files/topics, \
                use spawn_agent to fan out the work. When you call multiple tools in one response, \
@@ -976,12 +979,109 @@ impl AgentRunner {
             }
         }
 
+        // Include repo map for codebase awareness
+        let repo_map = Self::generate_repo_map(&self.config.workdir);
+        if !repo_map.is_empty() {
+            prompt.push_str(&format!(
+                "\n\n## Repository Map\nFiles in the working directory:\n```\n{}\n```",
+                repo_map.trim()
+            ));
+        }
+
         // Load persistent memory
         if let Some(memory_section) = crate::tools::memory::load_project_memory(&self.config.workdir) {
             prompt.push_str(&format!("\n\n{}", memory_section));
         }
 
         prompt
+    }
+
+    /// Generate a compact repository map (directory tree) for the system prompt.
+    /// Shows top-level structure and key source directories, capped at ~150 lines.
+    fn generate_repo_map(workdir: &Path) -> String {
+        use std::collections::BTreeMap;
+
+        let output = match std::process::Command::new("find")
+            .args(&[
+                ".", "-type", "f",
+                "-not", "-path", "./.git/*",
+                "-not", "-path", "./node_modules/*",
+                "-not", "-path", "./.tox/*",
+                "-not", "-path", "./.nox/*",
+                "-not", "-path", "./__pycache__/*",
+                "-not", "-path", "*/__pycache__/*",
+                "-not", "-path", "./.venv/*",
+                "-not", "-path", "./venv/*",
+                "-not", "-path", "./target/*",
+                "-not", "-path", "./.mypy_cache/*",
+                "-not", "-path", "./.pytest_cache/*",
+                "-not", "-path", "*/.pytest_cache/*",
+                "-not", "-path", "./*.egg-info/*",
+                "-not", "-path", "*/*.egg-info/*",
+                "-not", "-name", "*.pyc",
+                "-not", "-name", "*.pyo",
+            ])
+            .current_dir(workdir)
+            .output()
+        {
+            Ok(o) if o.status.success() => o,
+            _ => return String::new(),
+        };
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let mut files: Vec<&str> = stdout.lines().collect();
+        files.sort();
+
+        if files.is_empty() {
+            return String::new();
+        }
+
+        // Build directory tree structure
+        let mut tree: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        for file in &files {
+            let file = file.strip_prefix("./").unwrap_or(file);
+            let parts: Vec<&str> = file.rsplitn(2, '/').collect();
+            if parts.len() == 2 {
+                tree.entry(parts[1].to_string())
+                    .or_default()
+                    .push(parts[0].to_string());
+            } else {
+                tree.entry(".".to_string())
+                    .or_default()
+                    .push(parts[0].to_string());
+            }
+        }
+
+        let mut result = String::new();
+        let mut lines = 0;
+        let max_lines = 150;
+
+        for (dir, dir_files) in &tree {
+            if lines >= max_lines {
+                result.push_str(&format!("... ({} more directories)\n", tree.len()));
+                break;
+            }
+            if dir_files.len() <= 8 {
+                // Show all files for small directories
+                for f in dir_files {
+                    if dir == "." {
+                        result.push_str(&format!("{}\n", f));
+                    } else {
+                        result.push_str(&format!("{}/{}\n", dir, f));
+                    }
+                    lines += 1;
+                    if lines >= max_lines {
+                        break;
+                    }
+                }
+            } else {
+                // Summarize large directories
+                result.push_str(&format!("{}/  ({} files)\n", dir, dir_files.len()));
+                lines += 1;
+            }
+        }
+
+        result
     }
 
     /// Run `git diff --stat` to see which files have been modified.
