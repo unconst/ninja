@@ -971,8 +971,10 @@ impl AgentRunner {
                 Don't read every file. Target the specific code you need to change.\n\
              2. **Plan and externalize (1-2 iterations).** Use think to form a concrete plan: \
                 root cause, which files to change, what each change is. Write the plan to \
-                /tmp/.ninja_plan.md — this survives context compaction. Include a numbered list \
-                of specific edits you'll make.\n\
+                /tmp/.ninja_plan.md — this survives context compaction. Include a COMPLETE numbered \
+                list of ALL files you'll modify — don't just list source code files. Also consider: \
+                docs, changelog/HISTORY, config (pyproject.toml, setup.cfg), CI workflows, \
+                type stubs, __init__.py exports, test output files. Use todo_write to track each file.\n\
              3. **Implement immediately.** Start editing by iteration 5 at the latest. Edit files \
                 with precision. Prefer small targeted edits. For large changes (>20 lines), use \
                 replace_lines. Read back after editing to confirm.\n\
