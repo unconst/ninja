@@ -1198,6 +1198,9 @@ impl AgentRunner {
              5. **Verify.** Run tests or linters when available. If the task specifies a verification \
                 command (like a grep to check for remaining references), run it BEFORE declaring done. \
                 If it shows remaining issues, fix them. Never stop while verification fails.\n\
+             5b. **Rename verification.** When renaming symbols, classes, or field names: after all \
+                edits, grep for the OLD name across ALL files (including tests, configs, docstrings, \
+                string literals). Any remaining reference is a bug. Fix it before stopping.\n\
              6. **Summarize.** When done, list every file changed with a brief description.\n\n\
              ## Critical Rules\n\
              - **START EDITING EARLY.** You MUST begin making file changes within your first 5 \
