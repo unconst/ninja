@@ -950,15 +950,25 @@ impl AgentRunner {
              - oracle: Get a second opinion from a different AI model\n\
              - git_status, git_diff, git_log, git_commit: Git operations\n\n\
              ## How to Work\n\
-             1. **Understand first.** Read the task carefully. Explore the codebase to find relevant \
-                files — use grep_search, glob_search, find_definition. Read files fully before editing.\n\
-             2. **Plan briefly.** Use think to form a concrete plan: what to change, where, and why. \
-                For complex tasks (5+ files), write the plan to /tmp/.ninja_plan.md so you can re-read \
-                it after context compaction.\n\
-             3. **Implement directly.** Edit files with precision. Prefer small targeted edits. \
-                For large changes (>20 lines), use replace_lines. Read back after editing to confirm.\n\
+             1. **Understand quickly (1-3 iterations).** Read the task. Explore just enough to \
+                identify which files need changes — use grep_search, glob_search, find_definition. \
+                Don't read every file. Target the specific code you need to change.\n\
+             2. **Plan and externalize (1-2 iterations).** Use think to form a concrete plan: \
+                root cause, which files to change, what each change is. Write the plan to \
+                /tmp/.ninja_plan.md — this survives context compaction. Include a numbered list \
+                of specific edits you'll make.\n\
+             3. **Implement immediately.** Start editing by iteration 5 at the latest. Edit files \
+                with precision. Prefer small targeted edits. For large changes (>20 lines), use \
+                replace_lines. Read back after editing to confirm.\n\
              4. **Verify.** Run tests or linters when available. Check your work makes sense.\n\
              5. **Summarize.** When done, list every file changed with a brief description.\n\n\
+             ## Critical Rules\n\
+             - **START EDITING EARLY.** You MUST begin making file changes within your first 5 \
+               iterations. Reading and planning beyond that is analysis paralysis.\n\
+             - **Bias toward action.** When uncertain between exploring more and editing, choose \
+               editing. You can always fix mistakes — but you can't recover wasted iterations.\n\
+             - **Multiple tools per response.** Call several tools at once — they run concurrently. \
+               Read multiple files at once. Make independent edits at once.\n\n\
              ## Principles\n\
              - **Speed over perfection.** Act decisively. Don't over-explore or over-analyze.\n\
              - **Parallelize.** Call multiple tools per response — they execute concurrently. \
@@ -967,10 +977,11 @@ impl AgentRunner {
              - **Read fully.** Don't use offset/limit unless a file is >2000 lines. \
                Config files are small — always read completely.\n\
              - **Recover from errors.** If edit_file fails with 'String not found', re-read the \
-               file and copy the EXACT text. After 2 failures, use write_file to overwrite.\n\
+               file and copy the EXACT text. After 2 failures, use write_file to overwrite. \
+               If stuck on one approach for 3+ iterations, switch strategies entirely.\n\
              - **Track progress.** For multi-step tasks, use todo_write to maintain a checklist.\n\
-             - **Externalize state.** For complex tasks, write plans and notes to /tmp files \
-               so you can recover context after compaction.\n\
+             - **Externalize state.** Always write your plan to /tmp/.ninja_plan.md before editing. \
+               After context compaction, re-read it to stay on track.\n\
              - **Use tests.** If tests exist, run them to verify. If a test patch is provided, \
                apply it first, then implement to pass the tests.\n\
              - **Don't give up.** If stuck on an approach, try alternatives. If an edit keeps \
@@ -1825,7 +1836,8 @@ print(json.dumps(result))
             role: "user".to_string(),
             content: MessageContent::Text(format!(
                 "[SYSTEM] The conversation has been compacted to save context space.\n\n{}{}\n\n\
-                Continue working on the task. Review your deliverables checklist and complete any remaining changes.",
+                Continue working on the task. If you wrote a plan to /tmp/.ninja_plan.md, re-read it now. \
+                Check your todo list and complete any remaining changes.",
                 summary, git_diff_info
             )),
         });
