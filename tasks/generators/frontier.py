@@ -27,7 +27,7 @@ class FrontierGenerator(TaskGenerator):
     def category(self) -> TaskCategory:
         return TaskCategory.DIAGNOSTIC
 
-    def generate(self, count: int = 14, difficulty: str = "hard") -> list[Task]:
+    def generate(self, count: int = 15, difficulty: str = "hard") -> list[Task]:
         generators = [
             self._adversarial_code_review,
             self._incomplete_spec_implementation,
@@ -43,6 +43,7 @@ class FrontierGenerator(TaskGenerator):
             self._red_herring_backtrack,
             self._state_machine_protocol,
             self._large_file_plugin_registry,
+            self._symptom_driven_debug,
         ]
 
         tasks = []
@@ -6214,4 +6215,664 @@ print('CACHE_OK')
             ],
             source="frontier_generator",
             estimated_minutes=12,
+        )
+
+    def _symptom_driven_debug(self, difficulty: str) -> Task:
+        """Debug from symptoms, not instructions.
+
+        The agent gets a codebase with a failing test and must trace from
+        the symptom (wrong config value) to the root cause (isinstance check
+        doesn't match ConfigSection subclass). The fix is 1 line, but
+        FINDING it requires understanding 3-file interaction.
+
+        Tests Claude-like reasoning: hypothesis formation, systematic
+        elimination, reading code to understand data flow.
+        """
+        config_section_py = textwrap.dedent('''\
+            """Configuration section — a dict-like container with dot access.
+
+            Provides attribute-style access to configuration values while
+            maintaining dict compatibility for serialization.
+            """
+            from collections.abc import Mapping
+
+
+            class ConfigSection(Mapping):
+                """A configuration section that supports both dict and attribute access.
+
+                Used internally by the config system to provide a clean API:
+                    config.database.host  (attribute access)
+                    config["database"]["host"]  (dict access)
+
+                ConfigSection wraps a plain dict but provides additional features:
+                - Dot notation access
+                - Default values
+                - Type coercion helpers
+                - Nested section support
+                """
+
+                def __init__(self, data=None, name="root"):
+                    self._data = {}
+                    self._name = name
+                    if data:
+                        for key, value in data.items():
+                            if isinstance(value, dict):
+                                self._data[key] = ConfigSection(value, name=f"{name}.{key}")
+                            else:
+                                self._data[key] = value
+
+                def __getattr__(self, name):
+                    if name.startswith('_'):
+                        raise AttributeError(name)
+                    try:
+                        return self._data[name]
+                    except KeyError:
+                        raise AttributeError(
+                            f"Config section '{self._name}' has no key '{name}'"
+                        )
+
+                def __getitem__(self, key):
+                    return self._data[key]
+
+                def __contains__(self, key):
+                    return key in self._data
+
+                def __iter__(self):
+                    return iter(self._data)
+
+                def __len__(self):
+                    return len(self._data)
+
+                def get(self, key, default=None):
+                    """Get a value with optional default."""
+                    return self._data.get(key, default)
+
+                def get_int(self, key, default=0):
+                    """Get a value as integer."""
+                    val = self._data.get(key, default)
+                    return int(val) if val is not None else default
+
+                def get_bool(self, key, default=False):
+                    """Get a value as boolean."""
+                    val = self._data.get(key, default)
+                    if isinstance(val, bool):
+                        return val
+                    if isinstance(val, str):
+                        return val.lower() in ('true', '1', 'yes')
+                    return bool(val)
+
+                def get_list(self, key, default=None):
+                    """Get a value as list (splits strings on comma)."""
+                    val = self._data.get(key, default)
+                    if val is None:
+                        return default or []
+                    if isinstance(val, str):
+                        return [v.strip() for v in val.split(',')]
+                    if isinstance(val, list):
+                        return val
+                    return [val]
+
+                def to_dict(self):
+                    """Convert back to a plain dict (recursive)."""
+                    result = {}
+                    for key, value in self._data.items():
+                        if isinstance(value, ConfigSection):
+                            result[key] = value.to_dict()
+                        else:
+                            result[key] = value
+                    return result
+
+                def keys(self):
+                    return self._data.keys()
+
+                def values(self):
+                    return self._data.values()
+
+                def items(self):
+                    return self._data.items()
+
+                def __repr__(self):
+                    return f"<ConfigSection:{self._name} keys={list(self._data.keys())}>"
+        ''')
+
+        merger_py = textwrap.dedent('''\
+            """Configuration merger — combines multiple config sources.
+
+            Handles deep merging of configuration dicts with support for:
+            - Override precedence (later sources override earlier ones)
+            - Deep merging of nested dicts
+            - List append vs replace strategies
+            - Environment variable overrides
+            """
+            import os
+            import logging
+            from typing import Any, Dict, List, Optional
+
+            logger = logging.getLogger(__name__)
+
+
+            class MergeStrategy:
+                """Controls how values are merged."""
+                REPLACE = "replace"       # Later value replaces earlier
+                DEEP_MERGE = "deep_merge"  # Recursively merge dicts
+                APPEND = "append"         # Append lists together
+
+
+            def deep_merge(base: Dict, override: Dict,
+                           list_strategy: str = MergeStrategy.REPLACE) -> Dict:
+                """Deep merge override into base.
+
+                For nested dicts, recursively merge rather than replace.
+                For other types, override replaces base.
+
+                Args:
+                    base: Base configuration dict
+                    override: Override values to merge in
+                    list_strategy: How to handle list values
+
+                Returns:
+                    New dict with merged values
+                """
+                result = dict(base)
+
+                for key, value in override.items():
+                    if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                        # Both are dicts — recursively merge
+                        result[key] = deep_merge(result[key], value, list_strategy)
+                    elif (key in result and isinstance(result[key], list)
+                          and isinstance(value, list)
+                          and list_strategy == MergeStrategy.APPEND):
+                        # Both are lists and strategy is append
+                        result[key] = result[key] + value
+                    else:
+                        # Override replaces base
+                        result[key] = value
+
+                return result
+
+
+            def merge_configs(*sources: Dict,
+                              list_strategy: str = MergeStrategy.REPLACE) -> Dict:
+                """Merge multiple config dicts in order.
+
+                Later sources take precedence over earlier ones.
+                Nested dicts are deep-merged.
+
+                Args:
+                    *sources: Config dicts in precedence order (first = lowest)
+                    list_strategy: How to handle list merges
+
+                Returns:
+                    Merged configuration dict
+                """
+                if not sources:
+                    return {}
+
+                result = dict(sources[0])
+                for source in sources[1:]:
+                    result = deep_merge(result, source, list_strategy)
+
+                return result
+
+
+            def load_env_overrides(config: Dict, prefix: str = "APP") -> Dict:
+                """Apply environment variable overrides to a config dict.
+
+                Environment variables are mapped using the prefix and double
+                underscores for nesting:
+                    APP_DATABASE__HOST -> config["database"]["host"]
+                    APP_DATABASE__PORT -> config["database"]["port"]
+
+                Args:
+                    config: Base config to override
+                    prefix: Environment variable prefix
+
+                Returns:
+                    Config with env overrides applied
+                """
+                overrides = {}
+                env_prefix = f"{prefix}_"
+
+                for key, value in os.environ.items():
+                    if not key.startswith(env_prefix):
+                        continue
+                    # Strip prefix and split on double underscore
+                    path = key[len(env_prefix):].lower().split("__")
+                    # Build nested dict
+                    current = overrides
+                    for part in path[:-1]:
+                        if part not in current:
+                            current[part] = {}
+                        current = current[part]
+                    # Try type coercion
+                    current[path[-1]] = _coerce_env_value(value)
+
+                if overrides:
+                    config = deep_merge(config, overrides)
+                    logger.info(f"Applied {len(overrides)} env overrides")
+
+                return config
+
+
+            def _coerce_env_value(value: str) -> Any:
+                """Try to coerce an environment variable string to a Python type."""
+                # Boolean
+                if value.lower() in ('true', 'yes', '1'):
+                    return True
+                if value.lower() in ('false', 'no', '0'):
+                    return False
+                # Integer
+                try:
+                    return int(value)
+                except ValueError:
+                    pass
+                # Float
+                try:
+                    return float(value)
+                except ValueError:
+                    pass
+                # String
+                return value
+        ''')
+
+        loader_py = textwrap.dedent('''\
+            """Configuration loader — reads configs from files and builds ConfigSection.
+
+            Coordinates loading from defaults, files, and environment overrides,
+            then wraps everything in ConfigSection for easy access.
+            """
+            import json
+            import logging
+            from typing import Any, Dict, List, Optional
+            from .section import ConfigSection
+            from .merger import merge_configs, load_env_overrides
+
+            logger = logging.getLogger(__name__)
+
+
+            # Application defaults
+            DEFAULTS = {
+                "app": {
+                    "name": "myapp",
+                    "debug": False,
+                    "version": "1.0.0",
+                },
+                "database": {
+                    "host": "localhost",
+                    "port": 5432,
+                    "name": "myapp_db",
+                    "pool_size": 5,
+                    "pool_timeout": 30,
+                    "ssl": False,
+                },
+                "cache": {
+                    "backend": "memory",
+                    "ttl": 300,
+                    "max_size": 1000,
+                    "prefix": "myapp",
+                },
+                "logging": {
+                    "level": "INFO",
+                    "format": "%(asctime)s %(levelname)s %(message)s",
+                    "file": None,
+                },
+                "server": {
+                    "host": "0.0.0.0",
+                    "port": 8000,
+                    "workers": 4,
+                    "keepalive": 65,
+                },
+            }
+
+
+            class ConfigLoader:
+                """Loads and manages application configuration.
+
+                Combines multiple config sources in order:
+                1. Built-in defaults
+                2. Config file (JSON)
+                3. Environment variable overrides
+
+                Usage:
+                    loader = ConfigLoader()
+                    loader.load_from_dict({"database": {"pool_size": 20}})
+                    config = loader.build()
+                    print(config.database.pool_size)  # 20
+                """
+
+                def __init__(self, defaults: Optional[Dict] = None, env_prefix: str = "APP"):
+                    self._defaults = defaults or dict(DEFAULTS)
+                    self._overrides: List[Dict] = []
+                    self._env_prefix = env_prefix
+                    self._built = False
+                    self._config: Optional[ConfigSection] = None
+
+                def load_from_dict(self, overrides: Dict):
+                    """Add a dict of overrides."""
+                    self._overrides.append(overrides)
+                    self._built = False  # invalidate cache
+
+                def load_from_json(self, path: str):
+                    """Load overrides from a JSON file."""
+                    try:
+                        with open(path) as f:
+                            data = json.load(f)
+                        self._overrides.append(data)
+                        self._built = False
+                        logger.info(f"Loaded config from {path}")
+                    except FileNotFoundError:
+                        logger.warning(f"Config file not found: {path}")
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Invalid JSON in {path}: {e}")
+
+                def build(self) -> ConfigSection:
+                    """Build the final configuration.
+
+                    Merges defaults, overrides, and env vars, then wraps
+                    in ConfigSection for attribute-style access.
+                    """
+                    if self._built and self._config is not None:
+                        return self._config
+
+                    # Start from defaults, layer in each override
+                    merged = dict(self._defaults)
+                    for override in self._overrides:
+                        merged.update(override)
+
+                    # Apply environment overrides
+                    merged = load_env_overrides(merged, self._env_prefix)
+
+                    # Wrap in ConfigSection
+                    self._config = ConfigSection(merged)
+                    self._built = True
+                    return self._config
+
+                def get_flat(self, dotted_key: str, default=None):
+                    """Get a config value by dotted key path.
+
+                    Example: get_flat("database.pool_size") returns the pool_size value.
+                    """
+                    config = self.build()
+                    parts = dotted_key.split(".")
+                    current = config
+                    for part in parts:
+                        if isinstance(current, ConfigSection):
+                            current = current.get(part)
+                        elif isinstance(current, dict):
+                            current = current.get(part)
+                        else:
+                            return default
+                        if current is None:
+                            return default
+                    return current
+
+                def reset(self):
+                    """Clear all overrides and rebuild."""
+                    self._overrides.clear()
+                    self._built = False
+                    self._config = None
+        ''')
+
+        init_py = '"""Configuration system with deep merging and dot-access."""\nfrom .section import ConfigSection\nfrom .merger import deep_merge, merge_configs\nfrom .loader import ConfigLoader\n'
+
+        test_py = textwrap.dedent('''\
+            """Tests for the configuration system.
+
+            BUG REPORT: test_override_preserves_other_keys,
+            test_deep_override_via_loader, and test_loader_get_flat are failing!
+
+            When overriding a specific nested key (e.g., database.pool_size = 20),
+            it SHOULD preserve other keys in the same section (e.g., database.host).
+            But instead, after loading an override, the other keys in the same section
+            are getting their DEFAULT values instead of staying consistent.
+
+            Specifically:
+            - loader.load_from_dict({"database": {"pool_size": 20}})
+            - config = loader.build()
+            - config.database.pool_size is correctly 20
+            - BUT config.database.host is MISSING or going back to default
+
+            This started happening after ConfigSection was refactored from dict
+            to Mapping. The deep merge in merger.py seems to work correctly on
+            plain dicts, so the issue might be in how ConfigSection interacts
+            with the merge logic.
+
+            Run: python3 tests/test_config.py
+            """
+            import sys, os
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+            from configsys.section import ConfigSection
+            from configsys.merger import deep_merge, merge_configs, MergeStrategy
+            from configsys.loader import ConfigLoader
+
+
+            # ===== ConfigSection tests =====
+
+            def test_section_basic_access():
+                """Test basic attribute and dict access."""
+                section = ConfigSection({"host": "localhost", "port": 5432})
+                assert section.host == "localhost"
+                assert section["port"] == 5432
+                assert section.get("host") == "localhost"
+                assert section.get("missing", "default") == "default"
+
+            def test_section_nested():
+                """Test nested sections."""
+                section = ConfigSection({
+                    "database": {"host": "db.local", "port": 5432}
+                })
+                assert isinstance(section.database, ConfigSection)
+                assert section.database.host == "db.local"
+                assert section.database.port == 5432
+
+            def test_section_to_dict():
+                data = {"a": 1, "b": {"c": 3}}
+                section = ConfigSection(data)
+                result = section.to_dict()
+                assert result == data
+
+            def test_section_type_helpers():
+                section = ConfigSection({
+                    "count": "42",
+                    "enabled": "true",
+                    "tags": "a, b, c",
+                })
+                assert section.get_int("count") == 42
+                assert section.get_bool("enabled") is True
+                assert section.get_list("tags") == ["a", "b", "c"]
+
+
+            # ===== Merger tests =====
+
+            def test_deep_merge_flat():
+                base = {"a": 1, "b": 2}
+                override = {"b": 3, "c": 4}
+                result = deep_merge(base, override)
+                assert result == {"a": 1, "b": 3, "c": 4}
+
+            def test_deep_merge_nested():
+                base = {"db": {"host": "localhost", "port": 5432}}
+                override = {"db": {"port": 5433}}
+                result = deep_merge(base, override)
+                assert result == {"db": {"host": "localhost", "port": 5433}}
+
+            def test_deep_merge_new_nested_key():
+                base = {"db": {"host": "localhost"}}
+                override = {"db": {"ssl": True}}
+                result = deep_merge(base, override)
+                assert result == {"db": {"host": "localhost", "ssl": True}}
+
+            def test_merge_configs_multiple():
+                defaults = {"a": 1, "b": {"x": 10}}
+                file_cfg = {"b": {"y": 20}}
+                env_cfg = {"b": {"x": 30}}
+                result = merge_configs(defaults, file_cfg, env_cfg)
+                assert result == {"a": 1, "b": {"x": 30, "y": 20}}
+
+            def test_list_append_strategy():
+                base = {"tags": ["a", "b"]}
+                override = {"tags": ["c"]}
+                result = deep_merge(base, override, MergeStrategy.APPEND)
+                assert result == {"tags": ["a", "b", "c"]}
+
+
+            # ===== Loader tests =====
+
+            def test_loader_defaults():
+                loader = ConfigLoader()
+                config = loader.build()
+                assert config.database.host == "localhost"
+                assert config.database.port == 5432
+                assert config.database.pool_size == 5
+
+            def test_loader_override_single_key():
+                loader = ConfigLoader()
+                loader.load_from_dict({"database": {"pool_size": 20}})
+                config = loader.build()
+                assert config.database.pool_size == 20
+
+            def test_override_preserves_other_keys():
+                """FAILING: After overriding pool_size, other database keys should survive."""
+                loader = ConfigLoader()
+                loader.load_from_dict({"database": {"pool_size": 20}})
+                config = loader.build()
+
+                # The override should only change pool_size
+                assert config.database.pool_size == 20
+                # These should still be their defaults:
+                assert config.database.host == "localhost"
+                assert config.database.port == 5432
+                assert config.database.name == "myapp_db"
+                assert config.database.ssl is False
+
+            def test_deep_override_via_loader():
+                """FAILING: Multiple overrides should all be preserved."""
+                loader = ConfigLoader()
+                loader.load_from_dict({"database": {"pool_size": 20}})
+                loader.load_from_dict({"database": {"ssl": True}})
+                config = loader.build()
+
+                # Both overrides should be applied
+                assert config.database.pool_size == 20
+                assert config.database.ssl is True
+                # Defaults should survive
+                assert config.database.host == "localhost"
+                assert config.database.port == 5432
+
+            def test_loader_multiple_sections():
+                loader = ConfigLoader()
+                loader.load_from_dict({
+                    "database": {"pool_size": 20},
+                    "cache": {"ttl": 600},
+                })
+                config = loader.build()
+                assert config.database.pool_size == 20
+                assert config.cache.ttl == 600
+                # Other defaults preserved
+                assert config.server.port == 8000
+
+            def test_loader_get_flat():
+                loader = ConfigLoader()
+                loader.load_from_dict({"database": {"pool_size": 20}})
+                assert loader.get_flat("database.pool_size") == 20
+                assert loader.get_flat("database.host") == "localhost"
+                assert loader.get_flat("nonexistent.key", "fallback") == "fallback"
+
+            def test_loader_reset():
+                loader = ConfigLoader()
+                loader.load_from_dict({"database": {"pool_size": 20}})
+                config = loader.build()
+                assert config.database.pool_size == 20
+
+                loader.reset()
+                config = loader.build()
+                assert config.database.pool_size == 5  # back to default
+
+
+            if __name__ == "__main__":
+                test_fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+                passed = 0
+                failed = 0
+                for fn in test_fns:
+                    try:
+                        fn()
+                        print(f"  PASS: {fn.__name__}")
+                        passed += 1
+                    except Exception as e:
+                        print(f"  FAIL: {fn.__name__}: {e}")
+                        failed += 1
+                print(f"\\n{passed} passed, {failed} failed")
+                if failed:
+                    print("SOME TESTS FAILED")
+                    exit(1)
+                else:
+                    print("ALL TESTS PASSED")
+        ''')
+
+        files = {
+            "configsys/__init__.py": init_py,
+            "configsys/section.py": config_section_py,
+            "configsys/merger.py": merger_py,
+            "configsys/loader.py": loader_py,
+            "tests/test_config.py": test_py,
+        }
+
+        eval_script = textwrap.dedent('''\
+            #!/bin/bash
+            cd "$WORKDIR"
+            OUTPUT=$(python3 tests/test_config.py 2>&1)
+            echo "$OUTPUT"
+            if echo "$OUTPUT" | grep -q "ALL TESTS PASSED"; then
+                exit 0
+            else
+                exit 1
+            fi
+        ''')
+
+        return Task(
+            task_id="frontier_symptom_debug",
+            category=TaskCategory.DIAGNOSTIC,
+            title="Debug config system: nested overrides silently dropped",
+            difficulty="hard",
+            goal=textwrap.dedent("""\
+                Fix a bug in the configuration system where nested config overrides
+                are silently lost.
+
+                ## Symptom
+                When you override a specific key in a nested config section (e.g.,
+                `database.pool_size = 20`), the override is applied BUT other keys
+                in the same section (like `database.host`) lose their default values.
+
+                Three tests are failing: `test_override_preserves_other_keys`,
+                `test_deep_override_via_loader`, and `test_loader_get_flat`.
+
+                ## What the code does
+                - `configsys/merger.py`: `deep_merge()` recursively merges dicts
+                - `configsys/loader.py`: `ConfigLoader.build()` merges defaults with overrides
+                - `configsys/section.py`: `ConfigSection` wraps merged data for dot access
+
+                ## Hint
+                The `merger.py` module has a correct `deep_merge()` function.
+                But is it actually being used everywhere it should be?
+                Trace the data flow from `load_from_dict()` through `build()`
+                to see how overrides are actually combined with defaults.
+
+                Run tests: `python3 tests/test_config.py`
+            """),
+            hints=None,
+            environment=EnvironmentSetup(seed_files=files),
+            ground_truth="The bug is in loader.py build(): it uses merged.update(override) which does SHALLOW merge — replacing entire nested dicts instead of merging into them. When overriding {'database': {'pool_size': 20}}, the update replaces the entire 'database' section. Fix: use merge_configs() (deep merge) from merger.py instead of dict.update().",
+            eval_spec=EvalSpec(
+                method=EvalMethod.SCRIPT_CHECK,
+                check_script_content=eval_script,
+            ),
+            capabilities=[
+                Capability.CODE_READING,
+                Capability.CODE_EDITING,
+                Capability.ERROR_INTERPRETATION,
+                Capability.DECOMPOSITION,
+            ],
+            source="frontier_generator",
+            estimated_minutes=8,
         )
