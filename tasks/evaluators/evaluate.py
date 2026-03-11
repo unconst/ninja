@@ -244,7 +244,7 @@ def _eval_script_check(spec: EvalSpec, workdir: str) -> dict:
             passed = proc.returncode == 0
             return {
                 "score": 1.0 if passed else 0.0,
-                "details": proc.stdout[:500] if passed else proc.stderr[:500],
+                "details": proc.stdout[:500] if passed else (proc.stdout[:500] or proc.stderr[:500]),
                 "checks": [{"name": "script_check", "passed": passed, "detail": f"exit {proc.returncode}"}]
             }
         except subprocess.TimeoutExpired:
