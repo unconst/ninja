@@ -27,7 +27,7 @@ class FrontierGenerator(TaskGenerator):
     def category(self) -> TaskCategory:
         return TaskCategory.DIAGNOSTIC
 
-    def generate(self, count: int = 11, difficulty: str = "hard") -> list[Task]:
+    def generate(self, count: int = 13, difficulty: str = "hard") -> list[Task]:
         generators = [
             self._adversarial_code_review,
             self._incomplete_spec_implementation,
@@ -40,6 +40,8 @@ class FrontierGenerator(TaskGenerator):
             self._type_change_propagation,
             self._hidden_dependency_chain,
             self._visitor_pattern_extension,
+            self._red_herring_backtrack,
+            self._state_machine_protocol,
         ]
 
         tasks = []
@@ -4254,6 +4256,700 @@ print('CACHE_OK')
                 Capability.CODE_EDITING,
                 Capability.MULTI_FILE_REASONING,
                 Capability.CODE_READING,
+            ],
+            source="frontier_generator",
+            estimated_minutes=10,
+        )
+
+    def _red_herring_backtrack(self, difficulty: str) -> Task:
+        """The obvious fix makes things worse. Agent must backtrack.
+
+        A caching layer has a bug. The obvious fix (clearing cache on write)
+        causes test_performance to fail. The real fix is in the cache key
+        generation — cache keys don't include the query parameters, causing
+        stale cache hits. The agent must:
+        1. Try the obvious fix (cache invalidation)
+        2. See it breaks performance tests
+        3. Realize the root cause is elsewhere
+        4. Fix the cache key generation instead
+        """
+        cache_py = textwrap.dedent('''\
+            """Simple caching layer for expensive computations."""
+            import hashlib
+            import time
+
+
+            class Cache:
+                def __init__(self, max_size=100, ttl=300):
+                    self._store = {}
+                    self._timestamps = {}
+                    self._max_size = max_size
+                    self._ttl = ttl
+                    self._hits = 0
+                    self._misses = 0
+
+                def _make_key(self, func_name, args):
+                    """Generate cache key from function name and arguments.
+
+                    BUG: Only uses func_name and positional args, ignoring kwargs.
+                    This means get_user("alice", role="admin") and
+                    get_user("alice", role="viewer") return the same cached result.
+                    """
+                    key_data = f"{func_name}:{args}"
+                    return hashlib.md5(key_data.encode()).hexdigest()
+
+                def get(self, func_name, args, kwargs=None):
+                    """Get cached result if available and not expired."""
+                    key = self._make_key(func_name, args)
+                    if key in self._store:
+                        if time.time() - self._timestamps[key] < self._ttl:
+                            self._hits += 1
+                            return self._store[key], True
+                        else:
+                            del self._store[key]
+                            del self._timestamps[key]
+                    self._misses += 1
+                    return None, False
+
+                def put(self, func_name, args, kwargs=None, result=None):
+                    """Store result in cache."""
+                    if len(self._store) >= self._max_size:
+                        self._evict_oldest()
+                    key = self._make_key(func_name, args)
+                    self._store[key] = result
+                    self._timestamps[key] = time.time()
+
+                def invalidate(self, func_name=None):
+                    """Invalidate cache entries."""
+                    if func_name is None:
+                        self._store.clear()
+                        self._timestamps.clear()
+                    else:
+                        to_remove = [k for k in self._store if k.startswith(func_name)]
+                        for k in to_remove:
+                            del self._store[k]
+                            del self._timestamps[k]
+
+                def _evict_oldest(self):
+                    if not self._timestamps:
+                        return
+                    oldest = min(self._timestamps, key=self._timestamps.get)
+                    del self._store[oldest]
+                    del self._timestamps[oldest]
+
+                @property
+                def hit_rate(self):
+                    total = self._hits + self._misses
+                    return self._hits / total if total > 0 else 0.0
+
+                @property
+                def size(self):
+                    return len(self._store)
+        ''')
+
+        service_py = textwrap.dedent('''\
+            """User service with caching."""
+            from .cache import Cache
+
+            # Simulated database
+            _db = {
+                "alice": {"name": "Alice", "email": "alice@example.com",
+                          "roles": {"admin": {"level": 10}, "viewer": {"level": 1}}},
+                "bob": {"name": "Bob", "email": "bob@example.com",
+                        "roles": {"viewer": {"level": 1}}},
+                "charlie": {"name": "Charlie", "email": "charlie@example.com",
+                            "roles": {"editor": {"level": 5}, "viewer": {"level": 1}}},
+            }
+
+            cache = Cache(max_size=50, ttl=60)
+
+
+            def get_user(username, role=None):
+                """Get user data, optionally filtered by role.
+
+                If role is specified, return only that role's data.
+                Uses caching to avoid repeated DB lookups.
+                """
+                result, hit = cache.get("get_user", (username,), {"role": role})
+                if hit:
+                    return result
+
+                user = _db.get(username)
+                if user is None:
+                    cache.put("get_user", (username,), {"role": role}, result=None)
+                    return None
+
+                if role:
+                    role_data = user["roles"].get(role)
+                    if role_data is None:
+                        result = None
+                    else:
+                        result = {"name": user["name"], "role": role,
+                                  "level": role_data["level"]}
+                else:
+                    result = {"name": user["name"], "email": user["email"],
+                              "roles": list(user["roles"].keys())}
+
+                cache.put("get_user", (username,), {"role": role}, result=result)
+                return result
+
+
+            def get_user_count():
+                """Get total number of users. Cached."""
+                result, hit = cache.get("get_user_count", ())
+                if hit:
+                    return result
+                count = len(_db)
+                cache.put("get_user_count", (), result=count)
+                return count
+
+
+            def clear_cache():
+                """Clear all cached data."""
+                cache.invalidate()
+        ''')
+
+        init_py = '"""User service package."""\\n'
+
+        test_py = textwrap.dedent('''\
+            """Tests for the user service.
+
+            The bug: same-user queries with different kwargs return stale results
+            because the cache key doesn't include kwargs.
+
+            DO NOT fix this by disabling caching or always invalidating.
+            The fix should be in cache key generation — include kwargs in the key.
+            """
+            import sys, os
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from userservice.service import get_user, get_user_count, clear_cache, cache
+
+
+            def test_basic_user_lookup():
+                clear_cache()
+                user = get_user("alice")
+                assert user is not None
+                assert user["name"] == "Alice"
+
+
+            def test_user_not_found():
+                clear_cache()
+                user = get_user("nonexistent")
+                assert user is None
+
+
+            def test_user_with_role():
+                clear_cache()
+                user = get_user("alice", role="admin")
+                assert user is not None
+                assert user["role"] == "admin"
+                assert user["level"] == 10
+
+
+            def test_different_roles_different_results():
+                """This is the key bug test.
+
+                get_user("alice", role="admin") should return admin data.
+                get_user("alice", role="viewer") should return viewer data.
+                But because cache key ignores kwargs, the second call returns
+                cached admin data instead of viewer data.
+                """
+                clear_cache()
+                admin = get_user("alice", role="admin")
+                viewer = get_user("alice", role="viewer")
+
+                assert admin["role"] == "admin"
+                assert admin["level"] == 10
+                assert viewer["role"] == "viewer"
+                assert viewer["level"] == 1
+
+
+            def test_no_role_vs_role():
+                """Full user vs role-specific should be different."""
+                clear_cache()
+                full = get_user("alice")
+                admin = get_user("alice", role="admin")
+
+                assert "email" in full  # full user has email
+                assert "role" in admin  # role-specific has role
+                assert full != admin
+
+
+            def test_caching_works():
+                """Caching must still function — hit rate should be > 0."""
+                clear_cache()
+                get_user("alice")
+                get_user("alice")  # should be a cache hit
+
+                assert cache.hit_rate > 0, "Cache should have hits after repeated calls"
+
+
+            def test_performance_cache_hit_rate():
+                """After multiple calls, cache should be effective."""
+                clear_cache()
+                # Make several calls
+                for _ in range(5):
+                    get_user("alice", role="admin")
+                    get_user("bob", role="viewer")
+                    get_user_count()
+
+                # Cache should have a decent hit rate
+                assert cache.hit_rate >= 0.5, f"Cache hit rate too low: {cache.hit_rate:.2f}"
+
+
+            def test_different_users_different_results():
+                clear_cache()
+                alice = get_user("alice")
+                bob = get_user("bob")
+                assert alice["name"] == "Alice"
+                assert bob["name"] == "Bob"
+
+
+            def test_user_count():
+                clear_cache()
+                assert get_user_count() == 3
+
+
+            if __name__ == "__main__":
+                test_fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+                passed = 0
+                failed = 0
+                for fn in test_fns:
+                    try:
+                        fn()
+                        print(f"  PASS: {fn.__name__}")
+                        passed += 1
+                    except Exception as e:
+                        print(f"  FAIL: {fn.__name__}: {e}")
+                        failed += 1
+                print(f"\\n{passed} passed, {failed} failed")
+                if failed:
+                    print("SOME TESTS FAILED")
+                    exit(1)
+                else:
+                    print("ALL TESTS PASSED")
+        ''')
+
+        files = {
+            "userservice/__init__.py": "\"\"\"User service package.\"\"\"\n",
+            "userservice/cache.py": cache_py,
+            "userservice/service.py": service_py,
+            "tests/test_service.py": test_py,
+        }
+
+        eval_script = textwrap.dedent('''\
+            #!/bin/bash
+            cd "$WORKDIR"
+            OUTPUT=$(python3 tests/test_service.py 2>&1)
+            echo "$OUTPUT"
+            if echo "$OUTPUT" | grep -q "ALL TESTS PASSED"; then
+                exit 0
+            else
+                exit 1
+            fi
+        ''')
+
+        return Task(
+            task_id="frontier_red_herring",
+            category=TaskCategory.DIAGNOSTIC,
+            title="Fix stale cache bug — obvious fix breaks performance tests",
+            difficulty="hard",
+            goal=textwrap.dedent("""\
+                The user service has a caching bug: queries with different keyword
+                arguments return stale cached results.
+
+                For example:
+                - get_user("alice", role="admin") returns admin data
+                - get_user("alice", role="viewer") ALSO returns admin data (wrong!)
+
+                Fix the bug so all tests pass. The caching must still work —
+                test_performance_cache_hit_rate verifies the cache is effective.
+
+                Run tests: `python3 tests/test_service.py`
+            """),
+            hints=None,
+            environment=EnvironmentSetup(seed_files=files),
+            ground_truth="The bug is in Cache._make_key(): it only uses func_name and args, ignoring kwargs. Fix by including kwargs in the key: key_data = f'{func_name}:{args}:{sorted(kwargs.items()) if kwargs else ''}'",
+            eval_spec=EvalSpec(
+                method=EvalMethod.SCRIPT_CHECK,
+                check_script_content=eval_script,
+            ),
+            capabilities=[
+                Capability.CODE_EDITING,
+                Capability.CODE_READING,
+                Capability.ROOT_CAUSE_ANALYSIS,
+            ],
+            source="frontier_generator",
+            estimated_minutes=8,
+        )
+
+    def _state_machine_protocol(self, difficulty: str) -> Task:
+        """Implement a state machine protocol handler with strict transition rules.
+
+        Key difficulty: The agent must understand state machine semantics.
+        Invalid transitions must raise errors. The tests verify both
+        valid paths and that invalid transitions are properly rejected.
+        This tests abstract reasoning about state and invariants.
+        """
+        machine_py = textwrap.dedent('''\
+            """Generic state machine framework."""
+
+
+            class InvalidTransition(Exception):
+                """Raised when an invalid state transition is attempted."""
+                def __init__(self, current_state, event):
+                    self.current_state = current_state
+                    self.event = event
+                    super().__init__(
+                        f"Cannot handle event '{event}' in state '{current_state}'"
+                    )
+
+
+            class StateMachine:
+                """A generic state machine with strict transition enforcement."""
+
+                def __init__(self, initial_state, transitions, callbacks=None):
+                    """Initialize state machine.
+
+                    Args:
+                        initial_state: Starting state name
+                        transitions: Dict mapping (state, event) -> new_state
+                        callbacks: Optional dict mapping state -> callable(machine)
+                    """
+                    self.state = initial_state
+                    self.transitions = transitions
+                    self.callbacks = callbacks or {}
+                    self.history = [initial_state]
+
+                def handle(self, event):
+                    """Process an event. Raises InvalidTransition if not allowed."""
+                    key = (self.state, event)
+                    if key not in self.transitions:
+                        raise InvalidTransition(self.state, event)
+                    new_state = self.transitions[key]
+                    old_state = self.state
+                    self.state = new_state
+                    self.history.append(new_state)
+                    if new_state in self.callbacks:
+                        self.callbacks[new_state](self)
+                    return old_state, new_state
+
+                def can_handle(self, event):
+                    """Check if an event can be handled in the current state."""
+                    return (self.state, event) in self.transitions
+
+                def available_events(self):
+                    """Return list of events that can be handled in current state."""
+                    return [event for (state, event) in self.transitions
+                            if state == self.state]
+        ''')
+
+        # The order processing protocol — agent must implement this
+        protocol_py = textwrap.dedent('''\
+            """Order processing protocol.
+
+            States: draft, submitted, validated, processing, shipped, delivered, cancelled, refunded
+            Events: submit, validate, reject, process, ship, deliver, cancel, refund, reopen
+
+            Transition rules:
+            - draft -> submitted (submit)
+            - submitted -> validated (validate)
+            - submitted -> draft (reject)
+            - validated -> processing (process)
+            - validated -> cancelled (cancel)
+            - processing -> shipped (ship)
+            - processing -> cancelled (cancel)
+            - shipped -> delivered (deliver)
+            - delivered -> refunded (refund)
+            - cancelled -> draft (reopen)
+
+            Additional rules (NOT in simple transitions):
+            - cancel from processing should trigger a refund_pending flag
+            - refund should only work within 30 days (check order.shipped_at)
+            - validate should verify order.total > 0 and order.items is not empty
+
+            TODO: Implement OrderProcessor class that wraps StateMachine
+            and enforces the business rules above.
+            """
+            from .machine import StateMachine, InvalidTransition
+            from datetime import datetime, timedelta
+
+
+            class OrderValidationError(Exception):
+                pass
+
+
+            class OrderProcessor:
+                """Processes orders through the state machine with business rules.
+
+                The agent must implement this class.
+                """
+                pass
+        ''')
+
+        init_py = '"""Order processing state machine."""\n'
+
+        test_py = textwrap.dedent('''\
+            """Tests for the order processing protocol.
+
+            These tests verify both the state transitions AND the business rules.
+            The agent must implement OrderProcessor to pass all tests.
+            """
+            import sys, os
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from orders.machine import StateMachine, InvalidTransition
+            from orders.protocol import OrderProcessor, OrderValidationError
+            from datetime import datetime, timedelta
+
+
+            def make_order(**kwargs):
+                """Helper to create order dicts."""
+                order = {
+                    "id": "ORD-001",
+                    "items": [{"name": "Widget", "price": 10, "qty": 2}],
+                    "total": 20.0,
+                    "created_at": datetime.now(),
+                    "shipped_at": None,
+                    "refund_pending": False,
+                }
+                order.update(kwargs)
+                return order
+
+
+            def test_happy_path():
+                """Full order lifecycle: draft -> submitted -> validated -> processing -> shipped -> delivered."""
+                order = make_order()
+                proc = OrderProcessor(order)
+                assert proc.state == "draft"
+
+                proc.submit()
+                assert proc.state == "submitted"
+
+                proc.validate()
+                assert proc.state == "validated"
+
+                proc.process()
+                assert proc.state == "processing"
+
+                proc.ship()
+                assert proc.state == "shipped"
+                assert order["shipped_at"] is not None
+
+                proc.deliver()
+                assert proc.state == "delivered"
+
+
+            def test_cancel_from_validated():
+                order = make_order()
+                proc = OrderProcessor(order)
+                proc.submit()
+                proc.validate()
+                proc.cancel()
+                assert proc.state == "cancelled"
+                assert not order["refund_pending"]
+
+
+            def test_cancel_from_processing_sets_refund_pending():
+                """Cancelling from processing state should set refund_pending flag."""
+                order = make_order()
+                proc = OrderProcessor(order)
+                proc.submit()
+                proc.validate()
+                proc.process()
+                proc.cancel()
+                assert proc.state == "cancelled"
+                assert order["refund_pending"] is True
+
+
+            def test_reject_returns_to_draft():
+                order = make_order()
+                proc = OrderProcessor(order)
+                proc.submit()
+                proc.reject()
+                assert proc.state == "draft"
+
+
+            def test_reopen_after_cancel():
+                order = make_order()
+                proc = OrderProcessor(order)
+                proc.submit()
+                proc.validate()
+                proc.cancel()
+                proc.reopen()
+                assert proc.state == "draft"
+
+
+            def test_invalid_transition_raises():
+                """Can't ship from draft."""
+                order = make_order()
+                proc = OrderProcessor(order)
+                try:
+                    proc.ship()
+                    assert False, "Should have raised InvalidTransition"
+                except InvalidTransition:
+                    pass
+
+
+            def test_validate_empty_order():
+                """Validation should reject orders with no items."""
+                order = make_order(items=[], total=0)
+                proc = OrderProcessor(order)
+                proc.submit()
+                try:
+                    proc.validate()
+                    assert False, "Should have raised OrderValidationError"
+                except OrderValidationError:
+                    pass
+                # State should NOT change on validation failure
+                assert proc.state == "submitted"
+
+
+            def test_validate_zero_total():
+                """Validation should reject orders with total <= 0."""
+                order = make_order(total=0)
+                proc = OrderProcessor(order)
+                proc.submit()
+                try:
+                    proc.validate()
+                    assert False, "Should have raised OrderValidationError"
+                except OrderValidationError:
+                    pass
+                assert proc.state == "submitted"
+
+
+            def test_refund_within_30_days():
+                order = make_order()
+                proc = OrderProcessor(order)
+                proc.submit()
+                proc.validate()
+                proc.process()
+                proc.ship()
+                proc.deliver()
+                # Refund within 30 days should work
+                proc.refund()
+                assert proc.state == "refunded"
+
+
+            def test_refund_after_30_days():
+                """Refund should fail if > 30 days since shipping."""
+                order = make_order()
+                proc = OrderProcessor(order)
+                proc.submit()
+                proc.validate()
+                proc.process()
+                proc.ship()
+                # Manually set shipped_at to 31 days ago
+                order["shipped_at"] = datetime.now() - timedelta(days=31)
+                proc.deliver()
+                try:
+                    proc.refund()
+                    assert False, "Should have raised OrderValidationError"
+                except OrderValidationError:
+                    pass
+                assert proc.state == "delivered"
+
+
+            def test_cannot_submit_twice():
+                order = make_order()
+                proc = OrderProcessor(order)
+                proc.submit()
+                try:
+                    proc.submit()
+                    assert False, "Should have raised InvalidTransition"
+                except InvalidTransition:
+                    pass
+
+
+            def test_history_tracking():
+                order = make_order()
+                proc = OrderProcessor(order)
+                proc.submit()
+                proc.validate()
+                proc.process()
+                assert proc.history == ["draft", "submitted", "validated", "processing"]
+
+
+            def test_available_events():
+                order = make_order()
+                proc = OrderProcessor(order)
+                events = proc.available_events()
+                assert "submit" in events
+                assert "ship" not in events
+
+
+            if __name__ == "__main__":
+                test_fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+                passed = 0
+                failed = 0
+                for fn in test_fns:
+                    try:
+                        fn()
+                        print(f"  PASS: {fn.__name__}")
+                        passed += 1
+                    except Exception as e:
+                        print(f"  FAIL: {fn.__name__}: {e}")
+                        failed += 1
+                print(f"\\n{passed} passed, {failed} failed")
+                if failed:
+                    print("SOME TESTS FAILED")
+                    exit(1)
+                else:
+                    print("ALL TESTS PASSED")
+        ''')
+
+        files = {
+            "orders/__init__.py": init_py,
+            "orders/machine.py": machine_py,
+            "orders/protocol.py": protocol_py,
+            "tests/test_orders.py": test_py,
+        }
+
+        eval_script = textwrap.dedent('''\
+            #!/bin/bash
+            cd "$WORKDIR"
+            OUTPUT=$(python3 tests/test_orders.py 2>&1)
+            echo "$OUTPUT"
+            if echo "$OUTPUT" | grep -q "ALL TESTS PASSED"; then
+                exit 0
+            else
+                exit 1
+            fi
+        ''')
+
+        return Task(
+            task_id="frontier_state_machine",
+            category=TaskCategory.DIAGNOSTIC,
+            title="Implement order processor with state machine + business rules",
+            difficulty="hard",
+            goal=textwrap.dedent("""\
+                Implement the `OrderProcessor` class in `orders/protocol.py`.
+                It should wrap the `StateMachine` from `orders/machine.py` and
+                enforce business rules for order processing.
+
+                The protocol defines states and transitions (see the docstring in
+                protocol.py). You need to:
+
+                1. Define the state machine transitions
+                2. Implement methods: submit, validate, reject, process, ship, deliver, cancel, refund, reopen
+                3. Enforce business rules:
+                   - validate: reject if total <= 0 or items is empty (raise OrderValidationError, don't change state)
+                   - cancel from processing: set order["refund_pending"] = True
+                   - ship: set order["shipped_at"] = datetime.now()
+                   - refund: only within 30 days of shipping (raise OrderValidationError if too late)
+
+                Run tests: `python3 tests/test_orders.py`
+            """),
+            hints=None,
+            environment=EnvironmentSetup(seed_files=files),
+            ground_truth="Implement OrderProcessor with StateMachine, defining all transitions. Methods call self.machine.handle(event) and apply business rules. validate() checks order before transitioning. cancel() checks if in processing to set refund_pending. refund() checks shipped_at timedelta.",
+            eval_spec=EvalSpec(
+                method=EvalMethod.SCRIPT_CHECK,
+                check_script_content=eval_script,
+            ),
+            capabilities=[
+                Capability.CODE_EDITING,
+                Capability.CODE_READING,
+                Capability.DECOMPOSITION,
             ],
             source="frontier_generator",
             estimated_minutes=10,

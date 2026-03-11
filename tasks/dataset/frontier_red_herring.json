@@ -1,0 +1,50 @@
+{
+  "task_id": "frontier_red_herring",
+  "category": "diagnostic",
+  "title": "Fix stale cache bug \u2014 obvious fix breaks performance tests",
+  "difficulty": "hard",
+  "goal": "The user service has a caching bug: queries with different keyword\narguments return stale cached results.\n\nFor example:\n- get_user(\"alice\", role=\"admin\") returns admin data\n- get_user(\"alice\", role=\"viewer\") ALSO returns admin data (wrong!)\n\nFix the bug so all tests pass. The caching must still work \u2014\ntest_performance_cache_hit_rate verifies the cache is effective.\n\nRun tests: `python3 tests/test_service.py`\n",
+  "hints": null,
+  "environment": {
+    "env_type": "empty",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "userservice/__init__.py": "\"\"\"User service package.\"\"\"\n",
+      "userservice/cache.py": "\"\"\"Simple caching layer for expensive computations.\"\"\"\nimport hashlib\nimport time\n\n\nclass Cache:\n    def __init__(self, max_size=100, ttl=300):\n        self._store = {}\n        self._timestamps = {}\n        self._max_size = max_size\n        self._ttl = ttl\n        self._hits = 0\n        self._misses = 0\n\n    def _make_key(self, func_name, args):\n        \"\"\"Generate cache key from function name and arguments.\n\n        BUG: Only uses func_name and positional args, ignoring kwargs.\n        This means get_user(\"alice\", role=\"admin\") and\n        get_user(\"alice\", role=\"viewer\") return the same cached result.\n        \"\"\"\n        key_data = f\"{func_name}:{args}\"\n        return hashlib.md5(key_data.encode()).hexdigest()\n\n    def get(self, func_name, args, kwargs=None):\n        \"\"\"Get cached result if available and not expired.\"\"\"\n        key = self._make_key(func_name, args)\n        if key in self._store:\n            if time.time() - self._timestamps[key] < self._ttl:\n                self._hits += 1\n                return self._store[key], True\n            else:\n                del self._store[key]\n                del self._timestamps[key]\n        self._misses += 1\n        return None, False\n\n    def put(self, func_name, args, kwargs=None, result=None):\n        \"\"\"Store result in cache.\"\"\"\n        if len(self._store) >= self._max_size:\n            self._evict_oldest()\n        key = self._make_key(func_name, args)\n        self._store[key] = result\n        self._timestamps[key] = time.time()\n\n    def invalidate(self, func_name=None):\n        \"\"\"Invalidate cache entries.\"\"\"\n        if func_name is None:\n            self._store.clear()\n            self._timestamps.clear()\n        else:\n            to_remove = [k for k in self._store if k.startswith(func_name)]\n            for k in to_remove:\n                del self._store[k]\n                del self._timestamps[k]\n\n    def _evict_oldest(self):\n        if not self._timestamps:\n            return\n        oldest = min(self._timestamps, key=self._timestamps.get)\n        del self._store[oldest]\n        del self._timestamps[oldest]\n\n    @property\n    def hit_rate(self):\n        total = self._hits + self._misses\n        return self._hits / total if total > 0 else 0.0\n\n    @property\n    def size(self):\n        return len(self._store)\n",
+      "userservice/service.py": "\"\"\"User service with caching.\"\"\"\nfrom .cache import Cache\n\n# Simulated database\n_db = {\n    \"alice\": {\"name\": \"Alice\", \"email\": \"alice@example.com\",\n              \"roles\": {\"admin\": {\"level\": 10}, \"viewer\": {\"level\": 1}}},\n    \"bob\": {\"name\": \"Bob\", \"email\": \"bob@example.com\",\n            \"roles\": {\"viewer\": {\"level\": 1}}},\n    \"charlie\": {\"name\": \"Charlie\", \"email\": \"charlie@example.com\",\n                \"roles\": {\"editor\": {\"level\": 5}, \"viewer\": {\"level\": 1}}},\n}\n\ncache = Cache(max_size=50, ttl=60)\n\n\ndef get_user(username, role=None):\n    \"\"\"Get user data, optionally filtered by role.\n\n    If role is specified, return only that role's data.\n    Uses caching to avoid repeated DB lookups.\n    \"\"\"\n    result, hit = cache.get(\"get_user\", (username,), {\"role\": role})\n    if hit:\n        return result\n\n    user = _db.get(username)\n    if user is None:\n        cache.put(\"get_user\", (username,), {\"role\": role}, result=None)\n        return None\n\n    if role:\n        role_data = user[\"roles\"].get(role)\n        if role_data is None:\n            result = None\n        else:\n            result = {\"name\": user[\"name\"], \"role\": role,\n                      \"level\": role_data[\"level\"]}\n    else:\n        result = {\"name\": user[\"name\"], \"email\": user[\"email\"],\n                  \"roles\": list(user[\"roles\"].keys())}\n\n    cache.put(\"get_user\", (username,), {\"role\": role}, result=result)\n    return result\n\n\ndef get_user_count():\n    \"\"\"Get total number of users. Cached.\"\"\"\n    result, hit = cache.get(\"get_user_count\", ())\n    if hit:\n        return result\n    count = len(_db)\n    cache.put(\"get_user_count\", (), result=count)\n    return count\n\n\ndef clear_cache():\n    \"\"\"Clear all cached data.\"\"\"\n    cache.invalidate()\n",
+      "tests/test_service.py": "\"\"\"Tests for the user service.\n\nThe bug: same-user queries with different kwargs return stale results\nbecause the cache key doesn't include kwargs.\n\nDO NOT fix this by disabling caching or always invalidating.\nThe fix should be in cache key generation \u2014 include kwargs in the key.\n\"\"\"\nimport sys, os\nsys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\nfrom userservice.service import get_user, get_user_count, clear_cache, cache\n\n\ndef test_basic_user_lookup():\n    clear_cache()\n    user = get_user(\"alice\")\n    assert user is not None\n    assert user[\"name\"] == \"Alice\"\n\n\ndef test_user_not_found():\n    clear_cache()\n    user = get_user(\"nonexistent\")\n    assert user is None\n\n\ndef test_user_with_role():\n    clear_cache()\n    user = get_user(\"alice\", role=\"admin\")\n    assert user is not None\n    assert user[\"role\"] == \"admin\"\n    assert user[\"level\"] == 10\n\n\ndef test_different_roles_different_results():\n    \"\"\"This is the key bug test.\n\n    get_user(\"alice\", role=\"admin\") should return admin data.\n    get_user(\"alice\", role=\"viewer\") should return viewer data.\n    But because cache key ignores kwargs, the second call returns\n    cached admin data instead of viewer data.\n    \"\"\"\n    clear_cache()\n    admin = get_user(\"alice\", role=\"admin\")\n    viewer = get_user(\"alice\", role=\"viewer\")\n\n    assert admin[\"role\"] == \"admin\"\n    assert admin[\"level\"] == 10\n    assert viewer[\"role\"] == \"viewer\"\n    assert viewer[\"level\"] == 1\n\n\ndef test_no_role_vs_role():\n    \"\"\"Full user vs role-specific should be different.\"\"\"\n    clear_cache()\n    full = get_user(\"alice\")\n    admin = get_user(\"alice\", role=\"admin\")\n\n    assert \"email\" in full  # full user has email\n    assert \"role\" in admin  # role-specific has role\n    assert full != admin\n\n\ndef test_caching_works():\n    \"\"\"Caching must still function \u2014 hit rate should be > 0.\"\"\"\n    clear_cache()\n    get_user(\"alice\")\n    get_user(\"alice\")  # should be a cache hit\n\n    assert cache.hit_rate > 0, \"Cache should have hits after repeated calls\"\n\n\ndef test_performance_cache_hit_rate():\n    \"\"\"After multiple calls, cache should be effective.\"\"\"\n    clear_cache()\n    # Make several calls\n    for _ in range(5):\n        get_user(\"alice\", role=\"admin\")\n        get_user(\"bob\", role=\"viewer\")\n        get_user_count()\n\n    # Cache should have a decent hit rate\n    assert cache.hit_rate >= 0.5, f\"Cache hit rate too low: {cache.hit_rate:.2f}\"\n\n\ndef test_different_users_different_results():\n    clear_cache()\n    alice = get_user(\"alice\")\n    bob = get_user(\"bob\")\n    assert alice[\"name\"] == \"Alice\"\n    assert bob[\"name\"] == \"Bob\"\n\n\ndef test_user_count():\n    clear_cache()\n    assert get_user_count() == 3\n\n\nif __name__ == \"__main__\":\n    test_fns = [v for k, v in sorted(globals().items()) if k.startswith(\"test_\")]\n    passed = 0\n    failed = 0\n    for fn in test_fns:\n        try:\n            fn()\n            print(f\"  PASS: {fn.__name__}\")\n            passed += 1\n        except Exception as e:\n            print(f\"  FAIL: {fn.__name__}: {e}\")\n            failed += 1\n    print(f\"\\n{passed} passed, {failed} failed\")\n    if failed:\n        print(\"SOME TESTS FAILED\")\n        exit(1)\n    else:\n        print(\"ALL TESTS PASSED\")\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "The bug is in Cache._make_key(): it only uses func_name and args, ignoring kwargs. Fix by including kwargs in the key: key_data = f'{func_name}:{args}:{sorted(kwargs.items()) if kwargs else ''}'",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "script_check",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": "#!/bin/bash\ncd \"$WORKDIR\"\nOUTPUT=$(python3 tests/test_service.py 2>&1)\necho \"$OUTPUT\"\nif echo \"$OUTPUT\" | grep -q \"ALL TESTS PASSED\"; then\n    exit 0\nelse\n    exit 1\nfi\n",
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_editing",
+    "code_reading",
+    "root_cause"
+  ],
+  "source": "frontier_generator",
+  "generated_at": "2026-03-11T12:30:23.332952+00:00",
+  "estimated_minutes": 8
+}
