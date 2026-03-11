@@ -1,0 +1,56 @@
+{
+  "task_id": "frontier_propagation_5",
+  "category": "diagnostic",
+  "title": "Rename constant across 5 ripple locations (easy propagation)",
+  "difficulty": "medium",
+  "goal": "Rename the constant DEFAULT_TIMEOUT to REQUEST_TIMEOUT_MS across the entire codebase. The value must also change from 30 (seconds) to 30000 (milliseconds). Update all imports, references, default parameter values, and usages in config.py, http.py, retry.py, pool.py, monitor.py, and __init__.py. All tests in test_netlib.py must pass.",
+  "hints": "All 6 source files under netlib/ reference DEFAULT_TIMEOUT. Change both the name and the value.",
+  "environment": {
+    "env_type": "empty",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "netlib/__init__.py": "from .config import DEFAULT_TIMEOUT\nfrom .http import HttpClient\nfrom .retry import RetryPolicy\nfrom .pool import ConnectionPool\nfrom .monitor import HealthChecker\n",
+      "netlib/config.py": "# Network configuration constants\nDEFAULT_TIMEOUT = 30  # seconds\nMAX_RETRIES = 3\nPOOL_SIZE = 10\nKEEP_ALIVE = True\n",
+      "netlib/http.py": "from .config import DEFAULT_TIMEOUT\n\n\nclass HttpClient:\n    def __init__(self, base_url, timeout=DEFAULT_TIMEOUT):\n        self.base_url = base_url\n        self.timeout = timeout\n\n    def get(self, path, timeout=None):\n        t = timeout if timeout is not None else self.timeout\n        return self._request(\"GET\", path, t)\n\n    def post(self, path, data, timeout=None):\n        t = timeout if timeout is not None else self.timeout\n        return self._request(\"POST\", path, t, data)\n\n    def _request(self, method, path, timeout, data=None):\n        # Simulate request\n        return {\"method\": method, \"path\": path, \"timeout\": timeout}\n",
+      "netlib/retry.py": "import time\nfrom .config import DEFAULT_TIMEOUT\n\n\nclass RetryPolicy:\n    def __init__(self, max_retries=3, timeout=DEFAULT_TIMEOUT, backoff_factor=1.5):\n        self.max_retries = max_retries\n        self.timeout = timeout\n        self.backoff_factor = backoff_factor\n\n    def execute(self, func):\n        last_error = None\n        for attempt in range(self.max_retries + 1):\n            try:\n                return func(timeout=self.timeout)\n            except Exception as e:\n                last_error = e\n                if attempt < self.max_retries:\n                    wait = self.backoff_factor ** attempt\n                    time.sleep(wait)\n        raise last_error\n",
+      "netlib/pool.py": "from .config import DEFAULT_TIMEOUT, POOL_SIZE\n\n\nclass ConnectionPool:\n    def __init__(self, host, pool_size=POOL_SIZE, timeout=DEFAULT_TIMEOUT):\n        self.host = host\n        self.pool_size = pool_size\n        self.timeout = timeout\n        self._connections = []\n\n    def acquire(self, timeout=None):\n        t = timeout if timeout is not None else self.timeout\n        return {\"host\": self.host, \"timeout\": t}\n\n    def release(self, conn):\n        pass\n\n    def stats(self):\n        return {\n            \"host\": self.host,\n            \"pool_size\": self.pool_size,\n            \"timeout\": self.timeout,\n            \"active\": len(self._connections)\n        }\n",
+      "netlib/monitor.py": "from .config import DEFAULT_TIMEOUT\n\n\nclass HealthChecker:\n    def __init__(self, endpoints, check_interval=60, timeout=DEFAULT_TIMEOUT):\n        self.endpoints = endpoints\n        self.check_interval = check_interval\n        self.timeout = timeout\n\n    def check(self, endpoint):\n        return {\"endpoint\": endpoint, \"timeout\": self.timeout, \"healthy\": True}\n\n    def check_all(self):\n        return [self.check(ep) for ep in self.endpoints]\n",
+      "tests/__init__.py": "",
+      "tests/test_netlib.py": "import pytest\nfrom netlib.config import REQUEST_TIMEOUT_MS\nfrom netlib.http import HttpClient\nfrom netlib.retry import RetryPolicy\nfrom netlib.pool import ConnectionPool\nfrom netlib.monitor import HealthChecker\n\n\ndef test_config_value():\n    assert REQUEST_TIMEOUT_MS == 30000\n\ndef test_http_default_timeout():\n    client = HttpClient(\"http://example.com\")\n    assert client.timeout == 30000\n\ndef test_http_custom_timeout():\n    client = HttpClient(\"http://example.com\", timeout=5000)\n    assert client.timeout == 5000\n\ndef test_http_get():\n    client = HttpClient(\"http://example.com\")\n    result = client.get(\"/api\")\n    assert result[\"timeout\"] == 30000\n\ndef test_retry_default_timeout():\n    policy = RetryPolicy()\n    assert policy.timeout == 30000\n\ndef test_pool_default_timeout():\n    pool = ConnectionPool(\"example.com\")\n    assert pool.timeout == 30000\n\ndef test_pool_stats():\n    pool = ConnectionPool(\"example.com\")\n    stats = pool.stats()\n    assert stats[\"timeout\"] == 30000\n\ndef test_monitor_default_timeout():\n    checker = HealthChecker([\"http://example.com\"])\n    assert checker.timeout == 30000\n\ndef test_monitor_check():\n    checker = HealthChecker([\"http://example.com\"])\n    result = checker.check(\"http://example.com\")\n    assert result[\"timeout\"] == 30000\n\ndef test_init_import():\n    from netlib import REQUEST_TIMEOUT_MS as timeout\n    assert timeout == 30000\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Must update 6 files: config.py (rename constant and change value from 30 to 30000), __init__.py (update import), http.py (update import and default parameter), retry.py (update import and default parameter), pool.py (update import and default parameter), monitor.py (update import and default parameter). All 10 tests verify the new name and value.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "script_check",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": "#!/bin/bash\ncd \"$WORKDIR\"\nset +e\nSCORE=0\nTOTAL=7\n\n# Check 1: Tests pass\nOUTPUT=$(python3 -m pytest tests/test_netlib.py -v 2>&1)\nPASSED=$(echo \"$OUTPUT\" | grep -c \" PASSED\")\nif [ \"$PASSED\" -eq 10 ]; then\n    SCORE=$((SCORE + 1))\n    echo \"  PASS: All 10 tests pass\"\nelse\n    echo \"  FAIL: $PASSED/10 tests passed\"\nfi\n\n# Check 2: No DEFAULT_TIMEOUT in any source file\nCOUNT=$(grep -r \"DEFAULT_TIMEOUT\" netlib/ --include=\"*.py\" | grep -v __pycache__ | wc -l)\nif [ \"$COUNT\" -eq 0 ]; then\n    SCORE=$((SCORE + 1))\n    echo \"  PASS: No DEFAULT_TIMEOUT references remain\"\nelse\n    echo \"  FAIL: $COUNT references to DEFAULT_TIMEOUT remain\"\nfi\n\n# Check 3: REQUEST_TIMEOUT_MS in config.py\nif grep -q \"REQUEST_TIMEOUT_MS = 30000\" netlib/config.py; then\n    SCORE=$((SCORE + 1))\n    echo \"  PASS: config.py has REQUEST_TIMEOUT_MS = 30000\"\nelse\n    echo \"  FAIL: config.py missing REQUEST_TIMEOUT_MS = 30000\"\nfi\n\n# Check 4: __init__.py imports REQUEST_TIMEOUT_MS\nif grep -q \"REQUEST_TIMEOUT_MS\" netlib/__init__.py; then\n    SCORE=$((SCORE + 1))\n    echo \"  PASS: __init__.py imports REQUEST_TIMEOUT_MS\"\nelse\n    echo \"  FAIL: __init__.py missing REQUEST_TIMEOUT_MS import\"\nfi\n\n# Check 5: http.py uses REQUEST_TIMEOUT_MS\nif grep -q \"REQUEST_TIMEOUT_MS\" netlib/http.py; then\n    SCORE=$((SCORE + 1))\n    echo \"  PASS: http.py uses REQUEST_TIMEOUT_MS\"\nelse\n    echo \"  FAIL: http.py missing REQUEST_TIMEOUT_MS\"\nfi\n\n# Check 6: retry.py uses REQUEST_TIMEOUT_MS\nif grep -q \"REQUEST_TIMEOUT_MS\" netlib/retry.py; then\n    SCORE=$((SCORE + 1))\n    echo \"  PASS: retry.py uses REQUEST_TIMEOUT_MS\"\nelse\n    echo \"  FAIL: retry.py missing REQUEST_TIMEOUT_MS\"\nfi\n\n# Check 7: pool.py uses REQUEST_TIMEOUT_MS\nif grep -q \"REQUEST_TIMEOUT_MS\" netlib/pool.py; then\n    SCORE=$((SCORE + 1))\n    echo \"  PASS: pool.py uses REQUEST_TIMEOUT_MS\"\nelse\n    echo \"  FAIL: pool.py missing REQUEST_TIMEOUT_MS\"\nfi\n\necho \"\"\necho \"Score: $SCORE/$TOTAL\"\n\nif [ \"$SCORE\" -ge 7 ]; then\n    exit 0\nelse\n    exit 1\nfi\n",
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_editing",
+    "multi_file",
+    "code_search",
+    "code_reading",
+    "test_running"
+  ],
+  "source": "frontier_generator",
+  "generated_at": "2026-03-11T18:00:00.000000+00:00",
+  "estimated_minutes": 5
+}
