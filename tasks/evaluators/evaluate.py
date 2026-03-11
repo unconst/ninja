@@ -140,10 +140,12 @@ def _eval_command_output(spec: EvalSpec, workdir: str) -> dict:
     if not spec.check_command:
         return {"score": 0.0, "details": "No check command defined", "checks": []}
 
+    # Isolate from host venv plugins (SWE eval can install broken dev packages)
+    env = {**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
     try:
         proc = subprocess.run(
             spec.check_command, shell=True,
-            capture_output=True, text=True, cwd=workdir, timeout=60
+            capture_output=True, text=True, cwd=workdir, timeout=60, env=env
         )
         output = proc.stdout + proc.stderr
     except subprocess.TimeoutExpired:

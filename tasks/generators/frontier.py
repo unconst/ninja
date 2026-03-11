@@ -27,7 +27,7 @@ class FrontierGenerator(TaskGenerator):
     def category(self) -> TaskCategory:
         return TaskCategory.DIAGNOSTIC
 
-    def generate(self, count: int = 8, difficulty: str = "hard") -> list[Task]:
+    def generate(self, count: int = 11, difficulty: str = "hard") -> list[Task]:
         generators = [
             self._adversarial_code_review,
             self._incomplete_spec_implementation,
@@ -37,6 +37,9 @@ class FrontierGenerator(TaskGenerator):
             self._concurrent_bug_hunt,
             self._rename_with_ripple_effects,
             self._feature_flag_removal,
+            self._type_change_propagation,
+            self._hidden_dependency_chain,
+            self._visitor_pattern_extension,
         ]
 
         tasks = []
@@ -2751,6 +2754,1505 @@ print('CACHE_OK')
                 Capability.CODE_EDITING,
                 Capability.MULTI_FILE_REASONING,
                 Capability.CODE_SEARCH,
+                Capability.CODE_READING,
+            ],
+            source="frontier_generator",
+            estimated_minutes=10,
+        )
+
+    def _type_change_propagation(self, difficulty: str) -> Task:
+        """Change a core data class field type and update ALL 10 consumer files.
+
+        Key difficulty: The type change (str→list[str]) propagates through
+        10 files. Each file uses the field differently — some index it,
+        some iterate, some compare. Agent must update ALL of them consistently.
+        Most agents fix 6-7 files and miss the rest.
+        """
+        # Core model file — changing tags from str to list[str]
+        model_py = textwrap.dedent('''\
+            """Core data models for the task management system."""
+            from dataclasses import dataclass, field
+            from typing import Optional
+            from datetime import datetime
+
+
+            @dataclass
+            class Task:
+                id: str
+                title: str
+                description: str
+                tags: str  # BUG: Should be list[str] — comma-separated is error-prone
+                assignee: Optional[str] = None
+                status: str = "open"
+                priority: int = 0
+                created_at: datetime = field(default_factory=datetime.now)
+                parent_id: Optional[str] = None
+
+                def has_tag(self, tag: str) -> bool:
+                    """Check if task has a specific tag."""
+                    return tag in self.tags.split(",")
+
+                def add_tag(self, tag: str) -> None:
+                    """Add a tag to the task."""
+                    tags = self.tags.split(",") if self.tags else []
+                    if tag not in tags:
+                        tags.append(tag)
+                    self.tags = ",".join(tags)
+
+                def remove_tag(self, tag: str) -> None:
+                    """Remove a tag from the task."""
+                    tags = self.tags.split(",")
+                    tags = [t for t in tags if t != tag]
+                    self.tags = ",".join(tags)
+        ''')
+
+        # Repository layer
+        repo_py = textwrap.dedent('''\
+            """Task repository — storage and retrieval."""
+            import json
+            from pathlib import Path
+            from typing import Optional
+            from .model import Task
+            from datetime import datetime
+
+
+            class TaskRepository:
+                def __init__(self, storage_path: str = "tasks.json"):
+                    self.storage_path = Path(storage_path)
+                    self._tasks: dict[str, Task] = {}
+
+                def add(self, task: Task) -> None:
+                    self._tasks[task.id] = task
+
+                def get(self, task_id: str) -> Optional[Task]:
+                    return self._tasks.get(task_id)
+
+                def find_by_tag(self, tag: str) -> list[Task]:
+                    """Find all tasks with a specific tag."""
+                    return [t for t in self._tasks.values() if tag in t.tags.split(",")]
+
+                def find_by_assignee(self, assignee: str) -> list[Task]:
+                    return [t for t in self._tasks.values() if t.assignee == assignee]
+
+                def save(self) -> None:
+                    data = []
+                    for t in self._tasks.values():
+                        data.append({
+                            "id": t.id, "title": t.title,
+                            "description": t.description, "tags": t.tags,
+                            "assignee": t.assignee, "status": t.status,
+                            "priority": t.priority,
+                            "created_at": t.created_at.isoformat(),
+                            "parent_id": t.parent_id,
+                        })
+                    self.storage_path.write_text(json.dumps(data, indent=2))
+
+                def load(self) -> None:
+                    if not self.storage_path.exists():
+                        return
+                    data = json.loads(self.storage_path.read_text())
+                    for d in data:
+                        task = Task(
+                            id=d["id"], title=d["title"],
+                            description=d["description"], tags=d["tags"],
+                            assignee=d.get("assignee"), status=d.get("status", "open"),
+                            priority=d.get("priority", 0),
+                            created_at=datetime.fromisoformat(d["created_at"]),
+                            parent_id=d.get("parent_id"),
+                        )
+                        self._tasks[task.id] = task
+        ''')
+
+        # Service layer
+        service_py = textwrap.dedent('''\
+            """Task service — business logic."""
+            from .model import Task
+            from .repository import TaskRepository
+            from datetime import datetime
+            import uuid
+
+
+            class TaskService:
+                def __init__(self, repo: TaskRepository):
+                    self.repo = repo
+
+                def create_task(self, title: str, description: str, tags: str,
+                                assignee: str = None, priority: int = 0,
+                                parent_id: str = None) -> Task:
+                    task = Task(
+                        id=str(uuid.uuid4())[:8],
+                        title=title,
+                        description=description,
+                        tags=tags,
+                        assignee=assignee,
+                        priority=priority,
+                        parent_id=parent_id,
+                    )
+                    self.repo.add(task)
+                    return task
+
+                def bulk_tag(self, task_ids: list[str], tag: str) -> int:
+                    """Add a tag to multiple tasks. Returns count of modified tasks."""
+                    count = 0
+                    for tid in task_ids:
+                        task = self.repo.get(tid)
+                        if task and not task.has_tag(tag):
+                            task.add_tag(tag)
+                            count += 1
+                    return count
+
+                def get_tag_summary(self) -> dict[str, int]:
+                    """Return dict of tag -> count of tasks with that tag."""
+                    summary = {}
+                    for task in self.repo._tasks.values():
+                        for tag in task.tags.split(","):
+                            tag = tag.strip()
+                            if tag:
+                                summary[tag] = summary.get(tag, 0) + 1
+                    return summary
+        ''')
+
+        # CLI interface
+        cli_py = textwrap.dedent('''\
+            """Command-line interface for task management."""
+            import sys
+            from .service import TaskService
+            from .repository import TaskRepository
+
+
+            def main(args=None):
+                if args is None:
+                    args = sys.argv[1:]
+                repo = TaskRepository()
+                repo.load()
+                service = TaskService(repo)
+
+                if not args:
+                    print("Usage: task <command> [options]")
+                    return
+
+                cmd = args[0]
+                if cmd == "add":
+                    title = args[1] if len(args) > 1 else "Untitled"
+                    tags = args[2] if len(args) > 2 else ""
+                    task = service.create_task(title, "", tags)
+                    print(f"Created task {task.id}: {task.title} [tags: {task.tags}]")
+                elif cmd == "list":
+                    for task in repo._tasks.values():
+                        tag_str = task.tags if task.tags else "none"
+                        print(f"  {task.id} | {task.title} | tags: {tag_str} | {task.status}")
+                elif cmd == "tag":
+                    task_id = args[1]
+                    tag = args[2]
+                    task = repo.get(task_id)
+                    if task:
+                        task.add_tag(tag)
+                        print(f"Added tag '{tag}' to {task_id}")
+                    else:
+                        print(f"Task {task_id} not found")
+                elif cmd == "search":
+                    tag = args[1]
+                    results = repo.find_by_tag(tag)
+                    print(f"Tasks with tag '{tag}': {len(results)}")
+                    for t in results:
+                        print(f"  {t.id}: {t.title}")
+
+                repo.save()
+        ''')
+
+        # Exporter
+        export_py = textwrap.dedent('''\
+            """Export tasks to various formats."""
+            import csv
+            import io
+            from .model import Task
+
+
+            def to_csv(tasks: list[Task]) -> str:
+                """Export tasks to CSV format."""
+                output = io.StringIO()
+                writer = csv.writer(output)
+                writer.writerow(["id", "title", "tags", "status", "priority", "assignee"])
+                for t in tasks:
+                    writer.writerow([t.id, t.title, t.tags, t.status, t.priority, t.assignee or ""])
+                return output.getvalue()
+
+
+            def to_markdown(tasks: list[Task]) -> str:
+                """Export tasks to markdown table."""
+                lines = ["| ID | Title | Tags | Status |", "|----|-------|------|--------|"]
+                for t in tasks:
+                    lines.append(f"| {t.id} | {t.title} | {t.tags} | {t.status} |")
+                return "\\n".join(lines)
+
+
+            def filter_by_tags(tasks: list[Task], required_tags: list[str]) -> list[Task]:
+                """Filter tasks that have ALL required tags."""
+                result = []
+                for t in tasks:
+                    task_tags = set(t.tags.split(","))
+                    if all(rt in task_tags for rt in required_tags):
+                        result.append(t)
+                return result
+        ''')
+
+        # Importer
+        import_py = textwrap.dedent('''\
+            """Import tasks from external formats."""
+            import csv
+            import io
+            from .model import Task
+            from datetime import datetime
+
+
+            def from_csv(csv_text: str) -> list[Task]:
+                """Import tasks from CSV."""
+                reader = csv.DictReader(io.StringIO(csv_text))
+                tasks = []
+                for row in reader:
+                    task = Task(
+                        id=row["id"],
+                        title=row["title"],
+                        description=row.get("description", ""),
+                        tags=row.get("tags", ""),
+                        status=row.get("status", "open"),
+                        priority=int(row.get("priority", 0)),
+                        assignee=row.get("assignee") or None,
+                    )
+                    tasks.append(task)
+                return tasks
+
+
+            def merge_tags(existing: Task, imported: Task) -> str:
+                """Merge tags from two versions of a task."""
+                tags1 = set(existing.tags.split(",")) if existing.tags else set()
+                tags2 = set(imported.tags.split(",")) if imported.tags else set()
+                merged = tags1 | tags2
+                merged.discard("")
+                return ",".join(sorted(merged))
+        ''')
+
+        # Notification system
+        notify_py = textwrap.dedent('''\
+            """Notification system for task events."""
+            from .model import Task
+
+
+            class Notifier:
+                def __init__(self):
+                    self.sent = []
+
+                def on_task_created(self, task: Task) -> None:
+                    tags = task.tags.split(",") if task.tags else []
+                    if "urgent" in tags:
+                        self.sent.append(f"URGENT: New task {task.id}: {task.title}")
+                    else:
+                        self.sent.append(f"New task {task.id}: {task.title}")
+
+                def on_tag_added(self, task: Task, tag: str) -> None:
+                    if tag == "urgent":
+                        self.sent.append(f"ESCALATED: {task.id} marked urgent")
+                    self.sent.append(f"Tag '{tag}' added to {task.id}")
+
+                def format_digest(self, tasks: list[Task]) -> str:
+                    """Format a digest of tasks grouped by tags."""
+                    by_tag = {}
+                    for t in tasks:
+                        for tag in t.tags.split(","):
+                            tag = tag.strip()
+                            if tag:
+                                by_tag.setdefault(tag, []).append(t)
+                    lines = []
+                    for tag in sorted(by_tag):
+                        lines.append(f"## {tag}")
+                        for t in by_tag[tag]:
+                            lines.append(f"  - {t.title}")
+                    return "\\n".join(lines)
+        ''')
+
+        # Analytics
+        analytics_py = textwrap.dedent('''\
+            """Task analytics and reporting."""
+            from collections import Counter
+            from .model import Task
+
+
+            def tag_frequency(tasks: list[Task]) -> dict[str, int]:
+                """Count how often each tag appears."""
+                counter = Counter()
+                for t in tasks:
+                    for tag in t.tags.split(","):
+                        tag = tag.strip()
+                        if tag:
+                            counter[tag] += 1
+                return dict(counter)
+
+
+            def tag_co_occurrence(tasks: list[Task]) -> dict[tuple[str, str], int]:
+                """Count how often pairs of tags appear together."""
+                counter = Counter()
+                for t in tasks:
+                    tags = [tag.strip() for tag in t.tags.split(",") if tag.strip()]
+                    for i, t1 in enumerate(tags):
+                        for t2 in tags[i+1:]:
+                            pair = tuple(sorted([t1, t2]))
+                            counter[pair] += 1
+                return dict(counter)
+
+
+            def tasks_without_tags(tasks: list[Task]) -> list[Task]:
+                """Find tasks that have no tags."""
+                return [t for t in tasks if not t.tags or t.tags.strip() == ""]
+        ''')
+
+        # Validator
+        validator_py = textwrap.dedent('''\
+            """Validation rules for tasks."""
+            from .model import Task
+
+            ALLOWED_TAGS = {"bug", "feature", "urgent", "low-priority", "docs",
+                            "backend", "frontend", "devops", "testing", "tech-debt"}
+
+
+            def validate_task(task: Task) -> list[str]:
+                """Return list of validation errors for a task."""
+                errors = []
+                if not task.title:
+                    errors.append("Title is required")
+                if not task.description:
+                    errors.append("Description is required")
+                # Validate tags
+                if task.tags:
+                    for tag in task.tags.split(","):
+                        tag = tag.strip()
+                        if tag and tag not in ALLOWED_TAGS:
+                            errors.append(f"Invalid tag: {tag}")
+                return errors
+
+
+            def validate_tag_format(tags_str: str) -> bool:
+                """Check if tags string is properly formatted (no spaces around commas)."""
+                if not tags_str:
+                    return True
+                parts = tags_str.split(",")
+                return all(p == p.strip() for p in parts)
+        ''')
+
+        # Init file
+        init_py = textwrap.dedent('''\
+            """Task management library."""
+            from .model import Task
+            from .repository import TaskRepository
+            from .service import TaskService
+        ''')
+
+        # Test file — these tests expect tags as list[str]
+        test_py = textwrap.dedent('''\
+            """Tests for the task management system.
+
+            NOTE: These tests define the TARGET behavior. The tags field should be
+            list[str], not a comma-separated string. Refactor the codebase to make
+            these tests pass.
+            """
+            import sys
+            import os
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from tasklib.model import Task
+            from tasklib.repository import TaskRepository
+            from tasklib.service import TaskService
+            from tasklib.export import to_csv, to_markdown, filter_by_tags
+            from tasklib.importer import from_csv, merge_tags
+            from tasklib.notify import Notifier
+            from tasklib.analytics import tag_frequency, tag_co_occurrence, tasks_without_tags
+            from tasklib.validator import validate_task, validate_tag_format
+
+
+            def test_task_tags_is_list():
+                """Tags should be a list of strings, not comma-separated."""
+                task = Task(id="1", title="Test", description="desc", tags=["bug", "urgent"])
+                assert isinstance(task.tags, list)
+                assert task.tags == ["bug", "urgent"]
+
+
+            def test_has_tag():
+                task = Task(id="1", title="Test", description="desc", tags=["bug", "urgent"])
+                assert task.has_tag("bug")
+                assert not task.has_tag("feature")
+
+
+            def test_add_tag():
+                task = Task(id="1", title="Test", description="desc", tags=["bug"])
+                task.add_tag("urgent")
+                assert task.tags == ["bug", "urgent"]
+                task.add_tag("bug")  # duplicate
+                assert task.tags == ["bug", "urgent"]
+
+
+            def test_remove_tag():
+                task = Task(id="1", title="Test", description="desc", tags=["bug", "urgent"])
+                task.remove_tag("bug")
+                assert task.tags == ["urgent"]
+
+
+            def test_repo_find_by_tag():
+                repo = TaskRepository()
+                t1 = Task(id="1", title="A", description="", tags=["bug", "backend"])
+                t2 = Task(id="2", title="B", description="", tags=["feature"])
+                t3 = Task(id="3", title="C", description="", tags=["bug", "frontend"])
+                repo.add(t1)
+                repo.add(t2)
+                repo.add(t3)
+                assert len(repo.find_by_tag("bug")) == 2
+                assert len(repo.find_by_tag("feature")) == 1
+
+
+            def test_service_create_task():
+                repo = TaskRepository()
+                service = TaskService(repo)
+                task = service.create_task("Fix bug", "details", ["bug", "urgent"])
+                assert task.tags == ["bug", "urgent"]
+
+
+            def test_service_bulk_tag():
+                repo = TaskRepository()
+                service = TaskService(repo)
+                t1 = service.create_task("A", "desc", ["bug"])
+                t2 = service.create_task("B", "desc", ["feature"])
+                count = service.bulk_tag([t1.id, t2.id], "reviewed")
+                assert count == 2
+                assert "reviewed" in t1.tags
+                assert "reviewed" in t2.tags
+
+
+            def test_service_tag_summary():
+                repo = TaskRepository()
+                service = TaskService(repo)
+                service.create_task("A", "desc", ["bug", "urgent"])
+                service.create_task("B", "desc", ["bug", "feature"])
+                summary = service.get_tag_summary()
+                assert summary["bug"] == 2
+                assert summary["urgent"] == 1
+
+
+            def test_export_csv():
+                tasks = [
+                    Task(id="1", title="A", description="", tags=["bug", "urgent"]),
+                ]
+                csv_out = to_csv(tasks)
+                assert "bug" in csv_out
+                assert "urgent" in csv_out
+
+
+            def test_export_filter_by_tags():
+                tasks = [
+                    Task(id="1", title="A", description="", tags=["bug", "urgent"]),
+                    Task(id="2", title="B", description="", tags=["bug"]),
+                    Task(id="3", title="C", description="", tags=["feature"]),
+                ]
+                filtered = filter_by_tags(tasks, ["bug", "urgent"])
+                assert len(filtered) == 1
+                assert filtered[0].id == "1"
+
+
+            def test_import_csv():
+                csv_text = "id,title,description,tags,status,priority\\n1,Test,desc,\\"bug,urgent\\",open,0"
+                tasks = from_csv(csv_text)
+                assert len(tasks) == 1
+                assert isinstance(tasks[0].tags, list)
+                assert "bug" in tasks[0].tags
+
+
+            def test_merge_tags():
+                t1 = Task(id="1", title="A", description="", tags=["bug", "urgent"])
+                t2 = Task(id="1", title="A", description="", tags=["bug", "feature"])
+                merged = merge_tags(t1, t2)
+                assert isinstance(merged, list)
+                assert set(merged) == {"bug", "urgent", "feature"}
+
+
+            def test_notifier():
+                notifier = Notifier()
+                task = Task(id="1", title="Fix", description="", tags=["urgent", "bug"])
+                notifier.on_task_created(task)
+                assert any("URGENT" in msg for msg in notifier.sent)
+
+
+            def test_analytics_frequency():
+                tasks = [
+                    Task(id="1", title="A", description="", tags=["bug", "urgent"]),
+                    Task(id="2", title="B", description="", tags=["bug", "feature"]),
+                ]
+                freq = tag_frequency(tasks)
+                assert freq["bug"] == 2
+
+
+            def test_analytics_co_occurrence():
+                tasks = [
+                    Task(id="1", title="A", description="", tags=["bug", "urgent"]),
+                ]
+                co = tag_co_occurrence(tasks)
+                assert co[("bug", "urgent")] == 1
+
+
+            def test_tasks_without_tags():
+                tasks = [
+                    Task(id="1", title="A", description="", tags=["bug"]),
+                    Task(id="2", title="B", description="", tags=[]),
+                ]
+                no_tags = tasks_without_tags(tasks)
+                assert len(no_tags) == 1
+                assert no_tags[0].id == "2"
+
+
+            def test_validator():
+                task = Task(id="1", title="A", description="d", tags=["bug", "invalid-tag"])
+                errors = validate_task(task)
+                assert any("Invalid tag" in e for e in errors)
+
+
+            def test_validate_good_tags():
+                task = Task(id="1", title="A", description="d", tags=["bug", "feature"])
+                errors = validate_task(task)
+                assert len(errors) == 0
+
+
+            if __name__ == "__main__":
+                test_fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+                passed = 0
+                failed = 0
+                for fn in test_fns:
+                    try:
+                        fn()
+                        print(f"  PASS: {fn.__name__}")
+                        passed += 1
+                    except Exception as e:
+                        print(f"  FAIL: {fn.__name__}: {e}")
+                        failed += 1
+                print(f"\\n{passed} passed, {failed} failed")
+                if failed:
+                    print("SOME TESTS FAILED")
+                    exit(1)
+                else:
+                    print("ALL TESTS PASSED")
+        ''')
+
+        files = {
+            "tasklib/__init__.py": init_py,
+            "tasklib/model.py": model_py,
+            "tasklib/repository.py": repo_py,
+            "tasklib/service.py": service_py,
+            "tasklib/cli.py": cli_py,
+            "tasklib/export.py": export_py,
+            "tasklib/importer.py": import_py,
+            "tasklib/notify.py": notify_py,
+            "tasklib/analytics.py": analytics_py,
+            "tasklib/validator.py": validator_py,
+            "tests/test_tasks.py": test_py,
+        }
+
+        eval_script = textwrap.dedent('''\
+            #!/bin/bash
+            cd "$WORKDIR"
+            OUTPUT=$(python3 tests/test_tasks.py 2>&1)
+            echo "$OUTPUT"
+            PASS_COUNT=$(echo "$OUTPUT" | grep -c "PASS:")
+            FAIL_COUNT=$(echo "$OUTPUT" | grep -c "FAIL:")
+            echo ""
+            echo "Results: $PASS_COUNT passed, $FAIL_COUNT failed out of 20 tests"
+            if echo "$OUTPUT" | grep -q "ALL TESTS PASSED"; then
+                exit 0
+            else
+                exit 1
+            fi
+        ''')
+
+        return Task(
+            task_id="frontier_type_propagation",
+            category=TaskCategory.DIAGNOSTIC,
+            title="Refactor tags from str to list[str] across 10 files",
+            difficulty="hard",
+            goal=textwrap.dedent("""\
+                The task management library uses comma-separated strings for tags
+                (e.g., "bug,urgent"). This is error-prone. Refactor the `tags` field
+                in `Task` from `str` to `list[str]` and update ALL files that use it.
+
+                The test file `tests/test_tasks.py` defines the target behavior — all
+                tests expect tags as `list[str]`. Make ALL tests pass.
+
+                Files you'll likely need to change:
+                - tasklib/model.py (core data class)
+                - tasklib/repository.py (storage/retrieval with split/join)
+                - tasklib/service.py (business logic)
+                - tasklib/cli.py (command-line interface)
+                - tasklib/export.py (CSV/markdown export)
+                - tasklib/importer.py (CSV import, tag merging)
+                - tasklib/notify.py (notification system)
+                - tasklib/analytics.py (tag analytics)
+                - tasklib/validator.py (tag validation)
+
+                Run tests: `python3 tests/test_tasks.py`
+            """),
+            hints=None,
+            environment=EnvironmentSetup(seed_files=files),
+            ground_truth="Change tags: str to tags: list[str] in model.py. Remove all .split(',') calls. Update repository save/load to handle lists. Update service.create_task signature. Update CSV import/export. Update notifier, analytics, validator.",
+            eval_spec=EvalSpec(
+                method=EvalMethod.SCRIPT_CHECK,
+                check_script_content=eval_script,
+            ),
+            capabilities=[
+                Capability.CODE_EDITING,
+                Capability.MULTI_FILE_REASONING,
+                Capability.CODE_READING,
+                Capability.CODE_SEARCH,
+            ],
+            source="frontier_generator",
+            estimated_minutes=12,
+        )
+
+    def _hidden_dependency_chain(self, difficulty: str) -> Task:
+        """Bug manifests in output layer but root cause is 4 files deep.
+
+        Tests fail in the API response formatter, but the actual bug is in
+        the schema validator which passes malformed data through the pipeline.
+        Agent must trace: formatter → serializer → transformer → validator (root cause).
+        """
+        validator_py = textwrap.dedent('''\
+            """Input validation for data pipeline."""
+            from typing import Any
+
+
+            class SchemaValidator:
+                """Validates incoming data against expected schema."""
+
+                VALID_TYPES = {"string", "integer", "float", "boolean", "list", "dict"}
+
+                def validate(self, data: dict, schema: dict) -> dict:
+                    """Validate data against schema. Returns validated data.
+
+                    Schema format: {"field_name": {"type": "string", "required": True}}
+                    """
+                    result = {}
+                    for field_name, rules in schema.items():
+                        value = data.get(field_name)
+                        required = rules.get("required", False)
+
+                        if value is None:
+                            if required:
+                                raise ValueError(f"Missing required field: {field_name}")
+                            result[field_name] = rules.get("default")
+                            continue
+
+                        expected_type = rules.get("type", "string")
+                        if expected_type == "integer":
+                            try:
+                                result[field_name] = int(str(value).split(".")[0].lstrip("0") or "0")
+                            except (ValueError, IndexError):
+                                raise ValueError(f"Field {field_name}: expected integer, got {value!r}")
+                        elif expected_type == "float":
+                            try:
+                                result[field_name] = float(value)
+                            except (ValueError, TypeError):
+                                raise ValueError(f"Field {field_name}: expected float, got {value!r}")
+                        elif expected_type == "boolean":
+                            if isinstance(value, bool):
+                                result[field_name] = value
+                            elif isinstance(value, str):
+                                result[field_name] = value.lower() in ("true", "1", "yes")
+                            else:
+                                result[field_name] = bool(value)
+                        elif expected_type == "list":
+                            if not isinstance(value, list):
+                                result[field_name] = [value]
+                            else:
+                                result[field_name] = value
+                        else:
+                            result[field_name] = str(value) if value is not None else ""
+
+                    return result
+        ''')
+
+        transformer_py = textwrap.dedent('''\
+            """Data transformation layer."""
+            from typing import Any
+
+
+            class DataTransformer:
+                """Transforms validated data into internal representation."""
+
+                def transform(self, validated_data: dict, transforms: dict = None) -> dict:
+                    """Apply transformations to validated data."""
+                    if transforms is None:
+                        return validated_data.copy()
+
+                    result = validated_data.copy()
+                    for field, transform in transforms.items():
+                        if field not in result or result[field] is None:
+                            continue
+                        value = result[field]
+                        if transform == "uppercase" and isinstance(value, str):
+                            result[field] = value.upper()
+                        elif transform == "lowercase" and isinstance(value, str):
+                            result[field] = value.lower()
+                        elif transform == "abs_value" and isinstance(value, (int, float)):
+                            result[field] = abs(value)
+                        elif transform == "round_2" and isinstance(value, float):
+                            result[field] = round(value, 2)
+                        elif transform == "stringify":
+                            result[field] = str(value)
+                    return result
+        ''')
+
+        serializer_py = textwrap.dedent('''\
+            """Serialization layer — converts internal data to output format."""
+            import json
+            from typing import Any
+
+
+            class DataSerializer:
+                """Serializes transformed data for output."""
+
+                def serialize(self, data: dict, format: str = "dict") -> Any:
+                    """Serialize data to the specified format."""
+                    if format == "json":
+                        return json.dumps(data, default=str)
+                    elif format == "flat":
+                        return self._flatten(data)
+                    else:
+                        return data.copy()
+
+                def _flatten(self, data: dict, prefix: str = "") -> dict:
+                    result = {}
+                    for key, value in data.items():
+                        full_key = f"{prefix}.{key}" if prefix else key
+                        if isinstance(value, dict):
+                            result.update(self._flatten(value, full_key))
+                        elif isinstance(value, list):
+                            for i, item in enumerate(value):
+                                if isinstance(item, dict):
+                                    result.update(self._flatten(item, f"{full_key}.{i}"))
+                                else:
+                                    result[f"{full_key}.{i}"] = item
+                        else:
+                            result[full_key] = value
+                    return result
+        ''')
+
+        formatter_py = textwrap.dedent('''\
+            """Output formatting layer — final presentation."""
+            from typing import Any
+
+
+            class ResponseFormatter:
+                def format_response(self, data: Any, template: str = "standard") -> dict:
+                    if template == "minimal":
+                        return {"data": data}
+                    elif template == "verbose":
+                        return {
+                            "status": "success",
+                            "data": data,
+                            "metadata": {
+                                "field_count": len(data) if isinstance(data, dict) else 1,
+                                "type": type(data).__name__,
+                            }
+                        }
+                    else:
+                        return {"status": "success", "data": data}
+
+                def format_error(self, error: Exception) -> dict:
+                    return {"status": "error", "message": str(error), "type": type(error).__name__}
+        ''')
+
+        pipeline_py = textwrap.dedent('''\
+            """Main data pipeline."""
+            from .validator import SchemaValidator
+            from .transformer import DataTransformer
+            from .serializer import DataSerializer
+            from .formatter import ResponseFormatter
+
+
+            class DataPipeline:
+                def __init__(self):
+                    self.validator = SchemaValidator()
+                    self.transformer = DataTransformer()
+                    self.serializer = DataSerializer()
+                    self.formatter = ResponseFormatter()
+
+                def process(self, data: dict, schema: dict,
+                            transforms: dict = None,
+                            output_format: str = "dict",
+                            response_template: str = "standard") -> dict:
+                    try:
+                        validated = self.validator.validate(data, schema)
+                        transformed = self.transformer.transform(validated, transforms)
+                        serialized = self.serializer.serialize(transformed, output_format)
+                        return self.formatter.format_response(serialized, response_template)
+                    except Exception as e:
+                        return self.formatter.format_error(e)
+        ''')
+
+        init_py = '"""Data processing pipeline."""\nfrom .pipeline import DataPipeline\n'
+
+        test_py = textwrap.dedent('''\
+            """Tests for the data pipeline."""
+            import sys, os
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from pipeline.pipeline import DataPipeline
+            from pipeline.validator import SchemaValidator
+
+
+            def test_basic_pipeline():
+                pipe = DataPipeline()
+                result = pipe.process(
+                    {"name": "Alice", "age": "30"},
+                    {"name": {"type": "string"}, "age": {"type": "integer"}},
+                )
+                assert result["status"] == "success"
+                assert result["data"]["name"] == "Alice"
+                assert result["data"]["age"] == 30
+
+
+            def test_integer_validation_strict():
+                """'42abc' is not a valid integer — should reject it."""
+                validator = SchemaValidator()
+                try:
+                    validator.validate(
+                        {"count": "42abc"},
+                        {"count": {"type": "integer", "required": True}}
+                    )
+                    assert False, "Should have raised ValueError for '42abc'"
+                except ValueError:
+                    pass
+
+
+            def test_integer_accepts_valid():
+                validator = SchemaValidator()
+                result = validator.validate({"count": "42"}, {"count": {"type": "integer"}})
+                assert result["count"] == 42
+
+
+            def test_integer_from_float_string():
+                """'3.14' should be rejected for integer fields."""
+                validator = SchemaValidator()
+                try:
+                    validator.validate(
+                        {"count": "3.14"},
+                        {"count": {"type": "integer", "required": True}}
+                    )
+                    assert False, "Should have raised ValueError for '3.14'"
+                except ValueError:
+                    pass
+
+
+            def test_leading_zeros():
+                validator = SchemaValidator()
+                result = validator.validate({"num": "007"}, {"num": {"type": "integer"}})
+                assert result["num"] == 7
+
+
+            def test_negative_integer():
+                validator = SchemaValidator()
+                result = validator.validate({"num": "-5"}, {"num": {"type": "integer"}})
+                assert result["num"] == -5
+
+
+            def test_pipeline_with_transforms():
+                pipe = DataPipeline()
+                result = pipe.process(
+                    {"name": "alice", "score": "95"},
+                    {"name": {"type": "string"}, "score": {"type": "integer"}},
+                    transforms={"name": "uppercase"},
+                )
+                assert result["data"]["name"] == "ALICE"
+                assert result["data"]["score"] == 95
+
+
+            def test_pipeline_missing_required():
+                pipe = DataPipeline()
+                result = pipe.process(
+                    {"name": "Alice"},
+                    {"name": {"type": "string"}, "age": {"type": "integer", "required": True}},
+                )
+                assert result["status"] == "error"
+
+
+            def test_pipeline_optional_fields():
+                pipe = DataPipeline()
+                result = pipe.process(
+                    {"name": "Alice"},
+                    {"name": {"type": "string"}, "role": {"type": "string", "default": "user"}},
+                )
+                assert result["data"]["role"] == "user"
+
+
+            def test_validator_boolean():
+                validator = SchemaValidator()
+                result = validator.validate(
+                    {"active": "yes", "verified": "false"},
+                    {"active": {"type": "boolean"}, "verified": {"type": "boolean"}},
+                )
+                assert result["active"] is True
+                assert result["verified"] is False
+
+
+            def test_pipeline_json_output():
+                pipe = DataPipeline()
+                result = pipe.process(
+                    {"name": "Alice"},
+                    {"name": {"type": "string"}},
+                    output_format="json",
+                )
+                import json
+                assert result["status"] == "success"
+                parsed = json.loads(result["data"])
+                assert parsed["name"] == "Alice"
+
+
+            if __name__ == "__main__":
+                test_fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+                passed = 0
+                failed = 0
+                for fn in test_fns:
+                    try:
+                        fn()
+                        print(f"  PASS: {fn.__name__}")
+                        passed += 1
+                    except Exception as e:
+                        print(f"  FAIL: {fn.__name__}: {e}")
+                        failed += 1
+                print(f"\\n{passed} passed, {failed} failed")
+                if failed:
+                    print("SOME TESTS FAILED")
+                    exit(1)
+                else:
+                    print("ALL TESTS PASSED")
+        ''')
+
+        files = {
+            "pipeline/__init__.py": init_py,
+            "pipeline/validator.py": validator_py,
+            "pipeline/transformer.py": transformer_py,
+            "pipeline/serializer.py": serializer_py,
+            "pipeline/formatter.py": formatter_py,
+            "pipeline/pipeline.py": pipeline_py,
+            "tests/test_pipeline.py": test_py,
+        }
+
+        eval_script = textwrap.dedent('''\
+            #!/bin/bash
+            cd "$WORKDIR"
+            OUTPUT=$(python3 tests/test_pipeline.py 2>&1)
+            echo "$OUTPUT"
+            if echo "$OUTPUT" | grep -q "ALL TESTS PASSED"; then
+                exit 0
+            else
+                exit 1
+            fi
+        ''')
+
+        return Task(
+            task_id="frontier_hidden_dependency",
+            category=TaskCategory.DIAGNOSTIC,
+            title="Fix pipeline bug — root cause is 4 layers deep",
+            difficulty="hard",
+            goal=textwrap.dedent("""\
+                The data processing pipeline has failing tests. The bug manifests
+                in the test output as wrong values, but the root cause is in the
+                validation layer.
+
+                Trace the data flow through the pipeline to find and fix the actual bug.
+
+                Run tests: `python3 tests/test_pipeline.py`
+            """),
+            hints=None,
+            environment=EnvironmentSetup(seed_files=files),
+            ground_truth="The bug is in validator.py: integer coercion uses int(str(value).split('.')[0].lstrip('0') or '0') which silently converts '42abc' to 42 and '3.14' to 3. Fix: use strict int() conversion that rejects non-numeric strings.",
+            eval_spec=EvalSpec(
+                method=EvalMethod.SCRIPT_CHECK,
+                check_script_content=eval_script,
+            ),
+            capabilities=[
+                Capability.CODE_EDITING,
+                Capability.CODE_READING,
+                Capability.ROOT_CAUSE_ANALYSIS,
+            ],
+            source="frontier_generator",
+            estimated_minutes=8,
+        )
+
+    def _visitor_pattern_extension(self, difficulty: str) -> Task:
+        """Add new AST node types to a visitor-pattern interpreter.
+
+        Key difficulty: Understanding the double-dispatch pattern and
+        updating ALL visitor implementations consistently.
+        """
+        nodes_py = textwrap.dedent('''\
+            """AST node types for the expression language."""
+            from dataclasses import dataclass
+            from typing import Any
+
+
+            class Node:
+                """Base AST node."""
+                def accept(self, visitor: "Visitor") -> Any:
+                    raise NotImplementedError
+
+
+            @dataclass
+            class NumberNode(Node):
+                value: float
+                def accept(self, visitor: "Visitor") -> Any:
+                    return visitor.visit_number(self)
+
+
+            @dataclass
+            class StringNode(Node):
+                value: str
+                def accept(self, visitor: "Visitor") -> Any:
+                    return visitor.visit_string(self)
+
+
+            @dataclass
+            class BinaryOpNode(Node):
+                op: str
+                left: Node
+                right: Node
+                def accept(self, visitor: "Visitor") -> Any:
+                    return visitor.visit_binary_op(self)
+
+
+            @dataclass
+            class UnaryOpNode(Node):
+                op: str
+                operand: Node
+                def accept(self, visitor: "Visitor") -> Any:
+                    return visitor.visit_unary_op(self)
+
+
+            @dataclass
+            class VariableNode(Node):
+                name: str
+                def accept(self, visitor: "Visitor") -> Any:
+                    return visitor.visit_variable(self)
+
+
+            @dataclass
+            class AssignNode(Node):
+                name: str
+                value: Node
+                def accept(self, visitor: "Visitor") -> Any:
+                    return visitor.visit_assign(self)
+
+
+            @dataclass
+            class IfNode(Node):
+                condition: Node
+                then_branch: Node
+                else_branch: Node = None
+                def accept(self, visitor: "Visitor") -> Any:
+                    return visitor.visit_if(self)
+
+
+            @dataclass
+            class BlockNode(Node):
+                statements: list
+                def accept(self, visitor: "Visitor") -> Any:
+                    return visitor.visit_block(self)
+        ''')
+
+        visitor_py = textwrap.dedent('''\
+            """Base visitor interface."""
+            from typing import Any
+
+
+            class Visitor:
+                def visit_number(self, node) -> Any:
+                    raise NotImplementedError
+                def visit_string(self, node) -> Any:
+                    raise NotImplementedError
+                def visit_binary_op(self, node) -> Any:
+                    raise NotImplementedError
+                def visit_unary_op(self, node) -> Any:
+                    raise NotImplementedError
+                def visit_variable(self, node) -> Any:
+                    raise NotImplementedError
+                def visit_assign(self, node) -> Any:
+                    raise NotImplementedError
+                def visit_if(self, node) -> Any:
+                    raise NotImplementedError
+                def visit_block(self, node) -> Any:
+                    raise NotImplementedError
+        ''')
+
+        evaluator_py = textwrap.dedent('''\
+            """Evaluator visitor — executes the AST."""
+            from .visitor import Visitor
+            from .nodes import (NumberNode, StringNode, BinaryOpNode, UnaryOpNode,
+                                VariableNode, AssignNode, IfNode, BlockNode)
+
+
+            class Evaluator(Visitor):
+                def __init__(self):
+                    self.env = {}
+
+                def visit_number(self, node: NumberNode):
+                    return node.value
+
+                def visit_string(self, node: StringNode):
+                    return node.value
+
+                def visit_binary_op(self, node: BinaryOpNode):
+                    left = node.left.accept(self)
+                    right = node.right.accept(self)
+                    ops = {"+": lambda a,b: a+b, "-": lambda a,b: a-b,
+                           "*": lambda a,b: a*b, "/": lambda a,b: a/b,
+                           "==": lambda a,b: a==b, "!=": lambda a,b: a!=b,
+                           "<": lambda a,b: a<b, ">": lambda a,b: a>b}
+                    if node.op not in ops:
+                        raise ValueError(f"Unknown op: {node.op}")
+                    if node.op == "/" and right == 0:
+                        raise ZeroDivisionError("Division by zero")
+                    return ops[node.op](left, right)
+
+                def visit_unary_op(self, node: UnaryOpNode):
+                    val = node.operand.accept(self)
+                    if node.op == "-":
+                        return -val
+                    elif node.op == "not":
+                        return not val
+                    raise ValueError(f"Unknown unary op: {node.op}")
+
+                def visit_variable(self, node: VariableNode):
+                    if node.name not in self.env:
+                        raise NameError(f"Undefined variable: {node.name}")
+                    return self.env[node.name]
+
+                def visit_assign(self, node: AssignNode):
+                    value = node.value.accept(self)
+                    self.env[node.name] = value
+                    return value
+
+                def visit_if(self, node: IfNode):
+                    cond = node.condition.accept(self)
+                    if cond:
+                        return node.then_branch.accept(self)
+                    elif node.else_branch:
+                        return node.else_branch.accept(self)
+                    return None
+
+                def visit_block(self, node: BlockNode):
+                    result = None
+                    for stmt in node.statements:
+                        result = stmt.accept(self)
+                    return result
+        ''')
+
+        printer_py = textwrap.dedent('''\
+            """Printer visitor — pretty-prints the AST."""
+            from .visitor import Visitor
+            from .nodes import (NumberNode, StringNode, BinaryOpNode, UnaryOpNode,
+                                VariableNode, AssignNode, IfNode, BlockNode)
+
+
+            class Printer(Visitor):
+                def visit_number(self, node: NumberNode) -> str:
+                    if node.value == int(node.value):
+                        return str(int(node.value))
+                    return str(node.value)
+
+                def visit_string(self, node: StringNode) -> str:
+                    return '"' + node.value + '"'
+
+                def visit_binary_op(self, node: BinaryOpNode) -> str:
+                    left = node.left.accept(self)
+                    right = node.right.accept(self)
+                    return f"({left} {node.op} {right})"
+
+                def visit_unary_op(self, node: UnaryOpNode) -> str:
+                    val = node.operand.accept(self)
+                    return f"({node.op} {val})"
+
+                def visit_variable(self, node: VariableNode) -> str:
+                    return node.name
+
+                def visit_assign(self, node: AssignNode) -> str:
+                    val = node.value.accept(self)
+                    return f"{node.name} = {val}"
+
+                def visit_if(self, node: IfNode) -> str:
+                    cond = node.condition.accept(self)
+                    then = node.then_branch.accept(self)
+                    if node.else_branch:
+                        els = node.else_branch.accept(self)
+                        return f"if {cond} then {then} else {els}"
+                    return f"if {cond} then {then}"
+
+                def visit_block(self, node: BlockNode) -> str:
+                    parts = [stmt.accept(self) for stmt in node.statements]
+                    return "; ".join(parts)
+        ''')
+
+        optimizer_py = textwrap.dedent('''\
+            """Optimizer visitor — constant folding."""
+            from .visitor import Visitor
+            from .nodes import (NumberNode, StringNode, BinaryOpNode, UnaryOpNode,
+                                VariableNode, AssignNode, IfNode, BlockNode)
+
+
+            class Optimizer(Visitor):
+                def visit_number(self, node: NumberNode):
+                    return node
+
+                def visit_string(self, node: StringNode):
+                    return node
+
+                def visit_binary_op(self, node: BinaryOpNode):
+                    left = node.left.accept(self)
+                    right = node.right.accept(self)
+                    if isinstance(left, NumberNode) and isinstance(right, NumberNode):
+                        ops = {"+": lambda a,b: a+b, "-": lambda a,b: a-b,
+                               "*": lambda a,b: a*b}
+                        if node.op in ops:
+                            return NumberNode(ops[node.op](left.value, right.value))
+                        if node.op == "/" and right.value != 0:
+                            return NumberNode(left.value / right.value)
+                    if isinstance(left, StringNode) and isinstance(right, StringNode) and node.op == "+":
+                        return StringNode(left.value + right.value)
+                    return BinaryOpNode(node.op, left, right)
+
+                def visit_unary_op(self, node: UnaryOpNode):
+                    operand = node.operand.accept(self)
+                    if isinstance(operand, NumberNode) and node.op == "-":
+                        return NumberNode(-operand.value)
+                    return UnaryOpNode(node.op, operand)
+
+                def visit_variable(self, node: VariableNode):
+                    return node
+
+                def visit_assign(self, node: AssignNode):
+                    return AssignNode(node.name, node.value.accept(self))
+
+                def visit_if(self, node: IfNode):
+                    cond = node.condition.accept(self)
+                    then = node.then_branch.accept(self)
+                    els = node.else_branch.accept(self) if node.else_branch else None
+                    if isinstance(cond, NumberNode):
+                        return then if cond.value else (els or NumberNode(0))
+                    return IfNode(cond, then, els)
+
+                def visit_block(self, node: BlockNode):
+                    return BlockNode([stmt.accept(self) for stmt in node.statements])
+        ''')
+
+        init_py = textwrap.dedent('''\
+            """Expression language interpreter with visitor pattern."""
+            from .nodes import *
+            from .evaluator import Evaluator
+            from .printer import Printer
+            from .optimizer import Optimizer
+        ''')
+
+        test_py = textwrap.dedent('''\
+            """Tests for the expression language.
+
+            Tests include two NEW node types that must be added:
+            - FunctionCallNode: function calls like min(1, 2, 3)
+            - ListNode: list literals like [1, 2, 3]
+
+            You must add these to nodes.py, visitor.py, and ALL 3 visitors.
+            """
+            import sys, os
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from expr.nodes import (NumberNode, StringNode, BinaryOpNode, UnaryOpNode,
+                                     VariableNode, AssignNode, IfNode, BlockNode,
+                                     FunctionCallNode, ListNode)
+            from expr.evaluator import Evaluator
+            from expr.printer import Printer
+            from expr.optimizer import Optimizer
+
+
+            def test_basic_eval():
+                e = Evaluator()
+                node = BinaryOpNode("+", NumberNode(2), NumberNode(3))
+                assert node.accept(e) == 5
+
+            def test_string_concat():
+                e = Evaluator()
+                node = BinaryOpNode("+", StringNode("hello "), StringNode("world"))
+                assert node.accept(e) == "hello world"
+
+            def test_variable_assign_and_use():
+                e = Evaluator()
+                block = BlockNode([
+                    AssignNode("x", NumberNode(10)),
+                    BinaryOpNode("+", VariableNode("x"), NumberNode(5)),
+                ])
+                assert block.accept(e) == 15
+
+            def test_if_true():
+                e = Evaluator()
+                assert IfNode(NumberNode(1), NumberNode(42), NumberNode(0)).accept(e) == 42
+
+            def test_if_false():
+                e = Evaluator()
+                assert IfNode(NumberNode(0), NumberNode(42), NumberNode(99)).accept(e) == 99
+
+            def test_printer_basic():
+                p = Printer()
+                assert BinaryOpNode("+", NumberNode(2), NumberNode(3)).accept(p) == "(2 + 3)"
+
+            def test_optimizer_constant_fold():
+                o = Optimizer()
+                result = BinaryOpNode("+", NumberNode(2), NumberNode(3)).accept(o)
+                assert isinstance(result, NumberNode) and result.value == 5
+
+            def test_list_node_eval():
+                e = Evaluator()
+                result = ListNode([NumberNode(1), NumberNode(2), NumberNode(3)]).accept(e)
+                assert result == [1, 2, 3]
+
+            def test_list_node_with_expressions():
+                e = Evaluator()
+                node = ListNode([BinaryOpNode("+", NumberNode(1), NumberNode(2)), NumberNode(4)])
+                assert node.accept(e) == [3, 4]
+
+            def test_list_node_print():
+                p = Printer()
+                assert ListNode([NumberNode(1), NumberNode(2)]).accept(p) == "[1, 2]"
+
+            def test_list_node_optimize():
+                o = Optimizer()
+                node = ListNode([BinaryOpNode("+", NumberNode(1), NumberNode(2)), NumberNode(4)])
+                result = node.accept(o)
+                assert isinstance(result, ListNode)
+                assert isinstance(result.elements[0], NumberNode) and result.elements[0].value == 3
+
+            def test_function_call_min():
+                e = Evaluator()
+                assert FunctionCallNode("min", [NumberNode(3), NumberNode(1), NumberNode(2)]).accept(e) == 1
+
+            def test_function_call_max():
+                e = Evaluator()
+                assert FunctionCallNode("max", [NumberNode(3), NumberNode(1), NumberNode(2)]).accept(e) == 3
+
+            def test_function_call_len():
+                e = Evaluator()
+                node = FunctionCallNode("len", [ListNode([NumberNode(1), NumberNode(2), NumberNode(3)])])
+                assert node.accept(e) == 3
+
+            def test_function_call_abs():
+                e = Evaluator()
+                assert FunctionCallNode("abs", [UnaryOpNode("-", NumberNode(42))]).accept(e) == 42
+
+            def test_function_call_print():
+                p = Printer()
+                assert FunctionCallNode("min", [NumberNode(3), NumberNode(1)]).accept(p) == "min(3, 1)"
+
+            def test_function_call_optimize():
+                o = Optimizer()
+                node = FunctionCallNode("min", [
+                    BinaryOpNode("+", NumberNode(1), NumberNode(2)), NumberNode(1)])
+                result = node.accept(o)
+                assert isinstance(result, FunctionCallNode)
+                assert isinstance(result.args[0], NumberNode) and result.args[0].value == 3
+
+            def test_function_in_expression():
+                e = Evaluator()
+                node = BinaryOpNode("+",
+                    FunctionCallNode("min", [NumberNode(3), NumberNode(1)]),
+                    FunctionCallNode("max", [NumberNode(4), NumberNode(5)]))
+                assert node.accept(e) == 6
+
+            def test_nested_function_list():
+                e = Evaluator()
+                node = FunctionCallNode("len", [
+                    ListNode([NumberNode(1),
+                              FunctionCallNode("min", [NumberNode(3), NumberNode(1)]),
+                              NumberNode(5)])])
+                assert node.accept(e) == 3
+
+
+            if __name__ == "__main__":
+                test_fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+                passed = 0
+                failed = 0
+                for fn in test_fns:
+                    try:
+                        fn()
+                        print(f"  PASS: {fn.__name__}")
+                        passed += 1
+                    except Exception as e:
+                        print(f"  FAIL: {fn.__name__}: {e}")
+                        failed += 1
+                print(f"\\n{passed} passed, {failed} failed")
+                if failed:
+                    print("SOME TESTS FAILED")
+                    exit(1)
+                else:
+                    print("ALL TESTS PASSED")
+        ''')
+
+        files = {
+            "expr/__init__.py": init_py,
+            "expr/nodes.py": nodes_py,
+            "expr/visitor.py": visitor_py,
+            "expr/evaluator.py": evaluator_py,
+            "expr/printer.py": printer_py,
+            "expr/optimizer.py": optimizer_py,
+            "tests/test_expr.py": test_py,
+        }
+
+        eval_script = textwrap.dedent('''\
+            #!/bin/bash
+            cd "$WORKDIR"
+            OUTPUT=$(python3 tests/test_expr.py 2>&1)
+            echo "$OUTPUT"
+            if echo "$OUTPUT" | grep -q "ALL TESTS PASSED"; then
+                exit 0
+            else
+                exit 1
+            fi
+        ''')
+
+        return Task(
+            task_id="frontier_visitor_extension",
+            category=TaskCategory.DIAGNOSTIC,
+            title="Add 2 new node types to visitor-pattern AST interpreter",
+            difficulty="hard",
+            goal=textwrap.dedent("""\
+                The expression language uses the visitor pattern with 3 visitor
+                implementations (Evaluator, Printer, Optimizer). You need to add
+                two new AST node types:
+
+                1. **ListNode** — represents list literals like [1, 2, 3]
+                   - Evaluator: returns a Python list of evaluated elements
+                   - Printer: prints as "[1, 2, 3]"
+                   - Optimizer: constant-folds each element
+
+                2. **FunctionCallNode** — represents built-in function calls
+                   - Supports: min, max, len, abs
+                   - Evaluator: computes the function result
+                   - Printer: prints as "func(arg1, arg2)"
+                   - Optimizer: folds arguments
+
+                You must update:
+                - expr/nodes.py (add node classes with accept() methods)
+                - expr/visitor.py (add visit_list, visit_function_call to base)
+                - expr/evaluator.py (implement evaluation)
+                - expr/printer.py (implement printing)
+                - expr/optimizer.py (implement optimization)
+
+                Run tests: `python3 tests/test_expr.py`
+            """),
+            hints=None,
+            environment=EnvironmentSetup(seed_files=files),
+            ground_truth="Add ListNode(elements) and FunctionCallNode(name, args) to nodes.py. Add visit_list/visit_function_call to Visitor base. Implement in Evaluator, Printer, Optimizer.",
+            eval_spec=EvalSpec(
+                method=EvalMethod.SCRIPT_CHECK,
+                check_script_content=eval_script,
+            ),
+            capabilities=[
+                Capability.CODE_EDITING,
+                Capability.MULTI_FILE_REASONING,
                 Capability.CODE_READING,
             ],
             source="frontier_generator",
