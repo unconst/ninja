@@ -1,0 +1,74 @@
+{
+  "task_id": "local_ops_f57f75d2",
+  "category": "local_ops",
+  "title": "Convert INI config to YAML and TOML",
+  "difficulty": "medium",
+  "goal": "Convert the config.ini file into two equivalent files:\n1. config.yaml (YAML format)\n2. config.toml (TOML format)\n\nPreserve all sections, keys, and values. Numeric values should be\nnumbers (not strings). Boolean values should be booleans.\nKeep the original config.ini file.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [
+      "pip install pyyaml toml 2>/dev/null || true"
+    ],
+    "seed_files": {
+      "config.ini": "[database]\nhost = localhost\nport = 5432\nname = myapp_db\nuser = admin\npassword = secret123\npool_size = 10\n\n[redis]\nhost = localhost\nport = 6379\ndb = 0\n\n[server]\nhost = 0.0.0.0\nport = 8080\ndebug = true\nworkers = 4\n\n[logging]\nlevel = INFO\nfile = /var/log/myapp.log\nformat = %(asctime)s %(levelname)s %(message)s\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "config.yaml and config.toml created with correct types and all values preserved",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "config.yaml",
+          "config.toml",
+          "config.ini"
+        ]
+      },
+      {
+        "method": "file_content",
+        "expected_content": {
+          "config.yaml": "pool_size: 10",
+          "config.toml": "pool_size = 10"
+        }
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import yaml; d=yaml.safe_load(open('config.yaml')); assert d['database']['port']==5432; assert d['server']['debug']==True; print('yaml_ok')\"",
+        "output_contains": [
+          "yaml_ok"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "config_reading",
+    "config_editing",
+    "file_creation",
+    "code_writing",
+    "script_writing"
+  ],
+  "source": "local_ops_generator:config_migration",
+  "generated_at": "2026-03-11T08:15:32.297152+00:00",
+  "estimated_minutes": 5
+}

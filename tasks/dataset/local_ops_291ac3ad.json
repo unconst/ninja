@@ -1,0 +1,67 @@
+{
+  "task_id": "local_ops_291ac3ad",
+  "category": "local_ops",
+  "title": "Extract and summarize log issues",
+  "difficulty": "medium",
+  "goal": "Analyze the application log file (app.log) and create a report file called report.txt with:\n\n1. Total count of each log level (INFO, WARN, ERROR)\n2. List of unique error messages\n3. List of unique warnings\n4. Average response time of HTTP requests (from the request lines)\n5. Time range of the log file (first and last timestamp)\n\nUse simple text format with clear section headers.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "app.log": "2024-01-15 08:00:01 INFO  server started on port 8080\n2024-01-15 08:00:05 INFO  database connected: pool_size=10\n2024-01-15 08:01:12 WARN  slow query detected: 2.3s SELECT * FROM users\n2024-01-15 08:02:30 INFO  request: GET /api/users 200 45ms\n2024-01-15 08:02:31 INFO  request: POST /api/login 200 120ms\n2024-01-15 08:03:15 ERROR connection pool exhausted, retrying...\n2024-01-15 08:03:16 ERROR connection pool exhausted, retrying...\n2024-01-15 08:03:17 INFO  connection pool recovered\n2024-01-15 08:04:00 INFO  request: GET /api/users 200 50ms\n2024-01-15 08:04:01 WARN  deprecated API endpoint called: /api/v1/users\n2024-01-15 08:05:30 ERROR unhandled exception: NullPointerError in UserService.getProfile\n2024-01-15 08:05:30 ERROR   at UserService.java:142\n2024-01-15 08:05:30 ERROR   at RequestHandler.java:89\n2024-01-15 08:06:00 INFO  request: GET /health 200 5ms\n2024-01-15 08:07:45 WARN  memory usage above 80%: 82.3%\n2024-01-15 08:10:00 INFO  request: GET /api/users 200 48ms\n2024-01-15 08:15:00 ERROR database connection timeout after 30s\n2024-01-15 08:15:01 ERROR database connection timeout after 30s\n2024-01-15 08:15:02 WARN  circuit breaker opened for database\n2024-01-15 08:16:00 INFO  circuit breaker closed, database reconnected"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "report.txt with correct counts (INFO:9, WARN:3, ERROR:6), unique errors listed, average response time ~53.6ms",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "report.txt"
+        ]
+      },
+      {
+        "method": "file_content",
+        "expected_content": {
+          "report.txt": "ERROR"
+        }
+      },
+      {
+        "method": "command_output",
+        "check_command": "grep -c 'INFO' report.txt | head -1 && grep -ci 'error' report.txt | head -1",
+        "output_contains": []
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "log_analysis",
+    "file_creation",
+    "shell_commands",
+    "code_writing",
+    "summary_gen"
+  ],
+  "source": "local_ops_generator:log_extraction",
+  "generated_at": "2026-03-11T08:15:32.297184+00:00",
+  "estimated_minutes": 5
+}

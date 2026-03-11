@@ -1,0 +1,73 @@
+{
+  "task_id": "local_ops_1b5a5732",
+  "category": "local_ops",
+  "title": "Audit and split requirements into prod/dev",
+  "difficulty": "medium",
+  "goal": "The requirements.txt has all dependencies mixed together.\n\n1. Read the source code in src/ to determine which packages are actually used at runtime\n2. Split requirements.txt into:\n   - requirements.txt (production dependencies only)\n   - requirements-dev.txt (development/testing tools only)\n3. Remove any packages that are not imported anywhere in the codebase\n4. Keep version pins as-is\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "requirements.txt": "flask==2.0.1\nrequests==2.28.0\nnumpy==1.23.0\npandas==1.5.0\nscikit-learn==1.2.0\nmatplotlib==3.6.0\nSQLAlchemy==1.4.40\ncelery==5.2.7\nredis==4.3.4\nboto3==1.26.0\npytest==7.2.0\nblack==22.10.0\nflake8==5.0.4\nmypy==0.990\nsphinx==5.3.0\ncoverage==6.5.0\n",
+      "src/app.py": "from flask import Flask, jsonify\nimport requests\nfrom sqlalchemy import create_engine\n\napp = Flask(__name__)\nengine = create_engine('sqlite:///app.db')\n\n@app.route('/api/data')\ndef get_data():\n    resp = requests.get('https://api.example.com/data')\n    return jsonify(resp.json())\n",
+      "tests/test_app.py": "import pytest\nfrom src.app import app\ndef test_health():\n    pass\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "requirements.txt: flask, requests, SQLAlchemy. requirements-dev.txt: pytest, black, flake8, mypy, coverage. Removed: numpy, pandas, scikit-learn, matplotlib, celery, redis, boto3, sphinx",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "requirements.txt",
+          "requirements-dev.txt"
+        ]
+      },
+      {
+        "method": "file_content",
+        "expected_content": {
+          "requirements.txt": "flask",
+          "requirements-dev.txt": "pytest"
+        }
+      },
+      {
+        "method": "command_output",
+        "check_command": "! grep -q 'numpy' requirements.txt && ! grep -q 'pandas' requirements.txt && echo 'unused_removed'",
+        "output_contains": [
+          "unused_removed"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "dep_mgmt",
+    "file_creation",
+    "multi_file",
+    "decomposition"
+  ],
+  "source": "local_ops_generator:dependency_cleanup",
+  "generated_at": "2026-03-11T08:15:32.297244+00:00",
+  "estimated_minutes": 5
+}

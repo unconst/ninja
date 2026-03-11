@@ -1,0 +1,56 @@
+{
+  "task_id": "env_debug_b5c51cf2",
+  "category": "env_debug",
+  "title": "Diagnose and fix server startup failure",
+  "difficulty": "medium",
+  "goal": "The server.py script is failing to start. When you run `python3 server.py`\nit should print \"Server started on port XXXX\" but instead it errors out.\n\nDiagnose the issue and fix it. The fix should be in the code, not by\nkilling other processes. The server should be able to start successfully.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "server.py": "import socket\nimport json\nimport os\n\ndef load_config():\n    with open('server_config.json') as f:\n        return json.load(f)\n\ndef start_server():\n    config = load_config()\n    host = config['host']\n    port = config['port']\n\n    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\n    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\n    try:\n        sock.bind((host, port))\n        sock.listen(1)\n        print(f\"Server started on port {port}\")\n    except OSError as e:\n        print(f\"Failed to start: {e}\")\n        raise\n    finally:\n        sock.close()\n\nif __name__ == '__main__':\n    start_server()\n",
+      "server_config.json": "{\"host\": \"0.0.0.0\", \"port\": \"8080\"}"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "The port value in server_config.json is a string '8080' but socket.bind needs an int. Fix: either change JSON to use integer 8080, or add int() conversion in code.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 server.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "Server started on port"
+    ],
+    "output_not_contains": [
+      "Failed to start",
+      "Error",
+      "Traceback"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "error_interp",
+    "root_cause",
+    "code_reading",
+    "config_reading",
+    "code_editing"
+  ],
+  "source": "env_debug_generator:port_conflict",
+  "generated_at": "2026-03-11T08:15:32.298975+00:00",
+  "estimated_minutes": 3
+}
