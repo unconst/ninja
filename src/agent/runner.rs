@@ -1599,14 +1599,59 @@ print(json.dumps(result))
         }
 
         // First attempt to execute the tool
+        // Save pre-edit content for replace_lines/write_file auto-revert on syntax errors
+        let pre_edit_content = if (tool_name == "replace_lines" || tool_name == "write_file") {
+            if let Some(path_str) = input.get("path").and_then(|v| v.as_str()) {
+                if path_str.ends_with(".py") {
+                    let resolved = if Path::new(path_str).is_absolute() {
+                        PathBuf::from(path_str)
+                    } else {
+                        self.config.workdir.join(path_str)
+                    };
+                    std::fs::read_to_string(&resolved).ok()
+                } else { None }
+            } else { None }
+        } else { None };
+
         let result = tools::execute_tool(tool_name, input, &self.config.workdir);
-        
+
         match result {
             Ok(output) => {
                 // For edit_file operations, validate the changes were applied correctly
                 if tool_name == "edit_file" {
                     if let Some(validation_result) = self.validate_file_edit(input, &output) {
                         Ok(validation_result)
+                    } else {
+                        Ok(output)
+                    }
+                } else if tool_name == "replace_lines" || tool_name == "write_file" {
+                    // Lint check for Python files after replace_lines/write_file
+                    let path_str = input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                    if path_str.ends_with(".py") {
+                        let resolved = if Path::new(path_str).is_absolute() {
+                            PathBuf::from(path_str)
+                        } else {
+                            self.config.workdir.join(path_str)
+                        };
+                        let lint_msg = self.lint_python_file(&resolved);
+                        if !lint_msg.is_empty() {
+                            if (lint_msg.contains("invalid-syntax") || lint_msg.contains("SYNTAX ERROR"))
+                                && pre_edit_content.is_some()
+                            {
+                                let original = pre_edit_content.as_ref().unwrap();
+                                let _ = std::fs::write(&resolved, original);
+                                Ok(format!(
+                                    "EDIT REVERTED — your {} introduced a syntax error.\n{}\n\n\
+                                     The file has been restored to its previous state. \
+                                     Please fix the syntax and try again.",
+                                    tool_name, lint_msg
+                                ))
+                            } else {
+                                Ok(format!("{}{}", output, lint_msg))
+                            }
+                        } else {
+                            Ok(output)
+                        }
                     } else {
                         Ok(output)
                     }
