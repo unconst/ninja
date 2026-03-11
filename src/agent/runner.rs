@@ -729,12 +729,30 @@ impl AgentRunner {
                         (Err("Internal error: no handle or pre-resolved result".to_string()), std::time::Duration::ZERO)
                     };
 
-                    // Post-process: edit validation and error recovery
+                    // Post-process: edit validation, lint checks, and error recovery
                     let (output, is_error) = match result {
                         Ok(output) => {
                             if tc.name == "edit_file" {
                                 if let Some(validated) = self.validate_file_edit(&tc.input, &output) {
                                     (validated, false)
+                                } else {
+                                    (output, false)
+                                }
+                            } else if tc.name == "replace_lines" || tc.name == "write_file" {
+                                // Lint check for Python files after replace_lines/write_file
+                                let path_str = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                                if path_str.ends_with(".py") {
+                                    let resolved = if Path::new(path_str).is_absolute() {
+                                        PathBuf::from(path_str)
+                                    } else {
+                                        self.config.workdir.join(path_str)
+                                    };
+                                    let lint_msg = self.lint_python_file(&resolved);
+                                    if !lint_msg.is_empty() {
+                                        (format!("{}{}", output, lint_msg), false)
+                                    } else {
+                                        (output, false)
+                                    }
                                 } else {
                                     (output, false)
                                 }
@@ -1302,30 +1320,73 @@ impl AgentRunner {
             }
         };
 
-        // Quick syntax check for Python files
+        // Lint check for Python files
         if path.ends_with(".py") {
-            if let Ok(output) = std::process::Command::new("python3")
-                .args(&["-c", &format!("import ast; ast.parse(open('{}').read())", resolved_path.display())])
-                .current_dir(&self.config.workdir)
-                .output()
-            {
-                if !output.status.success() {
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    // Extract just the error line (last 2 lines usually)
-                    let err_lines: Vec<&str> = stderr.lines().collect();
-                    let err_msg = if err_lines.len() > 2 {
-                        err_lines[err_lines.len()-2..].join("\n")
-                    } else {
-                        stderr.trim().to_string()
-                    };
-                    result.push_str(&format!(
-                        "\n\nSYNTAX ERROR after edit: {}\nFix this syntax error before proceeding.", err_msg
-                    ));
-                }
+            let lint_msg = self.lint_python_file(&resolved_path);
+            if !lint_msg.is_empty() {
+                result.push_str(&lint_msg);
             }
         }
 
         Some(result)
+    }
+
+    /// Run lint checks on a Python file after editing. Returns error message to append, or empty string.
+    /// Uses ruff (fast, Rust-based linter) for syntax errors + undefined names + import errors.
+    /// Falls back to ast.parse if ruff is not available.
+    fn lint_python_file(&self, path: &Path) -> String {
+        // Try ruff first: fast, catches more issues than ast.parse
+        // E9 = syntax errors, F821 = undefined names, F401 = unused imports, F811 = redefined
+        if let Ok(output) = std::process::Command::new("ruff")
+            .args(&[
+                "check", "--select", "E9,F821,F811",
+                "--no-fix", "--output-format", "concise",
+                &path.display().to_string(),
+            ])
+            .current_dir(&self.config.workdir)
+            .output()
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            // ruff exits non-zero when it finds errors
+            if !output.status.success() && !stdout.trim().is_empty() {
+                // Limit to first 8 errors to avoid flooding
+                let errors: Vec<&str> = stdout.lines().take(8).collect();
+                let total = stdout.lines().count();
+                let mut msg = format!("\n\nLINT ERRORS after edit ({} issues):\n{}", total, errors.join("\n"));
+                if total > 8 {
+                    msg.push_str(&format!("\n... and {} more", total - 8));
+                }
+                msg.push_str("\nFix these errors before proceeding.");
+                return msg;
+            }
+            // ruff available and no errors — skip ast.parse
+            if stderr.is_empty() || !stderr.contains("not found") {
+                return String::new();
+            }
+        }
+
+        // Fallback: ast.parse for syntax-only check
+        if let Ok(output) = std::process::Command::new("python3")
+            .args(&["-c", &format!("import ast; ast.parse(open('{}').read())", path.display())])
+            .current_dir(&self.config.workdir)
+            .output()
+        {
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let err_lines: Vec<&str> = stderr.lines().collect();
+                let err_msg = if err_lines.len() > 2 {
+                    err_lines[err_lines.len()-2..].join("\n")
+                } else {
+                    stderr.trim().to_string()
+                };
+                return format!(
+                    "\n\nSYNTAX ERROR after edit: {}\nFix this syntax error before proceeding.", err_msg
+                );
+            }
+        }
+
+        String::new()
     }
 
     /// Check if git clone is necessary or if we're already in the target repository
