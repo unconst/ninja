@@ -46,7 +46,7 @@
     "code_editing",
     "root_cause",
     "hypothesis_test",
-    "constraint_satisfaction"
+    "decomposition"
   ],
   "source": "frontier_generator",
   "generated_at": "2026-03-11T18:00:00.000000+00:00",
