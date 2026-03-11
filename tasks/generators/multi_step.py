@@ -260,7 +260,7 @@ class MultiStepGenerator(TaskGenerator):
                         "users.json", "departments.json", "verify.py"
                     ]},
                     {"method": "command_output",
-                     "check_command": "python3 -c \"import json; u=json.load(open('users.json')); assert len(u)==6; assert all('department' in x or 'dept' in str(x).lower() for x in u); print('users_ok')\"",
+                     "check_command": "python3 -c \"import json; u=json.load(open('users.json')); assert len(u)==6; assert all(any('department' in k.lower() for k in x.keys()) for x in u); print('users_ok')\"",
                      "output_contains": ["users_ok"]},
                     {"method": "command_output",
                      "check_command": "python3 -c \"import json; d=json.load(open('departments.json')); assert len(d)==3; print('depts_ok')\"",
@@ -406,10 +406,10 @@ class MultiStepGenerator(TaskGenerator):
                 sub_evals=[
                     {"method": "file_exists", "expected_files": ["tests/"]},
                     {"method": "command_output",
-                     "check_command": "python3 -m pytest tests/ -v 2>&1 | tail -5",
+                     "check_command": "python3 -m pytest tests/ -v -p no:xdist -p no:randomly -p no:cacheprovider 2>&1 | tail -5",
                      "output_contains": ["passed"]},
                     {"method": "command_output",
-                     "check_command": "python3 -m pytest tests/ 2>&1 | grep -E '\\d+ passed' | head -1",
+                     "check_command": "python3 -m pytest tests/ -p no:xdist -p no:randomly -p no:cacheprovider 2>&1 | grep -E '\\d+ passed' | head -1",
                      "output_contains": ["passed"]},
                 ]
             ),

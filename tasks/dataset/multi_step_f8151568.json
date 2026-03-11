@@ -1,5 +1,5 @@
 {
-  "task_id": "multi_step_207e1c17",
+  "task_id": "multi_step_f8151568",
   "category": "multi_step",
   "title": "Refactor monolithic script into modules",
   "difficulty": "medium",
@@ -47,6 +47,6 @@
     "prioritization"
   ],
   "source": "multi_step_generator:refactor_and_verify",
-  "generated_at": "2026-03-11T08:30:22.562517+00:00",
+  "generated_at": "2026-03-11T08:48:16.496805+00:00",
   "estimated_minutes": 12
 }

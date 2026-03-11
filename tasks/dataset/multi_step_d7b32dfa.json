@@ -1,5 +1,5 @@
 {
-  "task_id": "multi_step_2cb207f4",
+  "task_id": "multi_step_d7b32dfa",
   "category": "multi_step",
   "title": "Migrate SQLite database to JSON API format",
   "difficulty": "medium",
@@ -46,7 +46,7 @@
       },
       {
         "method": "command_output",
-        "check_command": "python3 -c \"import json; u=json.load(open('users.json')); assert len(u)==6; assert all('department' in x or 'dept' in str(x).lower() for x in u); print('users_ok')\"",
+        "check_command": "python3 -c \"import json; u=json.load(open('users.json')); assert len(u)==6; assert all(any('department' in k.lower() for k in x.keys()) for x in u); print('users_ok')\"",
         "output_contains": [
           "users_ok"
         ]
@@ -78,6 +78,6 @@
     "script_writing"
   ],
   "source": "multi_step_generator:migration_pipeline",
-  "generated_at": "2026-03-11T08:30:22.562060+00:00",
+  "generated_at": "2026-03-11T08:48:16.496347+00:00",
   "estimated_minutes": 12
 }

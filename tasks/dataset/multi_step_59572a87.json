@@ -1,5 +1,5 @@
 {
-  "task_id": "multi_step_b24c5440",
+  "task_id": "multi_step_59572a87",
   "category": "multi_step",
   "title": "Bootstrap Python CLI tool from specification",
   "difficulty": "medium",
@@ -46,6 +46,6 @@
     "test_running"
   ],
   "source": "multi_step_generator:project_bootstrap",
-  "generated_at": "2026-03-11T08:30:22.561837+00:00",
+  "generated_at": "2026-03-11T08:48:16.496148+00:00",
   "estimated_minutes": 12
 }
