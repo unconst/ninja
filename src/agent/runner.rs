@@ -1510,9 +1510,9 @@ print(json.dumps(result))
                 msg.push_str("\nFix these errors before proceeding.");
                 return msg;
             }
-            // ruff available and no errors — skip ast.parse
+            // ruff available and no errors — check for duplicate definitions then return
             if stderr.is_empty() || !stderr.contains("not found") {
-                return String::new();
+                return self.check_duplicate_definitions(path);
             }
         }
 
@@ -1536,7 +1536,55 @@ print(json.dumps(result))
             }
         }
 
-        String::new()
+        self.check_duplicate_definitions(path)
+    }
+
+    /// Check for duplicate function/class definitions at the same indentation level in a Python file.
+    /// In Python, the last definition wins, making earlier definitions dead code.
+    fn check_duplicate_definitions(&self, path: &Path) -> String {
+        let content = match std::fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(_) => return String::new(),
+        };
+
+        // Track (indent_level, name) -> count
+        let mut defs: std::collections::HashMap<(usize, String), Vec<usize>> = std::collections::HashMap::new();
+
+        for (line_num, line) in content.lines().enumerate() {
+            let trimmed = line.trim_start();
+            let indent = line.len() - trimmed.len();
+
+            // Match "def name(" or "class name(" or "class name:"
+            if let Some(rest) = trimmed.strip_prefix("def ").or_else(|| trimmed.strip_prefix("class ")) {
+                if let Some(name_end) = rest.find(|c: char| c == '(' || c == ':') {
+                    let name = rest[..name_end].trim().to_string();
+                    if !name.is_empty() {
+                        defs.entry((indent, name)).or_default().push(line_num + 1);
+                    }
+                }
+            }
+        }
+
+        let mut warnings = Vec::new();
+        for ((indent, name), lines) in &defs {
+            if lines.len() > 1 {
+                let lines_str: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+                warnings.push(format!(
+                    "  '{}' defined {} times (lines {}). Last definition shadows the others.",
+                    name, lines.len(), lines_str.join(", ")
+                ));
+            }
+        }
+
+        if warnings.is_empty() {
+            return String::new();
+        }
+
+        format!(
+            "\n\nWARNING: Duplicate definitions in {}:\n{}\nIn Python, only the LAST definition is used. Earlier ones are dead code.",
+            path.file_name().unwrap_or_default().to_string_lossy(),
+            warnings.join("\n")
+        )
     }
 
     /// Check if git clone is necessary or if we're already in the target repository
