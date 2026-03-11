@@ -1,0 +1,55 @@
+{
+  "task_id": "ambiguous_3cd6d67f",
+  "category": "ambiguous",
+  "title": "Update the configuration (infer from code)",
+  "difficulty": "medium",
+  "goal": "Update the configuration. The app should start without errors.\nRun `python3 app.py` to check.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "app.py": "import json\nimport sys\n\ndef load_config():\n    with open(\"config.json\") as f:\n        config = json.load(f)\n\n    # Validate required fields\n    errors = []\n    if config.get(\"version\") != 2:\n        errors.append(\"Config version must be 2 (current format)\")\n    if \"database\" not in config:\n        errors.append(\"Missing 'database' section\")\n    else:\n        db = config[\"database\"]\n        if \"host\" not in db:\n            errors.append(\"Missing database.host\")\n        if \"port\" not in db:\n            errors.append(\"Missing database.port\")\n        if not isinstance(db.get(\"port\"), int):\n            errors.append(\"database.port must be an integer\")\n        if \"name\" not in db:\n            errors.append(\"Missing database.name\")\n\n    if \"features\" not in config:\n        errors.append(\"Missing 'features' section\")\n    else:\n        feat = config[\"features\"]\n        if not isinstance(feat.get(\"max_connections\"), int):\n            errors.append(\"features.max_connections must be an integer\")\n        if \"enable_cache\" not in feat:\n            errors.append(\"Missing features.enable_cache\")\n        if feat.get(\"log_level\") not in (\"debug\", \"info\", \"warning\", \"error\"):\n            errors.append(\"features.log_level must be debug/info/warning/error\")\n\n    if errors:\n        for e in errors:\n            print(f\"CONFIG ERROR: {e}\", file=sys.stderr)\n        sys.exit(1)\n\n    return config\n\nif __name__ == '__main__':\n    config = load_config()\n    print(f\"App started with config v{config['version']}\")\n    print(f\"Database: {config['database']['host']}:{config['database']['port']}/{config['database']['name']}\")\n    print(f\"Cache: {'enabled' if config['features']['enable_cache'] else 'disabled'}\")\n    print(f\"Log level: {config['features']['log_level']}\")\n    print(\"Startup complete.\")\n",
+      "config.json": "{\n    \"version\": 1,\n    \"database\": {\n        \"host\": \"localhost\",\n        \"port\": \"5432\"\n    },\n    \"features\": {\n        \"max_connections\": \"10\"\n    }\n}"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Update config.json: version->2, port->5432 (int), add database.name, max_connections->10 (int), add enable_cache (bool), add log_level (valid string)",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 app.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "Startup complete"
+    ],
+    "output_not_contains": [
+      "CONFIG ERROR",
+      "Traceback"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "config_reading",
+    "config_editing",
+    "root_cause",
+    "prioritization"
+  ],
+  "source": "ambiguous_generator:update_config",
+  "generated_at": "2026-03-11T09:32:33.655239+00:00",
+  "estimated_minutes": 5
+}

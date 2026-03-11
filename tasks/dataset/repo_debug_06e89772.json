@@ -1,0 +1,54 @@
+{
+  "task_id": "repo_debug_06e89772",
+  "category": "repo_debug",
+  "title": "Fix LRU cache eviction bug",
+  "difficulty": "medium",
+  "goal": "The LRU cache implementation has a bug in its eviction logic.\nRun tests: `python3 -m pytest test_cache.py -p no:xdist -p no:randomly -p no:cacheprovider -v`\n\nThe cache should evict the Least Recently Used item when full.\nFix the bug \u2014 do NOT rewrite the cache from scratch.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "cache.py": "from collections import OrderedDict\n\nclass LRUCache:\n    def __init__(self, capacity):\n        self.capacity = capacity\n        self.cache = OrderedDict()\n\n    def get(self, key):\n        if key not in self.cache:\n            return None\n        # Move to end (most recently used)\n        self.cache.move_to_end(key)\n        return self.cache[key]\n\n    def put(self, key, value):\n        if key in self.cache:\n            self.cache[key] = value\n            self.cache.move_to_end(key)\n            return\n        if len(self.cache) >= self.capacity:\n            # Bug: evicts LAST (most recent) instead of FIRST (least recent)\n            self.cache.popitem(last=True)\n        self.cache[key] = value\n\n    def size(self):\n        return len(self.cache)\n\n    def keys(self):\n        return list(self.cache.keys())\n",
+      "test_cache.py": "import pytest\nfrom cache import LRUCache\n\ndef test_basic_put_get():\n    c = LRUCache(3)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    assert c.get(\"a\") == 1\n    assert c.get(\"b\") == 2\n\ndef test_eviction():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    c.put(\"c\", 3)  # Should evict \"a\" (least recently used)\n    assert c.get(\"a\") is None  # Evicted\n    assert c.get(\"b\") == 2\n    assert c.get(\"c\") == 3\n\ndef test_access_refreshes():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    c.get(\"a\")  # Refresh \"a\" \u2014 now \"b\" is LRU\n    c.put(\"c\", 3)  # Should evict \"b\"\n    assert c.get(\"b\") is None\n    assert c.get(\"a\") == 1\n    assert c.get(\"c\") == 3\n\ndef test_update_existing():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    c.put(\"a\", 10)  # Update, not new entry\n    assert c.size() == 2\n    assert c.get(\"a\") == 10\n\ndef test_capacity_one():\n    c = LRUCache(1)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    assert c.get(\"a\") is None\n    assert c.get(\"b\") == 2\n\ndef test_keys_order():\n    c = LRUCache(3)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    c.put(\"c\", 3)\n    c.get(\"a\")  # a is now most recent\n    assert c.keys() == [\"b\", \"c\", \"a\"]\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Fix eviction: change popitem(last=True) to popitem(last=False) to evict the least recently used (first) item instead of the most recently used (last) item",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 -m pytest test_cache.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "6 passed"
+    ],
+    "output_not_contains": [
+      "FAILED",
+      "ERROR"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "test_running",
+    "root_cause",
+    "code_reading",
+    "code_editing"
+  ],
+  "source": "repo_debug_generator:race_condition_in_cache",
+  "generated_at": "2026-03-11T09:28:45.542625+00:00",
+  "estimated_minutes": 5
+}

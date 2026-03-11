@@ -1,0 +1,57 @@
+{
+  "task_id": "ambiguous_49e3237b",
+  "category": "ambiguous",
+  "title": "Fix the bug (underspecified)",
+  "difficulty": "medium",
+  "goal": "There's a bug in this project. Fix it.\n\nRun `python3 main.py` to see it.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "main.py": "from processor import process_records\nfrom report import print_report\n\ndef main():\n    records = [\n        {\"name\": \"Alice\", \"score\": 85, \"grade\": \"B\"},\n        {\"name\": \"Bob\", \"score\": 92, \"grade\": \"A\"},\n        {\"name\": \"Charlie\", \"score\": 78, \"grade\": \"C\"},\n        {\"name\": \"Diana\", \"score\": 95, \"grade\": \"A\"},\n        {\"name\": \"Eve\", \"score\": 61, \"grade\": \"D\"},\n    ]\n    results = process_records(records)\n    print_report(results)\n\nif __name__ == '__main__':\n    main()\n",
+      "processor.py": "def process_records(records):\n    \"\"\"Process student records and compute statistics.\"\"\"\n    total = 0\n    passing = []\n    failing = []\n\n    for r in records:\n        total += r[\"score\"]\n        if r[\"score\"] >= 70:\n            passing.append(r)\n        else:\n            failing.append(r)\n\n    # Bug: divides by len(passing) instead of len(records)\n    average = total / len(passing)\n\n    return {\n        \"total_students\": len(records),\n        \"average_score\": round(average, 1),\n        \"passing\": passing,\n        \"failing\": failing,\n        \"pass_rate\": round(len(passing) / len(records) * 100, 1),\n    }\n",
+      "report.py": "def print_report(results):\n    print(f\"Student Report\")\n    print(f\"=============\")\n    print(f\"Total: {results['total_students']}\")\n    print(f\"Average: {results['average_score']}\")\n    print(f\"Pass rate: {results['pass_rate']}%\")\n    print(f\"Passing: {len(results['passing'])}, Failing: {len(results['failing'])}\")\n\n    # Sanity check\n    expected_avg = sum(s['score'] for s in results['passing'] + results['failing']) / results['total_students']\n    if abs(results['average_score'] - round(expected_avg, 1)) > 0.1:\n        print(f\"WARNING: Average mismatch! Got {results['average_score']}, expected {round(expected_avg, 1)}\")\n    else:\n        print(\"All checks passed.\")\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Bug in processor.py: average is computed as total/len(passing) but should be total/len(records). Fix: change len(passing) to len(records).",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 main.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "All checks passed"
+    ],
+    "output_not_contains": [
+      "WARNING",
+      "Traceback",
+      "Error"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "multi_file",
+    "hypothesis_test"
+  ],
+  "source": "ambiguous_generator:fix_the_bug",
+  "generated_at": "2026-03-11T09:32:33.654589+00:00",
+  "estimated_minutes": 5
+}

@@ -1,0 +1,56 @@
+{
+  "task_id": "web_search_39d6e2ac",
+  "category": "web_search",
+  "title": "Fix vulnerability based on security advisory",
+  "difficulty": "medium",
+  "goal": "A security advisory (`docs/SECURITY_ADVISORY.md`) describes a vulnerability\nin the `sanitize` function. Read the advisory and apply the recommended fix.\n\nRun `python3 test_security.py` to verify the fix. It should print\n\"All security tests passed.\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "docs/SECURITY_ADVISORY.md": "# Security Advisory: XSS in sanitize_html()\n\n## Severity: HIGH\n\n## Affected Versions: < 2.0\n\n## Description\nThe `sanitize_html()` function in `sanitizer.py` fails to handle:\n1. **Event handler attributes** (e.g., `onerror`, `onload`, `onclick`)\n2. **javascript: URIs** in href/src attributes\n3. **Case-insensitive bypasses** (e.g., `<SCRIPT>`, `<Script>`)\n\n## Proof of Concept\n```\nsanitize_html('<img src=x onerror=\"alert(1)\">')  # Not stripped\nsanitize_html('<a href=\"javascript:alert(1)\">click</a>')  # Not stripped\nsanitize_html('<SCRIPT>alert(1)</SCRIPT>')  # Not caught\n```\n\n## Recommended Fix\n1. Make tag matching case-insensitive\n2. Strip ALL attributes matching `on\\w+` pattern (event handlers)\n3. Remove `href` and `src` attributes containing `javascript:`\n4. Allowlist approach: only keep `href` (non-JS), `src` (non-JS), `class`, `id`\n\n## Fixed in: 2.0 (apply patch below)\n",
+      "sanitizer.py": "import re\n\nALLOWED_TAGS = {\"b\", \"i\", \"em\", \"strong\", \"a\", \"p\", \"br\", \"ul\", \"li\", \"img\"}\n\ndef sanitize_html(html):\n    \"\"\"Remove dangerous HTML tags and attributes.\"\"\"\n    # Remove script tags\n    html = re.sub(r'<script[^>]*>.*?</script>', '', html)\n\n    # Remove dangerous tags\n    html = re.sub(r'<(?!/?(?:' + '|'.join(ALLOWED_TAGS) + r')\\b)[^>]+>', '', html)\n\n    return html\n",
+      "test_security.py": "from sanitizer import sanitize_html\n\ndef test_basic_tags_preserved():\n    assert \"<b>\" in sanitize_html(\"<b>bold</b>\")\n    assert \"<em>\" in sanitize_html(\"<em>emphasis</em>\")\n    assert \"<a\" in sanitize_html('<a href=\"/page\">link</a>')\n\ndef test_script_removed():\n    result = sanitize_html('<script>alert(1)</script>')\n    assert \"script\" not in result.lower()\n\ndef test_case_insensitive_script():\n    result = sanitize_html('<SCRIPT>alert(1)</SCRIPT>')\n    assert \"script\" not in result.lower()\n    assert \"alert\" not in result\n\ndef test_event_handlers_stripped():\n    result = sanitize_html('<img src=\"photo.jpg\" onerror=\"alert(1)\">')\n    assert \"onerror\" not in result\n    assert \"alert\" not in result\n    # img tag itself should still be allowed\n    assert \"<img\" in result.lower() or \"img\" not in result.lower()\n\ndef test_javascript_uri_stripped():\n    result = sanitize_html('<a href=\"javascript:alert(1)\">click</a>')\n    assert \"javascript:\" not in result.lower()\n\ndef test_mixed_case_event():\n    result = sanitize_html('<img src=\"x\" OnError=\"alert(1)\">')\n    assert \"onerror\" not in result.lower()\n    assert \"alert\" not in result\n\ndef test_safe_content_preserved():\n    safe = '<p>Hello <b>world</b>. Visit <a href=\"/home\">home</a>.</p>'\n    result = sanitize_html(safe)\n    assert \"Hello\" in result\n    assert \"<b>\" in result\n    assert \"home\" in result\n\nif __name__ == '__main__':\n    test_basic_tags_preserved()\n    test_script_removed()\n    test_case_insensitive_script()\n    test_event_handlers_stripped()\n    test_javascript_uri_stripped()\n    test_mixed_case_event()\n    test_safe_content_preserved()\n    print(\"All security tests passed.\")\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Fix sanitizer.py: 1) re.IGNORECASE on script removal, 2) strip on\\w+=\"...\" attributes, 3) strip javascript: in href/src, 4) match SCRIPT/Script variants",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 test_security.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "All security tests passed"
+    ],
+    "output_not_contains": [
+      "Traceback",
+      "AssertionError"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "doc_reading",
+    "code_reading",
+    "code_editing",
+    "root_cause",
+    "hypothesis_test"
+  ],
+  "source": "web_search_generator:dependency_vulnerability",
+  "generated_at": "2026-03-11T09:16:37.225524+00:00",
+  "estimated_minutes": 8
+}

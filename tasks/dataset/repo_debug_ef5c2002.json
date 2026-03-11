@@ -1,0 +1,60 @@
+{
+  "task_id": "repo_debug_ef5c2002",
+  "category": "repo_debug",
+  "title": "Fix broken code after incomplete refactoring",
+  "difficulty": "medium",
+  "goal": "Someone started refactoring the calculator module from functions to a class-based\ndesign but didn't finish. The code is in a broken state \u2014 some parts use the old\nfunction API, others use the new class API.\n\nComplete the refactoring so ALL tests pass:\n`python3 -m pytest tests/ -p no:xdist -p no:randomly -p no:cacheprovider -v`\n\nKeep the Calculator class approach. Update all call sites to use it.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "calculator/__init__.py": "# Refactored: only class-based API now\nfrom .calc import Calculator\n",
+      "calculator/calc.py": "class Calculator:\n    def __init__(self, precision=2):\n        self.precision = precision\n        self.history = []\n\n    def add(self, a, b):\n        result = round(a + b, self.precision)\n        self.history.append(('add', a, b, result))\n        return result\n\n    def subtract(self, a, b):\n        result = round(a - b, self.precision)\n        self.history.append(('subtract', a, b, result))\n        return result\n\n    def multiply(self, a, b):\n        result = round(a * b, self.precision)\n        self.history.append(('multiply', a, b, result))\n        return result\n\n    def divide(self, a, b):\n        if b == 0:\n            raise ZeroDivisionError(\"Cannot divide by zero\")\n        result = round(a / b, self.precision)\n        self.history.append(('divide', a, b, result))\n        return result\n\n    def last_result(self):\n        if not self.history:\n            return None\n        return self.history[-1][3]\n",
+      "app.py": "# Main app \u2014 partially refactored (functions.py was deleted)\nfrom calculator import Calculator\nfrom calculator.functions import add, multiply  # Bug: functions.py no longer exists\n\ndef compute_stats(numbers):\n    total = add(numbers[0], numbers[1])  # Bug: should use Calculator\n    for n in numbers[2:]:\n        total = add(total, n)\n\n    calc = Calculator()\n    avg = calc.divide(total, len(numbers))\n    product = multiply(numbers[0], numbers[1])  # Bug: old API\n    return {\"total\": total, \"average\": avg, \"product\": product}\n\ndef run():\n    result = compute_stats([10, 20, 30])\n    print(f\"Total: {result['total']}, Avg: {result['average']}, Product: {result['product']}\")\n    return result\n",
+      "tests/__init__.py": "",
+      "tests/test_calculator.py": "import pytest\nfrom calculator import Calculator\n\n@pytest.fixture\ndef calc():\n    return Calculator()\n\ndef test_add(calc):\n    assert calc.add(2, 3) == 5\n\ndef test_subtract(calc):\n    assert calc.subtract(10, 4) == 6\n\ndef test_multiply(calc):\n    assert calc.multiply(3, 7) == 21\n\ndef test_divide(calc):\n    assert calc.divide(10, 3) == 3.33\n\ndef test_divide_by_zero(calc):\n    with pytest.raises(ZeroDivisionError):\n        calc.divide(1, 0)\n\ndef test_history(calc):\n    calc.add(1, 2)\n    calc.multiply(3, 4)\n    assert len(calc.history) == 2\n    assert calc.last_result() == 12\n\ndef test_precision():\n    calc = Calculator(precision=4)\n    assert calc.divide(1, 3) == 0.3333\n",
+      "tests/test_app.py": "from app import compute_stats, run\n\ndef test_compute_stats():\n    result = compute_stats([10, 20, 30])\n    assert result[\"total\"] == 60\n    assert result[\"average\"] == 20.0\n    assert result[\"product\"] == 200\n\ndef test_run(capsys):\n    run()\n    captured = capsys.readouterr()\n    assert \"Total: 60\" in captured.out\n    assert \"Avg: 20\" in captured.out\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Refactor app.py to use Calculator class: remove old function imports, create Calculator instance, call calc.add() and calc.multiply() instead of bare functions",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 -m pytest tests/ -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "passed"
+    ],
+    "output_not_contains": [
+      "FAILED",
+      "ERROR"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "test_running",
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "multi_file",
+    "decomposition"
+  ],
+  "source": "repo_debug_generator:refactor_breakage",
+  "generated_at": "2026-03-11T09:28:45.542151+00:00",
+  "estimated_minutes": 8
+}

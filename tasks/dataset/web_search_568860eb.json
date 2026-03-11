@@ -1,0 +1,57 @@
+{
+  "task_id": "web_search_568860eb",
+  "category": "web_search",
+  "title": "Configure system from documentation",
+  "difficulty": "medium",
+  "goal": "Set up the logging system by reading the documentation in `docs/logging.md`.\nCreate the `logging_config.yaml` file and the `log_setup.py` module.\n\nRun `python3 test_logging.py` to verify. It should print\n\"Logging configuration tests passed.\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [
+      "pip install pyyaml 2>/dev/null || true"
+    ],
+    "seed_files": {
+      "docs/logging.md": "# Logging Configuration Guide\n\n## Config File Format (YAML)\nThe logging system reads `logging_config.yaml` from the project root.\n\n### Required Structure:\n```yaml\nversion: 1\nformatters:\n  standard:\n    format: \"%(asctime)s [%(levelname)s] %(name)s: %(message)s\"\n  json:\n    format: \"json\"\n    fields: [\"timestamp\", \"level\", \"logger\", \"message\"]\nhandlers:\n  console:\n    type: stream\n    formatter: standard\n    level: INFO\n  file:\n    type: file\n    formatter: json\n    level: DEBUG\n    path: logs/app.log\nloggers:\n  root:\n    level: DEBUG\n    handlers: [console, file]\n  app:\n    level: INFO\n    handlers: [console]\n  app.database:\n    level: WARNING\n    handlers: [console, file]\n```\n\n## Setup Module\nCreate `log_setup.py` with a `setup_logging()` function that:\n1. Reads `logging_config.yaml`\n2. Returns a dict with keys: `formatters`, `handlers`, `loggers`\n3. Each logger should have `level` and `handlers` keys\n4. The function should validate the config has `version: 1`\n",
+      "test_logging.py": "import yaml\nimport os\n\ndef test_config_exists():\n    assert os.path.exists(\"logging_config.yaml\"), \"Config file not found\"\n\ndef test_config_structure():\n    with open(\"logging_config.yaml\") as f:\n        config = yaml.safe_load(f)\n    assert config[\"version\"] == 1\n    assert \"formatters\" in config\n    assert \"standard\" in config[\"formatters\"]\n    assert \"json\" in config[\"formatters\"]\n    assert \"handlers\" in config\n    assert \"console\" in config[\"handlers\"]\n    assert \"file\" in config[\"handlers\"]\n    assert \"loggers\" in config\n    assert \"root\" in config[\"loggers\"]\n\ndef test_handler_details():\n    with open(\"logging_config.yaml\") as f:\n        config = yaml.safe_load(f)\n    console = config[\"handlers\"][\"console\"]\n    assert console[\"type\"] == \"stream\"\n    assert console[\"level\"] == \"INFO\"\n    file_h = config[\"handlers\"][\"file\"]\n    assert file_h[\"type\"] == \"file\"\n    assert file_h[\"level\"] == \"DEBUG\"\n    assert \"path\" in file_h\n\ndef test_logger_details():\n    with open(\"logging_config.yaml\") as f:\n        config = yaml.safe_load(f)\n    root = config[\"loggers\"][\"root\"]\n    assert root[\"level\"] == \"DEBUG\"\n    assert \"console\" in root[\"handlers\"]\n    assert \"file\" in root[\"handlers\"]\n    db = config[\"loggers\"][\"app.database\"]\n    assert db[\"level\"] == \"WARNING\"\n\ndef test_setup_module():\n    from log_setup import setup_logging\n    result = setup_logging()\n    assert isinstance(result, dict)\n    assert \"formatters\" in result\n    assert \"handlers\" in result\n    assert \"loggers\" in result\n\nif __name__ == '__main__':\n    test_config_exists()\n    test_config_structure()\n    test_handler_details()\n    test_logger_details()\n    test_setup_module()\n    print(\"Logging configuration tests passed.\")\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Create logging_config.yaml matching the doc format, and log_setup.py with setup_logging() that reads and validates the YAML config.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 test_logging.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "Logging configuration tests passed"
+    ],
+    "output_not_contains": [
+      "Traceback",
+      "AssertionError"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "doc_reading",
+    "code_writing",
+    "file_creation",
+    "config_editing",
+    "decomposition"
+  ],
+  "source": "web_search_generator:config_from_docs",
+  "generated_at": "2026-03-11T09:16:37.225682+00:00",
+  "estimated_minutes": 8
+}

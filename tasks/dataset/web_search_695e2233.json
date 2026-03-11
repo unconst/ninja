@@ -1,0 +1,58 @@
+{
+  "task_id": "web_search_695e2233",
+  "category": "web_search",
+  "title": "Update code based on changelog breaking changes",
+  "difficulty": "medium",
+  "goal": "The library we depend on released a new version. Read the changelog\nat `docs/CHANGELOG.md` and update `app.py` to work with the new version.\n\nRun `python3 test_app.py` to verify. It should print \"All tests passed.\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "docs/CHANGELOG.md": "# DataStore Changelog\n\n## v3.0.0 (Breaking Changes)\n\n### Removed\n- `DataStore.find()` removed \u2014 use `DataStore.query()` instead\n- `DataStore.save()` removed \u2014 use `DataStore.upsert()` instead\n- `DataStore(path)` constructor removed \u2014 use `DataStore.open(path)` factory\n\n### Changed\n- `query()` returns `ResultSet` object instead of list\n  - Use `.items()` to get list of records\n  - Use `.count()` for count (was `len()` on list)\n  - Use `.first()` for first result\n- `upsert()` requires explicit `key` parameter: `upsert(key, data)`\n- All methods are now prefixed with the record type:\n  `store.upsert(\"users\", key, data)` instead of `store.upsert(key, data)`\n\n### Added\n- `DataStore.open(path, mode=\"rw\")` \u2014 factory method, mode can be \"r\" or \"rw\"\n- `ResultSet.filter(fn)` \u2014 filter results with predicate\n- `DataStore.transaction()` context manager for atomic operations\n",
+      "datastore.py": "# v3.0 DataStore implementation\n\nclass ResultSet:\n    def __init__(self, data):\n        self._data = data\n\n    def items(self):\n        return list(self._data)\n\n    def count(self):\n        return len(self._data)\n\n    def first(self):\n        return self._data[0] if self._data else None\n\n    def filter(self, fn):\n        return ResultSet([d for d in self._data if fn(d)])\n\nclass DataStore:\n    def __init__(self):\n        # Private constructor \u2014 use open()\n        self._collections = {}\n        self._path = None\n\n    @classmethod\n    def open(cls, path, mode=\"rw\"):\n        store = cls()\n        store._path = path\n        store._mode = mode\n        return store\n\n    def query(self, collection, **filters):\n        items = self._collections.get(collection, [])\n        results = []\n        for item in items:\n            match = all(item.get(k) == v for k, v in filters.items())\n            if match or not filters:\n                results.append(item)\n        return ResultSet(results)\n\n    def upsert(self, collection, key, data):\n        if collection not in self._collections:\n            self._collections[collection] = []\n        # Update existing or insert\n        for i, item in enumerate(self._collections[collection]):\n            if item.get(\"id\") == key:\n                self._collections[collection][i] = {**data, \"id\": key}\n                return\n        self._collections[collection].append({**data, \"id\": key})\n\n    def transaction(self):\n        return _Transaction(self)\n\nclass _Transaction:\n    def __init__(self, store):\n        self._store = store\n    def __enter__(self):\n        return self._store\n    def __exit__(self, *args):\n        pass\n",
+      "app.py": "# Uses v2 API \u2014 needs migration to v3\nfrom datastore import DataStore\n\ndef setup_store():\n    store = DataStore(\"data/app.db\")  # v2 constructor\n    return store\n\ndef add_user(store, user_id, name, email):\n    store.save(user_id, {\"name\": name, \"email\": email})  # v2 method\n\ndef find_users(store, **criteria):\n    results = store.find(**criteria)  # v2 method, returns list\n    return results\n\ndef get_user_count(store):\n    users = store.find()  # v2 method\n    return len(users)  # v2: direct len on list\n\ndef get_first_user(store):\n    users = store.find()\n    return users[0] if users else None  # v2: direct index\n",
+      "test_app.py": "from app import setup_store, add_user, find_users, get_user_count, get_first_user\nfrom datastore import ResultSet\n\ndef test_setup():\n    store = setup_store()\n    assert store._path == \"data/app.db\"\n\ndef test_add_and_find():\n    store = setup_store()\n    add_user(store, \"u1\", \"Alice\", \"alice@test.com\")\n    add_user(store, \"u2\", \"Bob\", \"bob@test.com\")\n    results = find_users(store)\n    # v3: find_users should return ResultSet\n    assert isinstance(results, ResultSet), f\"Expected ResultSet, got {type(results)}\"\n    assert results.count() == 2\n\ndef test_count():\n    store = setup_store()\n    add_user(store, \"u1\", \"Alice\", \"alice@test.com\")\n    assert get_user_count(store) == 1\n\ndef test_first():\n    store = setup_store()\n    add_user(store, \"u1\", \"Alice\", \"alice@test.com\")\n    user = get_first_user(store)\n    assert user[\"name\"] == \"Alice\"\n\nif __name__ == '__main__':\n    test_setup()\n    test_add_and_find()\n    test_count()\n    test_first()\n    print(\"All tests passed.\")\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Migrate app.py: DataStore('path') -> DataStore.open('path'), store.save(k,d) -> store.upsert('users',k,d), store.find() -> store.query('users'), len(results) -> results.count(), results[0] -> results.first()",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 test_app.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "All tests passed"
+    ],
+    "output_not_contains": [
+      "Traceback",
+      "Error",
+      "AssertionError"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "doc_reading",
+    "code_reading",
+    "code_editing",
+    "multi_file",
+    "summary_gen"
+  ],
+  "source": "web_search_generator:changelog_impact_analysis",
+  "generated_at": "2026-03-11T09:16:37.225924+00:00",
+  "estimated_minutes": 8
+}

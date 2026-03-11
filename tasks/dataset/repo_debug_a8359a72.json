@@ -1,0 +1,55 @@
+{
+  "task_id": "repo_debug_a8359a72",
+  "category": "repo_debug",
+  "title": "Fix shared mutable state causing flaky tests",
+  "difficulty": "medium",
+  "goal": "Tests pass individually but fail when run together:\n\nSingle: `python3 -m pytest test_inventory.py::test_add_item -p no:xdist -p no:randomly -p no:cacheprovider -v`  (PASS)\nAll:    `python3 -m pytest test_inventory.py -p no:xdist -p no:randomly -p no:cacheprovider -v`  (FAIL)\n\nFind and fix the shared mutable state that's causing test interference.\nAll tests should pass when run together.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "inventory.py": "class Inventory:\n    # Bug: shared mutable default \u2014 all instances share same list\n    def __init__(self, items=[]):\n        self.items = items\n\n    def add_item(self, name, quantity):\n        self.items.append({\"name\": name, \"quantity\": quantity})\n\n    def remove_item(self, name):\n        self.items = [i for i in self.items if i[\"name\"] != name]\n\n    def get_item(self, name):\n        for item in self.items:\n            if item[\"name\"] == name:\n                return item\n        return None\n\n    def total_items(self):\n        return sum(i[\"quantity\"] for i in self.items)\n\n    def count(self):\n        return len(self.items)\n",
+      "test_inventory.py": "import pytest\nfrom inventory import Inventory\n\ndef test_add_item():\n    inv = Inventory()\n    inv.add_item(\"Apple\", 5)\n    assert inv.count() == 1\n    assert inv.get_item(\"Apple\")[\"quantity\"] == 5\n\ndef test_empty_inventory():\n    inv = Inventory()\n    assert inv.count() == 0\n    assert inv.total_items() == 0\n\ndef test_remove_item():\n    inv = Inventory()\n    inv.add_item(\"Banana\", 3)\n    inv.remove_item(\"Banana\")\n    assert inv.count() == 0\n\ndef test_multiple_items():\n    inv = Inventory()\n    inv.add_item(\"X\", 1)\n    inv.add_item(\"Y\", 2)\n    assert inv.count() == 2\n    assert inv.total_items() == 3\n\ndef test_get_nonexistent():\n    inv = Inventory()\n    assert inv.get_item(\"Ghost\") is None\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Classic Python mutable default argument bug. Fix: def __init__(self, items=None): self.items = items if items is not None else []",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 -m pytest test_inventory.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "5 passed"
+    ],
+    "output_not_contains": [
+      "FAILED",
+      "ERROR"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "test_running",
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "hypothesis_test"
+  ],
+  "source": "repo_debug_generator:test_fixture_corruption",
+  "generated_at": "2026-03-11T09:28:45.542354+00:00",
+  "estimated_minutes": 5
+}

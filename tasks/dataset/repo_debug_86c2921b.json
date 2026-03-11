@@ -1,0 +1,55 @@
+{
+  "task_id": "repo_debug_86c2921b",
+  "category": "repo_debug",
+  "title": "Fix off-by-one error in pagination",
+  "difficulty": "medium",
+  "goal": "The pagination module has a bug. Run the tests to see:\n`python3 -m pytest test_pagination.py -p no:xdist -p no:randomly -p no:cacheprovider -v`\n\nFix the pagination logic so all tests pass. The paginator should:\n- Return correct items for each page\n- Calculate total_pages correctly\n- Handle edge cases (empty list, last page with fewer items)\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "pagination.py": "class Paginator:\n    def __init__(self, items, page_size=10):\n        self.items = items\n        self.page_size = page_size\n\n    @property\n    def total_pages(self):\n        # Bug: integer division truncates, missing partial last page\n        return len(self.items) // self.page_size\n\n    def get_page(self, page_num):\n        \"\"\"Get items for a page (1-indexed).\"\"\"\n        if page_num < 1 or page_num > self.total_pages:\n            return []\n        # Bug: off-by-one in start index\n        start = page_num * self.page_size\n        end = start + self.page_size\n        return self.items[start:end]\n\n    def page_info(self, page_num):\n        items = self.get_page(page_num)\n        return {\n            \"page\": page_num,\n            \"items\": items,\n            \"total_pages\": self.total_pages,\n            \"total_items\": len(self.items),\n            \"has_next\": page_num < self.total_pages,\n            \"has_prev\": page_num > 1,\n        }\n",
+      "test_pagination.py": "import pytest\nfrom pagination import Paginator\n\ndef test_total_pages_exact():\n    p = Paginator(list(range(20)), page_size=10)\n    assert p.total_pages == 2\n\ndef test_total_pages_partial():\n    p = Paginator(list(range(25)), page_size=10)\n    assert p.total_pages == 3  # 10 + 10 + 5\n\ndef test_total_pages_empty():\n    p = Paginator([], page_size=10)\n    assert p.total_pages == 0\n\ndef test_get_first_page():\n    p = Paginator(list(range(25)), page_size=10)\n    assert p.get_page(1) == list(range(10))\n\ndef test_get_second_page():\n    p = Paginator(list(range(25)), page_size=10)\n    assert p.get_page(2) == list(range(10, 20))\n\ndef test_get_last_partial_page():\n    p = Paginator(list(range(25)), page_size=10)\n    assert p.get_page(3) == list(range(20, 25))\n\ndef test_page_out_of_range():\n    p = Paginator(list(range(25)), page_size=10)\n    assert p.get_page(0) == []\n    assert p.get_page(4) == []\n\ndef test_page_info():\n    p = Paginator(list(range(25)), page_size=10)\n    info = p.page_info(2)\n    assert info[\"page\"] == 2\n    assert info[\"has_next\"] is True\n    assert info[\"has_prev\"] is True\n    assert len(info[\"items\"]) == 10\n\ndef test_single_page():\n    p = Paginator(list(range(5)), page_size=10)\n    assert p.total_pages == 1\n    assert p.get_page(1) == list(range(5))\n    info = p.page_info(1)\n    assert info[\"has_next\"] is False\n    assert info[\"has_prev\"] is False\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Two bugs: 1) total_pages should use math.ceil or (len+size-1)//size, 2) get_page start index should be (page_num-1)*page_size not page_num*page_size",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 -m pytest test_pagination.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "passed"
+    ],
+    "output_not_contains": [
+      "FAILED",
+      "ERROR"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "test_running",
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "error_interp"
+  ],
+  "source": "repo_debug_generator:off_by_one_pagination",
+  "generated_at": "2026-03-11T09:28:45.541797+00:00",
+  "estimated_minutes": 5
+}

@@ -1,0 +1,71 @@
+{
+  "task_id": "ambiguous_4a76a000",
+  "category": "ambiguous",
+  "title": "Make it work (multiple issues)",
+  "difficulty": "medium",
+  "goal": "This project should process CSV data and output a summary, but it doesn't work.\nMake it work. The output should look correct.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "run.py": "from csv_processor import load_csv, summarize\n\ndef main():\n    data = load_csv(\"data/sales.csv\")\n    summary = summarize(data)\n    print(f\"Total revenue: ${summary['total_revenue']:.2f}\")\n    print(f\"Average order: ${summary['avg_order']:.2f}\")\n    print(f\"Top product: {summary['top_product']}\")\n    print(f\"Records: {summary['count']}\")\n    print(\"Processing complete.\")\n\nif __name__ == '__main__':\n    main()\n",
+      "csv_processor.py": "import csv\n\ndef load_csv(path):\n    \"\"\"Load CSV file and return list of dicts.\"\"\"\n    with open(path) as f:\n        reader = csv.DictReader(f)\n        return list(reader)\n\ndef summarize(records):\n    \"\"\"Compute summary statistics from sales records.\"\"\"\n    total = 0\n    product_totals = {}\n\n    for r in records:\n        # Bug 1: CSV values are strings, not floats\n        amount = r[\"quantity\"] * r[\"price\"]\n        total += amount\n\n        product = r[\"product\"]\n        if product not in product_totals:\n            product_totals[product] = 0\n        product_totals[product] += amount\n\n    # Bug 2: max of empty dict crashes if no records\n    top_product = max(product_totals, key=product_totals.get)\n\n    return {\n        \"total_revenue\": total,\n        \"avg_order\": total / len(records),\n        \"top_product\": top_product,\n        \"count\": len(records),\n    }\n",
+      "data/sales.csv": "product,quantity,price\nWidget A,5,10.99\nWidget B,2,24.50\nWidget A,3,10.99\nWidget C,1,7.25\nWidget B,4,24.50\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Bug: quantity and price are strings from CSV. Fix: amount = float(r['quantity']) * float(r['price']). This also fixes the str*str TypeError.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "command_output",
+        "check_command": "python3 run.py 2>&1",
+        "output_contains": [
+          "Processing complete",
+          "Total revenue"
+        ],
+        "output_not_contains": [
+          "Error",
+          "Traceback"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"from csv_processor import load_csv, summarize; d=load_csv('data/sales.csv'); s=summarize(d); assert abs(s['total_revenue']-242.17)<0.1, f'wrong total: {s}'; print('OK')\" 2>&1",
+        "output_contains": [
+          "OK"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "error_interp",
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "hypothesis_test"
+  ],
+  "source": "ambiguous_generator:make_it_work",
+  "generated_at": "2026-03-11T09:32:33.654736+00:00",
+  "estimated_minutes": 5
+}

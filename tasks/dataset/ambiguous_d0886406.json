@@ -1,0 +1,56 @@
+{
+  "task_id": "ambiguous_d0886406",
+  "category": "ambiguous",
+  "title": "Clean up this code (hidden bug)",
+  "difficulty": "medium",
+  "goal": "Clean up this code. The tests should pass after cleanup.\nRun: `python3 -m pytest test_utils.py -p no:xdist -p no:randomly -p no:cacheprovider -v`\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "utils.py": "# TODO: clean up this mess\n\ndef flatten(lst):\n    result = []\n    for item in lst:\n        if isinstance(item, list):\n            # Bug: only flattens one level, should recurse\n            result.extend(item)\n        else:\n            result.append(item)\n    return result\n\ndef unique(lst):\n    # Preserves order\n    seen = set()\n    result = []\n    for item in lst:\n        if item not in seen:\n            seen.add(item)\n            result.append(item)\n    return result\n\ndef chunk(lst, size):\n    \"\"\"Split list into chunks of given size.\"\"\"\n    # Bug: uses wrong range step \u2014 creates overlapping chunks\n    return [lst[i:i+size] for i in range(0, len(lst), 1)]\n\ndef merge_dicts(*dicts):\n    result = {}\n    for d in dicts:\n        result.update(d)\n    return result\n\ndef deep_get(d, path, default=None):\n    \"\"\"Get nested dict value by dot-separated path.\"\"\"\n    keys = path.split(\".\")\n    current = d\n    for key in keys:\n        if isinstance(current, dict):\n            current = current.get(key)\n        else:\n            return default\n    # Bug: returns None instead of default when key exists but is None\n    return current if current is not None else default\n",
+      "test_utils.py": "import pytest\nfrom utils import flatten, unique, chunk, merge_dicts, deep_get\n\ndef test_flatten_simple():\n    assert flatten([1, [2, 3], 4]) == [1, 2, 3, 4]\n\ndef test_flatten_nested():\n    assert flatten([1, [2, [3, 4]], 5]) == [1, 2, 3, 4, 5]\n\ndef test_flatten_empty():\n    assert flatten([]) == []\n\ndef test_unique():\n    assert unique([1, 2, 2, 3, 1, 4]) == [1, 2, 3, 4]\n\ndef test_unique_empty():\n    assert unique([]) == []\n\ndef test_chunk_even():\n    assert chunk([1, 2, 3, 4], 2) == [[1, 2], [3, 4]]\n\ndef test_chunk_uneven():\n    assert chunk([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]\n\ndef test_chunk_single():\n    assert chunk([1, 2, 3], 1) == [[1], [2], [3]]\n\ndef test_merge_dicts():\n    result = merge_dicts({\"a\": 1}, {\"b\": 2}, {\"a\": 3})\n    assert result == {\"a\": 3, \"b\": 2}\n\ndef test_deep_get():\n    d = {\"a\": {\"b\": {\"c\": 42}}}\n    assert deep_get(d, \"a.b.c\") == 42\n\ndef test_deep_get_missing():\n    d = {\"a\": {\"b\": 1}}\n    assert deep_get(d, \"a.c.d\", \"default\") == \"default\"\n\ndef test_deep_get_none_value():\n    d = {\"a\": {\"b\": None}}\n    # None is a valid value \u2014 should NOT return default\n    assert deep_get(d, \"a.b\", \"default\") is None\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Three bugs: 1) flatten needs recursion for nested lists, 2) chunk range step should be 'size' not '1', 3) deep_get should return current unconditionally (remove None check) to properly handle None values",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 -m pytest test_utils.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "12 passed"
+    ],
+    "output_not_contains": [
+      "FAILED",
+      "ERROR"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "test_running",
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "hypothesis_test",
+    "prioritization"
+  ],
+  "source": "ambiguous_generator:clean_up_this_code",
+  "generated_at": "2026-03-11T09:32:33.654922+00:00",
+  "estimated_minutes": 8
+}

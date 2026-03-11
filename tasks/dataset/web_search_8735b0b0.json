@@ -1,0 +1,56 @@
+{
+  "task_id": "web_search_8735b0b0",
+  "category": "web_search",
+  "title": "Fix error using FAQ documentation",
+  "difficulty": "medium",
+  "goal": "The application fails with an error. Check the FAQ at `docs/FAQ.md`\nfor known issues and solutions, then apply the fix.\n\nRun `python3 app.py` after fixing. It should print \"App ready.\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "docs/FAQ.md": "# Frequently Asked Questions\n\n## Common Errors\n\n### \"ConnectionPoolExhausted\" error\n**Cause**: Default pool size is 5. If `MAX_WORKERS` > pool size, connections queue up.\n**Fix**: Set `pool_size` in config to match `max_workers`, or set `pool_overflow=10`.\n\n### \"SerializerNotFound\" for custom types\n**Cause**: The default JSON serializer doesn't handle custom types.\n**Fix**: Register custom types in the config:\n```python\nconfig = Config(\n    serializers={\"datetime\": str, \"Decimal\": float},\n)\n```\n\n### \"InvalidSchemaVersion\" on startup\n**Cause**: Config file `schema_version` doesn't match expected version.\n**Fix**: Current expected version is `3`. Update config to `schema_version: 3`.\nAlso ensure `migrations_enabled: true` is set.\n\n### \"HandshakeTimeout\" connecting to service\n**Cause**: Default timeout is 5s, some services need more.\n**Fix**: Set `connect_timeout: 30` in config. Also set `retry_on_timeout: true`.\n\n## Configuration Reference\nRequired fields for v3 schema:\n- schema_version: 3\n- pool_size: int (must be >= max_workers)\n- max_workers: int\n- connect_timeout: int (seconds)\n- retry_on_timeout: bool\n- migrations_enabled: bool\n",
+      "app.py": "import json\nimport sys\n\ndef load_config():\n    with open(\"config.json\") as f:\n        config = json.load(f)\n\n    errors = []\n    if config.get(\"schema_version\") != 3:\n        errors.append(\"InvalidSchemaVersion\")\n    if not config.get(\"migrations_enabled\"):\n        errors.append(\"InvalidSchemaVersion: migrations_enabled required\")\n    if config.get(\"pool_size\", 5) < config.get(\"max_workers\", 1):\n        errors.append(\"ConnectionPoolExhausted: pool_size < max_workers\")\n    if config.get(\"connect_timeout\", 5) < 10:\n        errors.append(\"HandshakeTimeout: connect_timeout too low\")\n    if not config.get(\"retry_on_timeout\"):\n        errors.append(\"HandshakeTimeout: retry_on_timeout not set\")\n\n    if errors:\n        for e in errors:\n            print(f\"ERROR: {e}\", file=sys.stderr)\n        sys.exit(1)\n    return config\n\nif __name__ == '__main__':\n    config = load_config()\n    print(f\"Schema v{config['schema_version']}, pool={config['pool_size']}, workers={config['max_workers']}\")\n    print(\"App ready.\")\n",
+      "config.json": "{\n    \"schema_version\": 2,\n    \"pool_size\": 5,\n    \"max_workers\": 10,\n    \"connect_timeout\": 5\n}"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Update config.json: schema_version->3, pool_size>=max_workers (10), connect_timeout>=10 (30), add retry_on_timeout:true, add migrations_enabled:true",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 app.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "App ready"
+    ],
+    "output_not_contains": [
+      "ERROR",
+      "Traceback"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "doc_reading",
+    "config_reading",
+    "config_editing",
+    "root_cause",
+    "explanation"
+  ],
+  "source": "web_search_generator:error_from_docs",
+  "generated_at": "2026-03-11T09:16:37.226081+00:00",
+  "estimated_minutes": 5
+}

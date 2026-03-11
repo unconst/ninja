@@ -30,6 +30,9 @@ from tasks.generators.env_debug import EnvDebugGenerator
 from tasks.generators.data_analysis import DataAnalysisGenerator
 from tasks.generators.multi_step import MultiStepGenerator
 from tasks.generators.docs_reconciliation import DocsReconciliationGenerator
+from tasks.generators.repo_debug import RepoDebugGenerator
+from tasks.generators.ambiguous import AmbiguousGenerator
+from tasks.generators.web_search import WebSearchGenerator
 from tasks.evaluators.evaluate import evaluate_task
 from tasks.coverage import CoverageTracker
 
@@ -40,6 +43,9 @@ GENERATORS = {
     "data_analysis": DataAnalysisGenerator(),
     "multi_step": MultiStepGenerator(),
     "docs_reconciliation": DocsReconciliationGenerator(),
+    "repo_debug": RepoDebugGenerator(),
+    "ambiguous": AmbiguousGenerator(),
+    "web_search": WebSearchGenerator(),
 }
 
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "dataset")

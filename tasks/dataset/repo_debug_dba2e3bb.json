@@ -1,0 +1,73 @@
+{
+  "task_id": "repo_debug_dba2e3bb",
+  "category": "repo_debug",
+  "title": "Fix test regression after feature addition",
+  "difficulty": "medium",
+  "goal": "A recent change to the `UserService` class broke existing tests.\nRun `python3 -m pytest tests/ -p no:xdist -p no:randomly -p no:cacheprovider -x -v` to see the failures.\n\nFix the bug WITHOUT reverting the new feature (the `is_premium` field).\nAll tests must pass after your fix.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "src/__init__.py": "",
+      "src/models.py": "class User:\n    def __init__(self, name, email, is_premium=False):\n        self.name = name\n        self.email = email\n        self.is_premium = is_premium\n\n    def display_name(self):\n        prefix = \"[P] \" if self.is_premium else \"\"\n        return f\"{prefix}{self.name}\"\n\n    def to_dict(self):\n        return {\n            \"name\": self.name,\n            \"email\": self.email,\n            \"is_premium\": self.is_premium,\n        }\n",
+      "src/service.py": "from src.models import User\n\nclass UserService:\n    def __init__(self):\n        self._users = {}\n\n    def create_user(self, name, email, is_premium=False):\n        if email in self._users:\n            raise ValueError(f\"User {email} already exists\")\n        user = User(name, email, is_premium)\n        self._users[email] = user\n        return user\n\n    def get_user(self, email):\n        return self._users.get(email)\n\n    def list_users(self):\n        # Bug: was returning list of User objects, now returns dicts\n        # This broke downstream code that expected User objects\n        return [u.to_dict() for u in self._users.values()]\n\n    def count_premium(self):\n        return sum(1 for u in self._users.values() if u.is_premium)\n",
+      "tests/__init__.py": "",
+      "tests/test_service.py": "import pytest\nfrom src.service import UserService\n\n@pytest.fixture\ndef svc():\n    s = UserService()\n    s.create_user(\"Alice\", \"alice@test.com\")\n    s.create_user(\"Bob\", \"bob@test.com\", is_premium=True)\n    return s\n\ndef test_create_user(svc):\n    user = svc.create_user(\"Charlie\", \"charlie@test.com\")\n    assert user.name == \"Charlie\"\n\ndef test_duplicate_user(svc):\n    with pytest.raises(ValueError):\n        svc.create_user(\"Alice2\", \"alice@test.com\")\n\ndef test_get_user(svc):\n    user = svc.get_user(\"alice@test.com\")\n    assert user.name == \"Alice\"\n    assert user.email == \"alice@test.com\"\n\ndef test_list_users(svc):\n    users = svc.list_users()\n    assert len(users) == 2\n    names = [u.name for u in users]  # Expects User objects\n    assert \"Alice\" in names\n    assert \"Bob\" in names\n\ndef test_list_users_display(svc):\n    users = svc.list_users()\n    displays = [u.display_name() for u in users]  # Expects .display_name()\n    assert \"[P] Bob\" in displays\n\ndef test_count_premium(svc):\n    assert svc.count_premium() == 1\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Fix list_users() to return User objects instead of dicts. Change: return list(self._users.values())",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "command_output",
+        "check_command": "python3 -m pytest tests/ -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+        "output_contains": [
+          "passed"
+        ],
+        "output_not_contains": [
+          "FAILED",
+          "ERROR"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"from src.service import UserService; s=UserService(); s.create_user('X','x@t.com',True); print(s.count_premium())\" 2>&1",
+        "output_contains": [
+          "1"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "test_running",
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "multi_file",
+    "error_interp"
+  ],
+  "source": "repo_debug_generator:failing_tests_regression",
+  "generated_at": "2026-03-11T09:28:45.541608+00:00",
+  "estimated_minutes": 5
+}

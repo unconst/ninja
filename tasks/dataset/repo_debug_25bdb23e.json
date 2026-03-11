@@ -1,0 +1,55 @@
+{
+  "task_id": "repo_debug_25bdb23e",
+  "category": "repo_debug",
+  "title": "Fix edge case crashes in URL parser",
+  "difficulty": "medium",
+  "goal": "The URL parser utility works for basic cases but crashes on edge cases.\nRun `python3 -m pytest test_parser.py -p no:xdist -p no:randomly -p no:cacheprovider -v` to see failures.\n\nFix the parser to handle all edge cases. Do NOT rewrite it from scratch \u2014\nfix the minimum necessary to make all tests pass.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "parser.py": "def parse_url(url):\n    \"\"\"Parse a URL into its components.\"\"\"\n    result = {\n        \"scheme\": \"\",\n        \"host\": \"\",\n        \"port\": None,\n        \"path\": \"/\",\n        \"query\": {},\n        \"fragment\": \"\",\n    }\n\n    # Split fragment\n    if \"#\" in url:\n        url, result[\"fragment\"] = url.split(\"#\", 1)\n\n    # Split query\n    if \"?\" in url:\n        url, query_str = url.split(\"?\", 1)\n        for param in query_str.split(\"&\"):\n            key, value = param.split(\"=\")  # Bug: crashes if no \"=\"\n            result[\"query\"][key] = value\n\n    # Split scheme\n    scheme_end = url.index(\"://\")  # Bug: crashes if no scheme\n    result[\"scheme\"] = url[:scheme_end]\n    url = url[scheme_end + 3:]\n\n    # Split path\n    if \"/\" in url:\n        slash_idx = url.index(\"/\")\n        result[\"path\"] = url[slash_idx:]\n        url = url[:slash_idx]\n\n    # Split port\n    if \":\" in url:\n        host, port_str = url.split(\":\")\n        result[\"host\"] = host\n        result[\"port\"] = int(port_str)  # Bug: crashes on empty port\n    else:\n        result[\"host\"] = url\n\n    return result\n",
+      "test_parser.py": "import pytest\nfrom parser import parse_url\n\ndef test_basic_url():\n    r = parse_url(\"https://example.com/path\")\n    assert r[\"scheme\"] == \"https\"\n    assert r[\"host\"] == \"example.com\"\n    assert r[\"path\"] == \"/path\"\n\ndef test_url_with_port():\n    r = parse_url(\"http://localhost:8080/api\")\n    assert r[\"host\"] == \"localhost\"\n    assert r[\"port\"] == 8080\n    assert r[\"path\"] == \"/api\"\n\ndef test_url_with_query():\n    r = parse_url(\"https://example.com/search?q=hello&lang=en\")\n    assert r[\"query\"][\"q\"] == \"hello\"\n    assert r[\"query\"][\"lang\"] == \"en\"\n\ndef test_url_with_fragment():\n    r = parse_url(\"https://example.com/page#section1\")\n    assert r[\"fragment\"] == \"section1\"\n\ndef test_url_no_path():\n    r = parse_url(\"https://example.com\")\n    assert r[\"host\"] == \"example.com\"\n    assert r[\"path\"] == \"/\"\n\ndef test_query_param_no_value():\n    r = parse_url(\"https://example.com/search?q=hello&debug\")\n    assert r[\"query\"][\"q\"] == \"hello\"\n    assert \"debug\" in r[\"query\"]\n\ndef test_no_scheme():\n    r = parse_url(\"example.com/path\")\n    assert r[\"host\"] == \"example.com\"\n    assert r[\"path\"] == \"/path\"\n    assert r[\"scheme\"] == \"\"\n\ndef test_empty_url():\n    r = parse_url(\"\")\n    assert r[\"host\"] == \"\"\n    assert r[\"path\"] == \"/\"\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Three bugs: 1) query param split needs to handle missing '=' (use split('=',1) + default), 2) scheme parsing needs try/except for missing '://', 3) port parsing needs guard for empty port string",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 -m pytest test_parser.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "passed"
+    ],
+    "output_not_contains": [
+      "FAILED",
+      "ERROR"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "test_running",
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "hypothesis_test"
+  ],
+  "source": "repo_debug_generator:missing_edge_case",
+  "generated_at": "2026-03-11T09:28:45.541940+00:00",
+  "estimated_minutes": 8
+}

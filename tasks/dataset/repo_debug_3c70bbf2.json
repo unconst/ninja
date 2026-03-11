@@ -1,0 +1,79 @@
+{
+  "task_id": "repo_debug_3c70bbf2",
+  "category": "repo_debug",
+  "title": "Find and fix bug using git history",
+  "difficulty": "medium",
+  "goal": "This git repository has a bug that was introduced in a recent commit.\nThe `validate_email` function currently rejects valid emails with subdomains\n(like user@mail.example.com).\n\n1. Use `git log` to examine the recent commits\n2. Find which commit introduced the regression\n3. Fix the bug so ALL tests pass:\n   `python3 -m pytest test_email.py -p no:xdist -p no:randomly -p no:cacheprovider -v`\n4. Write the bad commit hash to a file called `bad_commit.txt`\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [
+      "git init",
+      "git config user.email 'dev@test.com'",
+      "git config user.name 'Dev'",
+      "python3 -c \"\nimport textwrap, pathlib\npathlib.Path('email_validator.py').write_text(textwrap.dedent('''\nimport re\n\ndef validate_email(email):\n    if not email or not isinstance(email, str):\n        return False\n    parts = email.split('@')\n    if len(parts) != 2:\n        return False\n    local, domain = parts\n    if not local or len(local) > 64:\n        return False\n    if not re.match(r'^[a-zA-Z0-9.-]+\\\\.[a-zA-Z]{2,}$', domain):\n        return False\n    return True\n'''))\"",
+      "git add -A && git commit -m 'Initial email validator'",
+      "git add -A && git commit -m 'Add test suite' --allow-empty",
+      "python3 -c \"\nimport textwrap, pathlib\npathlib.Path('email_validator.py').write_text(textwrap.dedent('''\nimport re\n\ndef validate_email(email):\n    if not email or not isinstance(email, str):\n        return False\n    parts = email.split('@')\n    if len(parts) != 2:\n        return False\n    local, domain = parts\n    if not local or len(local) > 64:\n        return False\n    if not re.match(r\\'^[a-zA-Z0-9]+\\\\\\\\.[a-zA-Z]{2,}$\\', domain):\n        return False\n    return True\n'''))\"",
+      "git add -A && git commit -m 'Tighten domain validation regex'",
+      "git add -A && git commit -m 'Update test comments' --allow-empty"
+    ],
+    "seed_files": {
+      "email_validator.py": "import re\n\ndef validate_email(email):\n    \"\"\"Validate an email address.\"\"\"\n    if not email or not isinstance(email, str):\n        return False\n    # Must have exactly one @\n    parts = email.split(\"@\")\n    if len(parts) != 2:\n        return False\n    local, domain = parts\n    # Local part checks\n    if not local or len(local) > 64:\n        return False\n    # Domain checks \u2014 bug: only allows single-level domains\n    if not re.match(r'^[a-zA-Z0-9]+\\.[a-zA-Z]{2,}$', domain):\n        return False\n    return True\n",
+      "test_email.py": "import pytest\nfrom email_validator import validate_email\n\ndef test_valid_basic():\n    assert validate_email(\"user@example.com\") is True\n\ndef test_valid_subdomain():\n    assert validate_email(\"user@mail.example.com\") is True\n\ndef test_valid_long_domain():\n    assert validate_email(\"user@sub.domain.example.co.uk\") is True\n\ndef test_invalid_no_at():\n    assert validate_email(\"userexample.com\") is False\n\ndef test_invalid_no_domain():\n    assert validate_email(\"user@\") is False\n\ndef test_invalid_no_local():\n    assert validate_email(\"@example.com\") is False\n\ndef test_invalid_double_at():\n    assert validate_email(\"user@@example.com\") is False\n\ndef test_invalid_empty():\n    assert validate_email(\"\") is False\n\ndef test_invalid_none():\n    assert validate_email(None) is False\n\ndef test_valid_numbers_in_domain():\n    assert validate_email(\"user@123.example.com\") is True\n\ndef test_valid_hyphen_in_domain():\n    assert validate_email(\"user@my-domain.com\") is True\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Fix regex to allow subdomains: r'^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$' (allow dots and hyphens). Bad commit is the 'Tighten domain validation' one.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "command_output",
+        "check_command": "python3 -m pytest test_email.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+        "output_contains": [
+          "passed"
+        ],
+        "output_not_contains": [
+          "FAILED",
+          "ERROR"
+        ]
+      },
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "bad_commit.txt"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "git_ops",
+    "test_running",
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "hypothesis_test"
+  ],
+  "source": "repo_debug_generator:git_bisect_bug",
+  "generated_at": "2026-03-11T09:28:45.542257+00:00",
+  "estimated_minutes": 10
+}

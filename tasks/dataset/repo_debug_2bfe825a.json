@@ -1,0 +1,62 @@
+{
+  "task_id": "repo_debug_2bfe825a",
+  "category": "repo_debug",
+  "title": "Fix broken imports after module rename",
+  "difficulty": "medium",
+  "goal": "Someone renamed the `utils` package to `helpers` but didn't update all\nthe import statements. Running `python3 main.py` crashes with ImportError.\n\nFind and fix ALL broken imports so the program runs and prints:\n\"Report generated: 3 items processed\"\n\nDo NOT rename anything back \u2014 keep the `helpers` package name.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "main.py": "from reporting.report import generate_report\n\nif __name__ == '__main__':\n    data = [\n        {\"name\": \"Widget A\", \"price\": 10.99, \"qty\": 5},\n        {\"name\": \"Widget B\", \"price\": 24.50, \"qty\": 2},\n        {\"name\": \"Widget C\", \"price\": 7.25, \"qty\": 12},\n    ]\n    result = generate_report(data)\n    print(f\"Report generated: {result['count']} items processed\")\n",
+      "helpers/__init__.py": "",
+      "helpers/formatting.py": "def format_currency(amount):\n    return f\"${amount:,.2f}\"\n\ndef format_table_row(name, value, qty):\n    return f\"| {name:20s} | {format_currency(value):>10s} | {qty:>5d} |\"\n",
+      "helpers/math_ops.py": "def safe_divide(a, b, default=0):\n    return a / b if b != 0 else default\n\ndef running_total(items, key):\n    total = 0\n    results = []\n    for item in items:\n        total += item[key]\n        results.append(total)\n    return results\n",
+      "helpers/validators.py": "def validate_positive(value, name=\"value\"):\n    if value < 0:\n        raise ValueError(f\"{name} must be positive, got {value}\")\n    return value\n",
+      "reporting/__init__.py": "",
+      "reporting/report.py": "from utils.formatting import format_currency, format_table_row\nfrom utils.math_ops import running_total\nfrom utils.validators import validate_positive\n\ndef generate_report(data):\n    rows = []\n    for item in data:\n        validate_positive(item['price'], 'price')\n        validate_positive(item['qty'], 'qty')\n        rows.append(format_table_row(\n            item['name'], item['price'], item['qty']\n        ))\n    totals = running_total(data, 'price')\n    return {\n        \"rows\": rows,\n        \"count\": len(data),\n        \"total\": format_currency(totals[-1] if totals else 0),\n    }\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Fix 3 imports in reporting/report.py: change 'utils.formatting' to 'helpers.formatting', 'utils.math_ops' to 'helpers.math_ops', 'utils.validators' to 'helpers.validators'",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 main.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "Report generated: 3 items processed"
+    ],
+    "output_not_contains": [
+      "ImportError",
+      "ModuleNotFoundError",
+      "Traceback"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "error_interp",
+    "file_search",
+    "code_reading",
+    "code_editing",
+    "multi_file",
+    "code_search"
+  ],
+  "source": "repo_debug_generator:import_after_rename",
+  "generated_at": "2026-03-11T09:28:45.542477+00:00",
+  "estimated_minutes": 5
+}

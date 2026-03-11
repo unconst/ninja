@@ -4,3 +4,6 @@ from .env_debug import EnvDebugGenerator
 from .data_analysis import DataAnalysisGenerator
 from .multi_step import MultiStepGenerator
 from .docs_reconciliation import DocsReconciliationGenerator
+from .repo_debug import RepoDebugGenerator
+from .ambiguous import AmbiguousGenerator
+from .web_search import WebSearchGenerator

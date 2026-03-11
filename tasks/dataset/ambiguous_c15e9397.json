@@ -1,0 +1,55 @@
+{
+  "task_id": "ambiguous_c15e9397",
+  "category": "ambiguous",
+  "title": "Add error handling (infer requirements)",
+  "difficulty": "medium",
+  "goal": "This file processor crashes on bad input. Add appropriate error handling\nso it processes what it can and reports what it couldn't.\n\nRun the test to verify: `python3 test_processor.py`\nIt should print \"All tests passed.\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "file_processor.py": "import json\nimport os\n\ndef process_file(path):\n    \"\"\"Read a JSON file, extract 'value' field, return as float.\"\"\"\n    with open(path) as f:\n        data = json.load(f)\n    return float(data[\"value\"])\n\ndef process_directory(dirpath):\n    \"\"\"Process all JSON files in directory. Return results dict.\"\"\"\n    results = {}\n    errors = {}\n    for fname in sorted(os.listdir(dirpath)):\n        if not fname.endswith('.json'):\n            continue\n        path = os.path.join(dirpath, fname)\n        result = process_file(path)\n        results[fname] = result\n    return {\"results\": results, \"errors\": errors}\n",
+      "test_processor.py": "import os\nimport json\nimport tempfile\nimport shutil\nfrom file_processor import process_file, process_directory\n\ndef test_process_valid():\n    d = tempfile.mkdtemp()\n    try:\n        with open(os.path.join(d, \"a.json\"), \"w\") as f:\n            json.dump({\"value\": 42}, f)\n        result = process_file(os.path.join(d, \"a.json\"))\n        assert result == 42.0, f\"Expected 42.0, got {result}\"\n    finally:\n        shutil.rmtree(d)\n\ndef test_process_missing_file():\n    try:\n        process_file(\"/nonexistent/path.json\")\n        assert False, \"Should have raised an error\"\n    except (FileNotFoundError, OSError):\n        pass  # expected\n\ndef test_process_bad_json():\n    d = tempfile.mkdtemp()\n    try:\n        with open(os.path.join(d, \"bad.json\"), \"w\") as f:\n            f.write(\"not json {{{\")\n        try:\n            process_file(os.path.join(d, \"bad.json\"))\n            assert False, \"Should have raised an error\"\n        except (json.JSONDecodeError, ValueError):\n            pass  # expected\n    finally:\n        shutil.rmtree(d)\n\ndef test_process_missing_key():\n    d = tempfile.mkdtemp()\n    try:\n        with open(os.path.join(d, \"nokey.json\"), \"w\") as f:\n            json.dump({\"other\": 1}, f)\n        try:\n            process_file(os.path.join(d, \"nokey.json\"))\n            assert False, \"Should have raised an error\"\n        except (KeyError, ValueError):\n            pass  # expected\n    finally:\n        shutil.rmtree(d)\n\ndef test_directory_mixed():\n    d = tempfile.mkdtemp()\n    try:\n        # Good file\n        with open(os.path.join(d, \"good.json\"), \"w\") as f:\n            json.dump({\"value\": 10}, f)\n        # Bad JSON\n        with open(os.path.join(d, \"bad.json\"), \"w\") as f:\n            f.write(\"{corrupt\")\n        # Missing key\n        with open(os.path.join(d, \"nokey.json\"), \"w\") as f:\n            json.dump({\"x\": 1}, f)\n        # Non-JSON file (should be skipped)\n        with open(os.path.join(d, \"readme.txt\"), \"w\") as f:\n            f.write(\"ignore me\")\n\n        result = process_directory(d)\n        assert \"good.json\" in result[\"results\"], f\"Missing good.json in {result}\"\n        assert result[\"results\"][\"good.json\"] == 10.0\n        assert \"bad.json\" in result[\"errors\"], f\"bad.json should be in errors: {result}\"\n        assert \"nokey.json\" in result[\"errors\"], f\"nokey.json should be in errors: {result}\"\n        assert \"readme.txt\" not in result[\"results\"]\n        assert \"readme.txt\" not in result[\"errors\"]\n    finally:\n        shutil.rmtree(d)\n\nif __name__ == '__main__':\n    test_process_valid()\n    test_process_missing_file()\n    test_process_bad_json()\n    test_process_missing_key()\n    test_directory_mixed()\n    print(\"All tests passed.\")\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Add try/except in process_directory around process_file call. Catch json.JSONDecodeError, KeyError, ValueError and store in errors dict. process_file itself can raise naturally.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 test_processor.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "All tests passed"
+    ],
+    "output_not_contains": [
+      "Traceback",
+      "AssertionError"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_editing",
+    "hypothesis_test",
+    "prioritization",
+    "test_running"
+  ],
+  "source": "ambiguous_generator:add_error_handling",
+  "generated_at": "2026-03-11T09:32:33.655130+00:00",
+  "estimated_minutes": 5
+}

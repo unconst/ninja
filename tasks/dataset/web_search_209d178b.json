@@ -1,0 +1,72 @@
+{
+  "task_id": "web_search_209d178b",
+  "category": "web_search",
+  "title": "Set up build system from documentation",
+  "difficulty": "medium",
+  "goal": "Read `docs/BUILD.md` and set up the project's build system.\nCreate the Makefile and verify the build works.\n\nRun `make test` to verify. It should print \"Build system OK.\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "docs/BUILD.md": "# Build System Setup\n\n## Overview\nThis project uses Make for building. Create a `Makefile` in the project root.\n\n## Required Targets\n\n### `build`\n- Compile all Python files to bytecode: `python3 -m py_compile <file>`\n- Compile: `src/main.py`, `src/utils.py`, `src/config.py`\n- Create `build/` directory if it doesn't exist\n\n### `clean`\n- Remove `build/` directory\n- Remove all `__pycache__` directories\n- Remove all `.pyc` files\n\n### `test`\n- Run: `python3 -m pytest tests/ -p no:xdist -p no:randomly -p no:cacheprovider -v`\n- Must depend on `build` (build first, then test)\n\n### `lint`\n- Run: `python3 -m py_compile src/main.py src/utils.py src/config.py`\n- Exit with error if any file has syntax errors\n\n### `all` (default)\n- Run `clean`, then `build`, then `test`\n\n## Variables\n- `SRC_DIR = src`\n- `BUILD_DIR = build`\n- `PYTHON = python3`\n",
+      "src/__init__.py": "",
+      "src/main.py": "from src.utils import helper\nfrom src.config import load_config\n\ndef main():\n    config = load_config()\n    result = helper(config[\"value\"])\n    print(f\"Result: {result}\")\n\nif __name__ == '__main__':\n    main()\n",
+      "src/utils.py": "def helper(x):\n    return x * 2\n",
+      "src/config.py": "def load_config():\n    return {\"value\": 21}\n",
+      "tests/__init__.py": "",
+      "tests/test_main.py": "from src.utils import helper\nfrom src.config import load_config\n\ndef test_helper():\n    assert helper(21) == 42\n\ndef test_config():\n    config = load_config()\n    assert \"value\" in config\n\ndef test_build_system():\n    import os\n    # Check Makefile exists\n    assert os.path.exists(\"Makefile\"), \"Makefile not found\"\n    print(\"Build system OK.\")\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Create Makefile with targets: all (clean build test), build (py_compile), clean (rm -rf), test (pytest), lint (py_compile). Must use tabs for indentation.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "Makefile"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "make test 2>&1",
+        "output_contains": [
+          "passed"
+        ],
+        "output_not_contains": [
+          "FAILED"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "doc_reading",
+    "file_creation",
+    "build_systems",
+    "script_writing",
+    "decomposition"
+  ],
+  "source": "web_search_generator:build_system_setup",
+  "generated_at": "2026-03-11T09:16:37.226184+00:00",
+  "estimated_minutes": 8
+}

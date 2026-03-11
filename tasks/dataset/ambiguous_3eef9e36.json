@@ -1,0 +1,56 @@
+{
+  "task_id": "ambiguous_3eef9e36",
+  "category": "ambiguous",
+  "title": "Finish the half-implemented feature",
+  "difficulty": "medium",
+  "goal": "Someone started implementing a task queue but didn't finish.\nThere are TODO comments in the code. Finish the implementation.\n\nRun `python3 test_queue.py` \u2014 it should print \"All tests passed.\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "task_queue.py": "from collections import deque\nfrom datetime import datetime\n\nclass TaskQueue:\n    def __init__(self):\n        self._queues = {\"high\": deque(), \"normal\": deque(), \"low\": deque()}\n        self._completed = []\n\n    def add_task(self, name, priority=\"normal\"):\n        \"\"\"Add a task with given priority.\"\"\"\n        if priority not in self._queues:\n            raise ValueError(f\"Invalid priority: {priority}\")\n        task = {\n            \"name\": name,\n            \"priority\": priority,\n            \"added_at\": datetime.now().isoformat(),\n            \"status\": \"pending\",\n        }\n        self._queues[priority].append(task)\n        return task\n\n    def next_task(self):\n        \"\"\"Get next task by priority (high > normal > low).\"\"\"\n        # TODO: implement \u2014 should return highest priority task\n        # and remove it from the queue. Return None if all empty.\n        pass\n\n    def complete_task(self, task):\n        \"\"\"Mark a task as completed.\"\"\"\n        task[\"status\"] = \"completed\"\n        task[\"completed_at\"] = datetime.now().isoformat()\n        self._completed.append(task)\n\n    def pending_count(self):\n        \"\"\"Return total number of pending tasks.\"\"\"\n        # TODO: implement \u2014 sum of all queue lengths\n        pass\n\n    def completed_count(self):\n        return len(self._completed)\n\n    def stats(self):\n        \"\"\"Return queue statistics.\"\"\"\n        # TODO: implement \u2014 return dict with:\n        # \"pending\": total pending, \"completed\": completed count,\n        # \"by_priority\": {\"high\": N, \"normal\": N, \"low\": N}\n        pass\n",
+      "test_queue.py": "from task_queue import TaskQueue\n\ndef test_add_and_next():\n    q = TaskQueue()\n    q.add_task(\"low task\", \"low\")\n    q.add_task(\"high task\", \"high\")\n    q.add_task(\"normal task\", \"normal\")\n\n    # Should get high first\n    t = q.next_task()\n    assert t[\"name\"] == \"high task\", f\"Expected high task, got {t}\"\n\n    # Then normal\n    t = q.next_task()\n    assert t[\"name\"] == \"normal task\", f\"Expected normal task, got {t}\"\n\n    # Then low\n    t = q.next_task()\n    assert t[\"name\"] == \"low task\", f\"Expected low task, got {t}\"\n\n    # Then None\n    assert q.next_task() is None\n\ndef test_complete():\n    q = TaskQueue()\n    q.add_task(\"task1\")\n    t = q.next_task()\n    q.complete_task(t)\n    assert q.completed_count() == 1\n    assert t[\"status\"] == \"completed\"\n\ndef test_pending_count():\n    q = TaskQueue()\n    q.add_task(\"a\")\n    q.add_task(\"b\", \"high\")\n    q.add_task(\"c\", \"low\")\n    assert q.pending_count() == 3\n    q.next_task()\n    assert q.pending_count() == 2\n\ndef test_stats():\n    q = TaskQueue()\n    q.add_task(\"a\", \"high\")\n    q.add_task(\"b\", \"high\")\n    q.add_task(\"c\", \"normal\")\n    t = q.next_task()\n    q.complete_task(t)\n\n    s = q.stats()\n    assert s[\"pending\"] == 2\n    assert s[\"completed\"] == 1\n    assert s[\"by_priority\"][\"high\"] == 1\n    assert s[\"by_priority\"][\"normal\"] == 1\n    assert s[\"by_priority\"][\"low\"] == 0\n\ndef test_invalid_priority():\n    q = TaskQueue()\n    try:\n        q.add_task(\"x\", \"urgent\")\n        assert False, \"Should raise ValueError\"\n    except ValueError:\n        pass\n\nif __name__ == '__main__':\n    test_add_and_next()\n    test_complete()\n    test_pending_count()\n    test_stats()\n    test_invalid_priority()\n    print(\"All tests passed.\")\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Implement three TODO methods: next_task (iterate high/normal/low, popleft first non-empty), pending_count (sum of queue lengths), stats (dict with pending, completed, by_priority)",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 test_queue.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "All tests passed"
+    ],
+    "output_not_contains": [
+      "Traceback",
+      "AssertionError",
+      "Error"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_writing",
+    "doc_reading",
+    "decomposition",
+    "hypothesis_test"
+  ],
+  "source": "ambiguous_generator:finish_the_feature",
+  "generated_at": "2026-03-11T09:32:33.655435+00:00",
+  "estimated_minutes": 8
+}

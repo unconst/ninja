@@ -1,0 +1,58 @@
+{
+  "task_id": "web_search_62580635",
+  "category": "web_search",
+  "title": "Migrate API client using migration guide",
+  "difficulty": "medium",
+  "goal": "The `client.py` uses API v1, which is deprecated. A migration guide\nis available in `docs/migration_v1_to_v2.md`. Update the client\nto use the v2 API.\n\nAfter migration, run `python3 test_client.py` \u2014 it should print\n\"All migration tests passed.\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "docs/migration_v1_to_v2.md": "# API Migration Guide: v1 \u2192 v2\n\n## Breaking Changes\n\n### Authentication\n- v1: `client.auth(api_key)` \u2192 v2: `client.authenticate(api_key, version=\"v2\")`\n- The `auth()` method is removed in v2\n\n### Endpoint Changes\n- v1: `client.get(endpoint)` \u2192 v2: `client.request(\"GET\", endpoint)`\n- v1: `client.post(endpoint, data)` \u2192 v2: `client.request(\"POST\", endpoint, body=data)`\n- The `get()` and `post()` methods are removed in v2\n\n### Response Format\n- v1: Returns raw data dict \u2192 v2: Returns `Response` object with `.data`, `.status`, `.headers`\n- v1: `resp[\"users\"]` \u2192 v2: `resp.data[\"users\"]`\n- v1: Errors raise `APIError` \u2192 v2: Errors raise `APIError` with `.code` and `.message` attrs\n\n### Configuration\n- v1: `Client(base_url=...)` \u2192 v2: `Client(base_url=..., timeout=30)` (timeout now required)\n- v1: No retry \u2192 v2: `Client(..., retries=3)` optional, defaults to 0\n\n### Pagination\n- v1: `client.get(\"/users?page=1\")` \u2192 v2: `client.paginate(\"/users\", page_size=10)` returns iterator\n- Or use `client.request(\"GET\", \"/users\", params={\"page\": 1, \"size\": 10})`\n",
+      "api_sdk.py": "# v2 API SDK (simplified)\n\nclass Response:\n    def __init__(self, data, status=200, headers=None):\n        self.data = data\n        self.status = status\n        self.headers = headers or {}\n\nclass APIError(Exception):\n    def __init__(self, code, message):\n        self.code = code\n        self.message = message\n        super().__init__(f\"API Error {code}: {message}\")\n\nclass Client:\n    def __init__(self, base_url, timeout=30, retries=0):\n        self.base_url = base_url\n        self.timeout = timeout\n        self.retries = retries\n        self._authenticated = False\n        self._data_store = {\n            \"/users\": [{\"id\": 1, \"name\": \"Alice\"}, {\"id\": 2, \"name\": \"Bob\"}],\n            \"/items\": [{\"id\": 1, \"title\": \"Widget\"}],\n        }\n\n    def authenticate(self, api_key, version=\"v2\"):\n        if version != \"v2\":\n            raise APIError(400, \"Only v2 auth supported\")\n        self._authenticated = True\n\n    def request(self, method, endpoint, body=None, params=None):\n        if not self._authenticated:\n            raise APIError(401, \"Not authenticated\")\n        if method == \"GET\":\n            data = self._data_store.get(endpoint, [])\n            return Response(data, 200)\n        elif method == \"POST\":\n            if body:\n                return Response(body, 201)\n            raise APIError(400, \"No body\")\n        raise APIError(405, f\"Method {method} not allowed\")\n\n    def paginate(self, endpoint, page_size=10):\n        data = self._data_store.get(endpoint, [])\n        for i in range(0, len(data), page_size):\n            yield Response(data[i:i+page_size], 200)\n",
+      "client.py": "# v1 API client \u2014 needs migration to v2\nfrom api_sdk import Client\n\ndef get_all_users(api_key):\n    client = Client(base_url=\"http://api.example.com\")\n    client.auth(api_key)  # v1 method\n    resp = client.get(\"/users\")  # v1 method\n    return resp[\"users\"] if \"users\" in resp else resp  # v1 format\n\ndef create_item(api_key, title):\n    client = Client(base_url=\"http://api.example.com\")\n    client.auth(api_key)\n    resp = client.post(\"/items\", {\"title\": title})  # v1 method\n    return resp\n\ndef run():\n    users = get_all_users(\"test-key\")\n    print(f\"Found {len(users)} users\")\n    item = create_item(\"test-key\", \"New Widget\")\n    print(f\"Created item: {item}\")\n",
+      "test_client.py": "from client import get_all_users, create_item\nfrom api_sdk import Response\n\ndef test_get_users():\n    users = get_all_users(\"test-key\")\n    assert isinstance(users, list), f\"Expected list, got {type(users)}\"\n    assert len(users) == 2\n    assert users[0][\"name\"] == \"Alice\"\n\ndef test_create_item():\n    result = create_item(\"test-key\", \"New Widget\")\n    # v2 returns Response object\n    assert isinstance(result, Response), f\"Expected Response, got {type(result)}\"\n    assert result.data[\"title\"] == \"New Widget\"\n    assert result.status == 201\n\nif __name__ == '__main__':\n    test_get_users()\n    test_create_item()\n    print(\"All migration tests passed.\")\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Migrate client.py: 1) Client needs timeout param, 2) auth->authenticate with version='v2', 3) get->request('GET',...), 4) post->request('POST',...,body=), 5) responses are Response objects (.data)",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 test_client.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "All migration tests passed"
+    ],
+    "output_not_contains": [
+      "Traceback",
+      "Error",
+      "AssertionError"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "doc_reading",
+    "code_reading",
+    "code_editing",
+    "multi_file",
+    "summary_gen"
+  ],
+  "source": "web_search_generator:api_migration_guide",
+  "generated_at": "2026-03-11T09:16:37.225304+00:00",
+  "estimated_minutes": 8
+}
