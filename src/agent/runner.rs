@@ -1261,6 +1261,10 @@ impl AgentRunner {
                occurrences in one call — much faster than individual edits. Do this \
                for EACH file separately.\n\
              - **Track progress.** For multi-step tasks, use todo_write to maintain a checklist.\n\
+             - **Breadth before depth.** For multi-file changes, make ONE focused pass through \
+               each file before returning for second passes. Don't spend 10+ iterations perfecting \
+               one file while others remain untouched. If an edit fails twice, move to the next \
+               file and come back later.\n\
              - **Externalize state.** Always write your plan to /tmp/.ninja_plan.md before editing. \
                After context compaction, re-read it to stay on track. Also log failed approaches \
                there — what you tried, why it failed, and what to try next.\n\
