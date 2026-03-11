@@ -929,7 +929,9 @@ impl AgentRunner {
              - Do NOT spend more than 5 iterations exploring. If unsure, start implementing.\n\n\
              **Phase 2: IMPLEMENT (iterations 6-35)**\n\
              - Work through the REQUIRED FILES list systematically — do not skip ANY file\n\
-             - Always read a file before editing it\n\
+             - Always read a file before editing it — read the ENTIRE file (no offset/limit) for config \
+               files (pyproject.toml, setup.cfg, Cargo.toml, package.json, etc.) since they are small \
+               and you need full context\n\
              - For edit_file, include enough surrounding context in old_string to make it unique\n\
              - For large edits (>20 lines), prefer replace_lines over edit_file\n\
              - After each edit, read back the file to confirm it applied correctly\n\
@@ -957,7 +959,8 @@ impl AgentRunner {
              - PARALLELIZE: When you need to read or research multiple independent files/topics, \
                use spawn_agent to fan out the work. When you call multiple tools in one response, \
                they execute concurrently.\n\
-             - Read files FULLY — avoid reading tiny chunks (offset/limit). Read the whole file.\n\
+             - Read files FULLY — avoid using offset/limit unless a file is >2000 lines. \
+               Config files are ALWAYS small; read them completely.\n\
              - Be precise and minimal in changes — don't over-engineer\n\
              - When editing, prefer small targeted edits over rewriting entire files\n\
              - If edit_file fails with 'String not found', re-read the file and copy the EXACT text. \
