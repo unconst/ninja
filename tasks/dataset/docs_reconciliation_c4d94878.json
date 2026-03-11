@@ -1,0 +1,78 @@
+{
+  "task_id": "docs_reconciliation_c4d94878",
+  "category": "docs_reconciliation",
+  "title": "Generate changelog from code diffs",
+  "difficulty": "medium",
+  "goal": "The changes/ directory contains diff files showing recent changes to the project.\nRead each diff carefully and produce a CHANGELOG.md that:\n\n1. Groups changes by type: Added, Changed, Fixed, Removed\n2. Describes each change in user-friendly language (not technical jargon)\n3. References the affected component/module\n4. Uses Keep a Changelog format (https://keepachangelog.com)\n\nRead the diffs, understand the code changes, and write clear descriptions.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "changes/001_add_search.diff": "--- a/app/routes.py\n+++ b/app/routes.py\n@@ -15,6 +15,18 @@ def list_users():\n     return jsonify(users)\n\n+@app.route('/api/search')\n+def search():\n+    query = request.args.get('q', '')\n+    results = db.search(query)\n+    return jsonify(results)\n+\n+@app.route('/api/search/advanced')\n+def advanced_search():\n+    filters = request.json\n+    results = db.advanced_search(filters)\n+    return jsonify(results)\n",
+      "changes/002_fix_auth.diff": "--- a/app/auth.py\n+++ b/app/auth.py\n@@ -22,7 +22,8 @@ def verify_token(token):\n-    if token.expiry < time.time():\n+    if token.expiry <= time.time():\n+        logger.warning(f\"Expired token attempt: {token.user_id}\")\n     return None\n\n@@ -45,6 +46,9 @@ def login(username, password):\n+    if not rate_limiter.check(username):\n+        raise TooManyAttemptsError(\"Too many login attempts\")\n+\n     user = db.get_user(username)\n",
+      "changes/003_remove_legacy.diff": "--- a/app/compat.py\n+++ /dev/null\n@@ -1,35 +0,0 @@\n-# Legacy compatibility layer\n-# Deprecated since v2.0\n-\n-def old_api_handler(request):\n-    '''Handle requests in v1 format.'''\n-    return convert_to_v2(request)\n-\n-def convert_to_v2(request):\n-    return request\n",
+      "changes/004_update_config.diff": "--- a/config.py\n+++ b/config.py\n@@ -5,8 +5,10 @@ class Config:\n-    TIMEOUT = 30\n+    TIMEOUT = 60\n-    MAX_RETRIES = 3\n+    MAX_RETRIES = 5\n+    CACHE_TTL = 300\n+    ENABLE_METRICS = True\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "CHANGELOG.md with: Added (search endpoints, rate limiting, cache TTL, metrics), Changed (timeout 30->60, retries 3->5), Fixed (token expiry off-by-one, added expired token logging), Removed (legacy compatibility layer)",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "CHANGELOG.md"
+        ]
+      },
+      {
+        "method": "file_content",
+        "expected_content": {
+          "CHANGELOG.md": "Added"
+        }
+      },
+      {
+        "method": "command_output",
+        "check_command": "grep -c -iE '(added|changed|fixed|removed)' CHANGELOG.md",
+        "output_contains": []
+      },
+      {
+        "method": "command_output",
+        "check_command": "grep -qi 'search' CHANGELOG.md && grep -qi 'legacy\\|compat' CHANGELOG.md && echo 'content_ok'",
+        "output_contains": [
+          "content_ok"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "doc_reading",
+    "code_reading",
+    "file_creation",
+    "explanation",
+    "summary_gen",
+    "code_search"
+  ],
+  "source": "docs_reconciliation_generator:changelog_from_diff",
+  "generated_at": "2026-03-11T08:24:40.449890+00:00",
+  "estimated_minutes": 8
+}

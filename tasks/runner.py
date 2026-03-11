@@ -29,6 +29,7 @@ from tasks.generators.local_ops import LocalOpsGenerator
 from tasks.generators.env_debug import EnvDebugGenerator
 from tasks.generators.data_analysis import DataAnalysisGenerator
 from tasks.generators.multi_step import MultiStepGenerator
+from tasks.generators.docs_reconciliation import DocsReconciliationGenerator
 from tasks.evaluators.evaluate import evaluate_task
 from tasks.coverage import CoverageTracker
 
@@ -38,6 +39,7 @@ GENERATORS = {
     "env_debug": EnvDebugGenerator(),
     "data_analysis": DataAnalysisGenerator(),
     "multi_step": MultiStepGenerator(),
+    "docs_reconciliation": DocsReconciliationGenerator(),
 }
 
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "dataset")

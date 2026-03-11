@@ -1,0 +1,74 @@
+{
+  "task_id": "docs_reconciliation_a522a0f8",
+  "category": "docs_reconciliation",
+  "title": "Fix outdated README to match current code",
+  "difficulty": "medium",
+  "goal": "The README.md describes the project but is outdated. Read the actual\nsource code and update the README to accurately reflect:\n\n1. The actual CLI arguments (check main.py's argparse setup)\n2. The actual function names and signatures\n3. The correct installation steps\n4. Remove references to features that don't exist in the code\n5. Add documentation for features in the code but not in the README\n\nKeep the README's style and tone. Only fix inaccuracies.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "README.md": "# DataProcessor\n\nA tool for processing CSV files.\n\n## Installation\n```\npip install dataprocessor\npip install -r requirements.txt\n```\n\n## Usage\n```\npython main.py --input data.csv --output result.csv\npython main.py --input data.csv --format json\npython main.py --validate data.csv\n```\n\n## Features\n- CSV to JSON conversion\n- Data validation\n- Column filtering with --columns flag\n- Row sampling with --sample flag\n- Export to Excel format\n\n## API\n```python\nfrom processor import DataProcessor\ndp = DataProcessor()\ndp.load(\"data.csv\")\ndp.filter(columns=[\"name\", \"age\"])\ndp.export(\"output.json\")\n```\n",
+      "main.py": "import argparse\nfrom processor import load_csv, transform, save_output\n\ndef main():\n    parser = argparse.ArgumentParser(description='Process CSV data')\n    parser.add_argument('input', help='Input CSV file')\n    parser.add_argument('-o', '--output', help='Output file path')\n    parser.add_argument('-f', '--format', choices=['csv', 'json'], default='csv',\n                      help='Output format (default: csv)')\n    parser.add_argument('--sort', help='Sort by column name')\n    parser.add_argument('--filter', help='Filter expression (col=value)')\n    parser.add_argument('--stats', action='store_true', help='Show column statistics')\n    args = parser.parse_args()\n\n    data = load_csv(args.input)\n\n    if args.filter:\n        col, val = args.filter.split('=')\n        data = [r for r in data if r.get(col) == val]\n\n    if args.sort:\n        data = sorted(data, key=lambda r: r.get(args.sort, ''))\n\n    if args.stats:\n        from processor import print_stats\n        print_stats(data)\n        return\n\n    output = transform(data, args.format)\n    if args.output:\n        save_output(output, args.output)\n    else:\n        print(output)\n\nif __name__ == '__main__':\n    main()\n",
+      "processor.py": "import csv\nimport json\nimport io\n\ndef load_csv(filepath):\n    with open(filepath) as f:\n        return list(csv.DictReader(f))\n\ndef transform(data, format='csv'):\n    if format == 'json':\n        return json.dumps(data, indent=2)\n    output = io.StringIO()\n    if data:\n        writer = csv.DictWriter(output, fieldnames=data[0].keys())\n        writer.writeheader()\n        writer.writerows(data)\n    return output.getvalue()\n\ndef save_output(content, filepath):\n    with open(filepath, 'w') as f:\n        f.write(content)\n\ndef print_stats(data):\n    if not data:\n        print(\"No data\")\n        return\n    for col in data[0].keys():\n        values = [r[col] for r in data]\n        print(f\"{col}: {len(values)} values, {len(set(values))} unique\")\n",
+      "requirements.txt": "# no external dependencies needed\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "README updated: positional input arg (not --input), no --validate flag, no --columns/--sample flags, no Excel export, has --sort/--filter/--stats. API is functions not class. Installation is just 'pip install -r requirements.txt'.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_content",
+        "expected_content": {
+          "README.md": "--sort"
+        }
+      },
+      {
+        "method": "command_output",
+        "check_command": "! grep -q '\\-\\-validate' README.md && ! grep -q 'Excel' README.md && echo 'removed_ok'",
+        "output_contains": [
+          "removed_ok"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "grep -q '\\-\\-filter' README.md && grep -q '\\-\\-stats' README.md && echo 'added_ok'",
+        "output_contains": [
+          "added_ok"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "doc_reading",
+    "code_reading",
+    "code_editing",
+    "symbol_lookup",
+    "multi_file",
+    "explanation"
+  ],
+  "source": "docs_reconciliation_generator:outdated_readme",
+  "generated_at": "2026-03-11T08:24:40.449523+00:00",
+  "estimated_minutes": 8
+}

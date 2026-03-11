@@ -1,0 +1,80 @@
+{
+  "task_id": "docs_reconciliation_1d491729",
+  "category": "docs_reconciliation",
+  "title": "Find and fix config documentation mismatches",
+  "difficulty": "medium",
+  "goal": "The CONFIG.md documents all configuration options, but the code has evolved\nand the docs are now out of sync.\n\n1. Read CONFIG.md carefully\n2. Search the code to find all actual config variable usage\n3. Create a discrepancies.json file listing:\n   - \"documented_not_used\": config vars in docs but not in code\n   - \"used_not_documented\": config vars in code but not in docs\n   - \"wrong_defaults\": vars where documented default differs from code default\n4. Update CONFIG.md to be correct\n\nDo NOT change the code, only fix the documentation.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "CONFIG.md": "# Configuration Guide\n\n## Database\n| Variable | Default | Description |\n|----------|---------|-------------|\n| DB_HOST | localhost | Database host |\n| DB_PORT | 5432 | Database port |\n| DB_NAME | myapp | Database name |\n| DB_POOL_SIZE | 5 | Connection pool size |\n| DB_TIMEOUT | 10 | Query timeout in seconds |\n\n## Server\n| Variable | Default | Description |\n|----------|---------|-------------|\n| SERVER_HOST | 0.0.0.0 | Server bind address |\n| SERVER_PORT | 8080 | Server port |\n| WORKERS | 4 | Number of worker processes |\n| DEBUG_MODE | false | Enable debug mode |\n\n## Cache\n| Variable | Default | Description |\n|----------|---------|-------------|\n| CACHE_BACKEND | memory | Cache backend (memory/redis) |\n| CACHE_TTL | 300 | Cache TTL in seconds |\n",
+      "app/config.py": "import os\n\nDB_HOST = os.environ.get('DB_HOST', 'localhost')\nDB_PORT = int(os.environ.get('DB_PORT', '5432'))\nDB_NAME = os.environ.get('DB_NAME', 'myapp')\nDB_POOL_SIZE = int(os.environ.get('DB_POOL_SIZE', '10'))  # docs say 5\n# DB_TIMEOUT was removed in v3\n\nSERVER_HOST = os.environ.get('SERVER_HOST', '0.0.0.0')\nSERVER_PORT = int(os.environ.get('SERVER_PORT', '3000'))  # docs say 8080\nDEBUG_MODE = os.environ.get('DEBUG_MODE', 'false').lower() == 'true'\n# WORKERS was replaced by MAX_THREADS\nMAX_THREADS = int(os.environ.get('MAX_THREADS', '8'))\n\nCACHE_BACKEND = os.environ.get('CACHE_BACKEND', 'redis')  # docs say memory\nCACHE_TTL = int(os.environ.get('CACHE_TTL', '300'))\n\n# New in v3\nLOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')\nRATE_LIMIT = int(os.environ.get('RATE_LIMIT', '100'))\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "documented_not_used: DB_TIMEOUT, WORKERS. used_not_documented: MAX_THREADS, LOG_LEVEL, RATE_LIMIT. wrong_defaults: DB_POOL_SIZE (5->10), SERVER_PORT (8080->3000), CACHE_BACKEND (memory->redis).",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "file_exists",
+        "expected_files": [
+          "discrepancies.json"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import json; d=json.load(open('discrepancies.json')); assert len(d.get('documented_not_used',[]))>=2; assert len(d.get('used_not_documented',[]))>=2; print('discrepancies_found')\"",
+        "output_contains": [
+          "discrepancies_found"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "grep -q 'MAX_THREADS' CONFIG.md && grep -q 'LOG_LEVEL' CONFIG.md && echo 'docs_updated'",
+        "output_contains": [
+          "docs_updated"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "grep -q '3000' CONFIG.md && echo 'port_fixed'",
+        "output_contains": [
+          "port_fixed"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "doc_reading",
+    "code_reading",
+    "code_search",
+    "code_editing",
+    "file_creation",
+    "multi_file",
+    "symbol_lookup"
+  ],
+  "source": "docs_reconciliation_generator:config_docs_mismatch",
+  "generated_at": "2026-03-11T08:24:40.449988+00:00",
+  "estimated_minutes": 10
+}

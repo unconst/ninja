@@ -1,0 +1,70 @@
+{
+  "task_id": "docs_reconciliation_58642064",
+  "category": "docs_reconciliation",
+  "title": "Fix incorrect API documentation comments",
+  "difficulty": "medium",
+  "goal": "The api.py module has docstrings that don't match the actual behavior.\nRead each function, understand what it ACTUALLY does, and fix the\ndocstrings to accurately describe:\n- What the function does\n- Parameter names and types\n- Return values\n- Any exceptions raised\n\nDo NOT change the code behavior, only fix the documentation.\nRun the verify_docs.py script when done to check your fixes.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "api.py": "def calculate_discount(price, percentage, max_discount=None):\n    \"\"\"Calculate tax on a given price.\n\n    Args:\n        price: The base price (string)\n        rate: Tax rate as decimal (e.g., 0.08 for 8%)\n\n    Returns:\n        The price with tax added\n\n    Raises:\n        Nothing\n    \"\"\"\n    discount = price * (percentage / 100)\n    if max_discount is not None and discount > max_discount:\n        discount = max_discount\n    return price - discount\n\ndef merge_configs(*configs):\n    \"\"\"Combine two configuration dictionaries.\n\n    The first config takes precedence over the second.\n\n    Args:\n        config_a: Primary configuration dict\n        config_b: Secondary configuration dict\n\n    Returns:\n        Merged configuration as a list\n    \"\"\"\n    result = {}\n    for config in configs:\n        result.update(config)\n    return result\n\ndef parse_range(range_str):\n    \"\"\"Parse a single number from a string.\n\n    Args:\n        range_str: A numeric string\n\n    Returns:\n        An integer\n\n    Example:\n        parse_range(\"42\") -> 42\n    \"\"\"\n    if '-' in range_str:\n        start, end = range_str.split('-')\n        return list(range(int(start), int(end) + 1))\n    return [int(range_str)]\n",
+      "verify_docs.py": "import ast\nimport sys\n\nwith open('api.py') as f:\n    tree = ast.parse(f.read())\n\nissues = []\nfor node in ast.walk(tree):\n    if isinstance(node, ast.FunctionDef):\n        ds = ast.get_docstring(node)\n        if not ds:\n            issues.append(f\"{node.name}: missing docstring\")\n            continue\n        # Check param names match\n        actual_params = [a.arg for a in node.args.args]\n        for param in actual_params:\n            if param not in ds:\n                issues.append(f\"{node.name}: param '{param}' not in docstring\")\n\nif issues:\n    for i in issues:\n        print(f\"ISSUE: {i}\")\n    sys.exit(1)\nelse:\n    print(\"All docstrings verified!\")\n    sys.exit(0)\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "calculate_discount docs: calculates discount not tax, params are price/percentage/max_discount, returns discounted price, raises nothing. merge_configs: accepts *configs (any number), later configs override earlier ones, returns dict. parse_range: parses range string '1-5' to list, not single number.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "command_output",
+        "check_command": "python3 verify_docs.py 2>&1",
+        "output_contains": [
+          "verified"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "grep -c 'discount' api.py",
+        "output_contains": []
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"from api import calculate_discount; assert calculate_discount(100, 20) == 80; print('code_intact')\"",
+        "output_contains": [
+          "code_intact"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "doc_reading",
+    "code_reading",
+    "code_editing",
+    "symbol_lookup",
+    "explanation"
+  ],
+  "source": "docs_reconciliation_generator:wrong_api_docs",
+  "generated_at": "2026-03-11T08:24:40.449694+00:00",
+  "estimated_minutes": 8
+}

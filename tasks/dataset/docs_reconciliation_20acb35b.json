@@ -1,0 +1,71 @@
+{
+  "task_id": "docs_reconciliation_20acb35b",
+  "category": "docs_reconciliation",
+  "title": "Add comprehensive docstrings to undocumented code",
+  "difficulty": "medium",
+  "goal": "The utils.py module has no docstrings at all. Read the code carefully\nand add accurate docstrings to:\n\n1. The module itself (module-level docstring)\n2. Every class\n3. Every public method/function\n4. Include: description, Args, Returns, Raises, Examples\n\nFollow Google-style docstring format. Do NOT change any code logic.\nVerify by running: python3 -c \"import utils; help(utils)\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "utils.py": "import re\nfrom collections import defaultdict\n\nclass TextAnalyzer:\n    def __init__(self, text):\n        self.text = text\n        self._words = None\n\n    @property\n    def words(self):\n        if self._words is None:\n            self._words = re.findall(r'\\b\\w+\\b', self.text.lower())\n        return self._words\n\n    def word_frequency(self):\n        freq = defaultdict(int)\n        for word in self.words:\n            freq[word] += 1\n        return dict(sorted(freq.items(), key=lambda x: -x[1]))\n\n    def sentences(self):\n        return [s.strip() for s in re.split(r'[.!?]+', self.text) if s.strip()]\n\n    def search(self, pattern):\n        return re.findall(pattern, self.text)\n\n    def summary(self, max_sentences=3):\n        sents = self.sentences()\n        return '. '.join(sents[:max_sentences]) + '.' if sents else ''\n\n\ndef slugify(text):\n    text = text.lower().strip()\n    text = re.sub(r'[^\\w\\s-]', '', text)\n    text = re.sub(r'[\\s_-]+', '-', text)\n    return text.strip('-')\n\ndef extract_emails(text):\n    return re.findall(r'[\\w.+-]+@[\\w-]+\\.[\\w.-]+', text)\n\ndef mask_sensitive(text, patterns=None):\n    if patterns is None:\n        patterns = [r'\\b\\d{3}-\\d{2}-\\d{4}\\b', r'\\b\\d{16}\\b']\n    for pattern in patterns:\n        text = re.sub(pattern, '***REDACTED***', text)\n    return text\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "All functions and class have Google-style docstrings with accurate descriptions, Args, Returns, and Examples sections",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"import utils; assert utils.TextAnalyzer.__doc__; assert utils.slugify.__doc__; assert utils.extract_emails.__doc__; print('docs_present')\"",
+        "output_contains": [
+          "docs_present"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"from utils import TextAnalyzer; t=TextAnalyzer('Hello world. Test.'); assert t.word_frequency()['hello']==1; assert t.sentences()==['Hello world', 'Test']; print('code_intact')\"",
+        "output_contains": [
+          "code_intact"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -c \"from utils import slugify; assert slugify('Hello World!')==('hello-world'); print('slugify_ok')\"",
+        "output_contains": [
+          "slugify_ok"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_editing",
+    "symbol_lookup",
+    "explanation",
+    "doc_reading"
+  ],
+  "source": "docs_reconciliation_generator:missing_docstrings",
+  "generated_at": "2026-03-11T08:24:40.449787+00:00",
+  "estimated_minutes": 8
+}
