@@ -1,0 +1,32 @@
+{
+  "task_id": "env_debug_51b3c00f",
+  "category": "env_debug",
+  "title": "Fix and recover corrupt JSON data files",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 0.006067037582397461,
+  "exit_code": 2,
+  "result": {
+    "score": 0.0,
+    "details": "0/3 output checks passed",
+    "checks": [
+      {
+        "name": "contains:Pipeline complete: processed 10 records",
+        "passed": false,
+        "detail": "not found"
+      },
+      {
+        "name": "not_contains:Error",
+        "passed": false,
+        "detail": "unexpectedly present"
+      },
+      {
+        "name": "not_contains:Traceback",
+        "passed": false,
+        "detail": "unexpectedly present"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_env_debug_51b3c00f_x31jjpiu"
+}

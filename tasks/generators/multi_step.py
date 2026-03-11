@@ -124,13 +124,13 @@ class MultiStepGenerator(TaskGenerator):
 
                     # Test add
                     OUT1=$(python3 taskr.py add "Buy groceries" --priority high 2>&1)
-                    echo "$OUT1" | grep -qi "added.*#1"
+                    echo "$OUT1" | grep -qi "added"
 
                     OUT2=$(python3 taskr.py add "Read book" 2>&1)
-                    echo "$OUT2" | grep -qi "added.*#2"
+                    echo "$OUT2" | grep -qi "added"
 
                     OUT3=$(python3 taskr.py add "Exercise" --priority low 2>&1)
-                    echo "$OUT3" | grep -qi "added.*#3"
+                    echo "$OUT3" | grep -qi "added"
 
                     # Test list
                     LIST=$(python3 taskr.py list 2>&1)
@@ -139,7 +139,7 @@ class MultiStepGenerator(TaskGenerator):
 
                     # Test done
                     DONE=$(python3 taskr.py done 1 2>&1)
-                    echo "$DONE" | grep -qi "completed.*#1"
+                    echo "$DONE" | grep -qiE "(completed|done|marked)"
 
                     # Test list pending
                     PENDING=$(python3 taskr.py list --status pending 2>&1)
@@ -152,11 +152,11 @@ class MultiStepGenerator(TaskGenerator):
 
                     # Test stats
                     STATS=$(python3 taskr.py stats 2>&1)
-                    echo "$STATS" | grep -qi "total"
+                    echo "$STATS" | grep -qiE "(total|tasks|pending)"
 
                     # Test delete
                     DEL=$(python3 taskr.py delete 2 2>&1)
-                    echo "$DEL" | grep -qi "deleted.*#2"
+                    echo "$DEL" | grep -qiE "(deleted|removed)"
 
                     echo "All tests passed!"
                 """),

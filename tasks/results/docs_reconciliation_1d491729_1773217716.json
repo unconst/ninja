@@ -1,0 +1,37 @@
+{
+  "task_id": "docs_reconciliation_1d491729",
+  "category": "docs_reconciliation",
+  "title": "Find and fix config documentation mismatches",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 66.94365119934082,
+  "exit_code": 0,
+  "result": {
+    "score": 0.75,
+    "details": "Composite: 3/4 sub-evals passed",
+    "checks": [
+      {
+        "name": "exists:discrepancies.json",
+        "passed": true,
+        "detail": "exists"
+      },
+      {
+        "name": "contains:discrepancies_found",
+        "passed": false,
+        "detail": "not found"
+      },
+      {
+        "name": "contains:docs_updated",
+        "passed": true,
+        "detail": "found"
+      },
+      {
+        "name": "contains:port_fixed",
+        "passed": true,
+        "detail": "found"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_docs_reconciliation_1d491729_wh9qf9b3"
+}

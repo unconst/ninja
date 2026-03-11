@@ -1,5 +1,5 @@
 {
-  "task_id": "multi_step_a2a04c6a",
+  "task_id": "multi_step_eb966ab9",
   "category": "multi_step",
   "title": "Add test suite to untested project",
   "difficulty": "medium",
@@ -71,6 +71,6 @@
     "multi_file"
   ],
   "source": "multi_step_generator:test_infrastructure",
-  "generated_at": "2026-03-11T08:21:34.191385+00:00",
+  "generated_at": "2026-03-11T08:30:22.562230+00:00",
   "estimated_minutes": 12
 }

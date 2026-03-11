@@ -1,0 +1,37 @@
+{
+  "task_id": "data_analysis_6d841de9",
+  "category": "data_analysis",
+  "title": "Join data files and compute sales report",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 69.62271976470947,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "Composite: 3/3 sub-evals passed",
+    "checks": [
+      {
+        "name": "exists:sales_report.csv",
+        "passed": true,
+        "detail": "exists"
+      },
+      {
+        "name": "exists:product_summary.csv",
+        "passed": true,
+        "detail": "exists"
+      },
+      {
+        "name": "contains:top_customer_ok",
+        "passed": true,
+        "detail": "found"
+      },
+      {
+        "name": "contains:products_ok",
+        "passed": true,
+        "detail": "found"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_data_analysis_6d841de9_zb09ke2o"
+}

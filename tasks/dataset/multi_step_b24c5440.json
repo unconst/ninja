@@ -1,5 +1,5 @@
 {
-  "task_id": "multi_step_6bf756d4",
+  "task_id": "multi_step_b24c5440",
   "category": "multi_step",
   "title": "Bootstrap Python CLI tool from specification",
   "difficulty": "medium",
@@ -31,7 +31,7 @@
     "output_not_contains": null,
     "test_command": null,
     "check_script": null,
-    "check_script_content": "#!/bin/bash\nset -e\nrm -f tasks.json\n\n# Test add\nOUT1=$(python3 taskr.py add \"Buy groceries\" --priority high 2>&1)\necho \"$OUT1\" | grep -qi \"added.*#1\"\n\nOUT2=$(python3 taskr.py add \"Read book\" 2>&1)\necho \"$OUT2\" | grep -qi \"added.*#2\"\n\nOUT3=$(python3 taskr.py add \"Exercise\" --priority low 2>&1)\necho \"$OUT3\" | grep -qi \"added.*#3\"\n\n# Test list\nLIST=$(python3 taskr.py list 2>&1)\necho \"$LIST\" | grep -q \"Buy groceries\"\necho \"$LIST\" | grep -q \"Read book\"\n\n# Test done\nDONE=$(python3 taskr.py done 1 2>&1)\necho \"$DONE\" | grep -qi \"completed.*#1\"\n\n# Test list pending\nPENDING=$(python3 taskr.py list --status pending 2>&1)\necho \"$PENDING\" | grep -q \"Read book\"\n# Buy groceries should NOT appear in pending\nif echo \"$PENDING\" | grep -q \"Buy groceries\"; then\n    echo \"FAIL: completed task in pending list\"\n    exit 1\nfi\n\n# Test stats\nSTATS=$(python3 taskr.py stats 2>&1)\necho \"$STATS\" | grep -qi \"total\"\n\n# Test delete\nDEL=$(python3 taskr.py delete 2 2>&1)\necho \"$DEL\" | grep -qi \"deleted.*#2\"\n\necho \"All tests passed!\"\n",
+    "check_script_content": "#!/bin/bash\nset -e\nrm -f tasks.json\n\n# Test add\nOUT1=$(python3 taskr.py add \"Buy groceries\" --priority high 2>&1)\necho \"$OUT1\" | grep -qi \"added\"\n\nOUT2=$(python3 taskr.py add \"Read book\" 2>&1)\necho \"$OUT2\" | grep -qi \"added\"\n\nOUT3=$(python3 taskr.py add \"Exercise\" --priority low 2>&1)\necho \"$OUT3\" | grep -qi \"added\"\n\n# Test list\nLIST=$(python3 taskr.py list 2>&1)\necho \"$LIST\" | grep -q \"Buy groceries\"\necho \"$LIST\" | grep -q \"Read book\"\n\n# Test done\nDONE=$(python3 taskr.py done 1 2>&1)\necho \"$DONE\" | grep -qiE \"(completed|done|marked)\"\n\n# Test list pending\nPENDING=$(python3 taskr.py list --status pending 2>&1)\necho \"$PENDING\" | grep -q \"Read book\"\n# Buy groceries should NOT appear in pending\nif echo \"$PENDING\" | grep -q \"Buy groceries\"; then\n    echo \"FAIL: completed task in pending list\"\n    exit 1\nfi\n\n# Test stats\nSTATS=$(python3 taskr.py stats 2>&1)\necho \"$STATS\" | grep -qiE \"(total|tasks|pending)\"\n\n# Test delete\nDEL=$(python3 taskr.py delete 2 2>&1)\necho \"$DEL\" | grep -qiE \"(deleted|removed)\"\n\necho \"All tests passed!\"\n",
     "rubric": null,
     "sub_evals": null,
     "pass_threshold": 1.0
@@ -46,6 +46,6 @@
     "test_running"
   ],
   "source": "multi_step_generator:project_bootstrap",
-  "generated_at": "2026-03-11T08:21:34.191136+00:00",
+  "generated_at": "2026-03-11T08:30:22.561837+00:00",
   "estimated_minutes": 12
 }

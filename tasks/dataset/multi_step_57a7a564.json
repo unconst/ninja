@@ -1,5 +1,5 @@
 {
-  "task_id": "multi_step_29af2975",
+  "task_id": "multi_step_57a7a564",
   "category": "multi_step",
   "title": "Build REST API server from data model",
   "difficulty": "medium",
@@ -44,6 +44,6 @@
     "prioritization"
   ],
   "source": "multi_step_generator:api_with_tests",
-  "generated_at": "2026-03-11T08:21:34.191468+00:00",
+  "generated_at": "2026-03-11T08:30:22.562316+00:00",
   "estimated_minutes": 15
 }

@@ -1,0 +1,22 @@
+{
+  "task_id": "multi_step_6bf756d4",
+  "category": "multi_step",
+  "title": "Bootstrap Python CLI tool from specification",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 114.70295429229736,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_multi_step_6bf756d4__4nqcsbt"
+}
