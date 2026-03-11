@@ -213,6 +213,123 @@ def cmd_coverage(args):
             print(f"    -> {s['suggestion']}")
 
 
+def cmd_batch(args):
+    """Run all tasks in a category (or all) through the agent."""
+    import concurrent.futures
+
+    agent = args.agent
+    task_files = sorted(Path(DATASET_DIR).glob("*.json"))
+
+    if args.category:
+        task_files = [f for f in task_files if f.name.startswith(args.category)]
+
+    if args.sample and args.sample < len(task_files):
+        import random
+        random.seed(42)
+        task_files = random.sample(task_files, args.sample)
+
+    print(f"Batch run: {len(task_files)} tasks, agent={agent}, "
+          f"max_iter={args.max_iterations}, timeout={args.timeout}s")
+
+    results = []
+
+    def run_single(task_file):
+        try:
+            task = Task.from_json(task_file.read_text())
+
+            # Setup
+            workdir = tempfile.mkdtemp(prefix=f"task_{task.task_id}_")
+            env = task.environment
+            for filepath, content in env.seed_files.items():
+                full_path = os.path.join(workdir, filepath)
+                os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                Path(full_path).write_text(content)
+            for cmd in env.setup_commands:
+                subprocess.run(cmd, shell=True, cwd=workdir, capture_output=True, timeout=120)
+
+            # Write prompt
+            prompt_path = os.path.join(workdir, ".task_prompt.md")
+            Path(prompt_path).write_text(task.goal)
+
+            # Run agent
+            rollout_path = os.path.join(workdir, "rollout.json")
+            cmd = [
+                agent,
+                "--prompt-file", prompt_path,
+                "--workdir", workdir,
+                "--rollout", rollout_path,
+                "--max-iterations", str(args.max_iterations),
+            ]
+
+            start = time.time()
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=args.timeout)
+            elapsed = time.time() - start
+
+            # Evaluate
+            result = evaluate_task(task, workdir)
+
+            return {
+                "task_id": task.task_id,
+                "category": task.category.value,
+                "title": task.title,
+                "passed": result["passed"],
+                "score": result["score"],
+                "elapsed": elapsed,
+                "exit_code": proc.returncode,
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                "task_id": task.task_id if 'task' in dir() else str(task_file),
+                "category": "timeout",
+                "title": "",
+                "passed": False,
+                "score": 0.0,
+                "elapsed": args.timeout,
+                "exit_code": -1,
+            }
+        except Exception as e:
+            return {
+                "task_id": str(task_file.stem),
+                "category": "error",
+                "title": "",
+                "passed": False,
+                "score": 0.0,
+                "elapsed": 0,
+                "exit_code": -1,
+                "error": str(e),
+            }
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
+        futures = {pool.submit(run_single, f): f for f in task_files}
+        for future in concurrent.futures.as_completed(futures):
+            r = future.result()
+            status = "PASS" if r["passed"] else "FAIL"
+            print(f"  [{status}] {r['task_id']:40s} {r['score']:.0%} {r['elapsed']:.0f}s")
+            results.append(r)
+
+    # Summary
+    passed = sum(1 for r in results if r["passed"])
+    print(f"\n{'='*60}")
+    print(f"Results: {passed}/{len(results)} passed ({passed/len(results)*100:.1f}%)")
+    by_cat = {}
+    for r in results:
+        cat = r["category"]
+        if cat not in by_cat:
+            by_cat[cat] = {"pass": 0, "total": 0}
+        by_cat[cat]["total"] += 1
+        if r["passed"]:
+            by_cat[cat]["pass"] += 1
+    for cat, counts in sorted(by_cat.items()):
+        print(f"  {cat:25s} {counts['pass']}/{counts['total']}")
+
+    # Save batch results
+    batch_path = os.path.join(DATASET_DIR, "..", "results",
+                               f"batch_{int(time.time())}.json")
+    os.makedirs(os.path.dirname(batch_path), exist_ok=True)
+    Path(batch_path).write_text(json.dumps(results, indent=2))
+    print(f"Batch results: {batch_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Task generation and evaluation runner")
     sub = parser.add_subparsers(dest="command", help="Command")
@@ -242,6 +359,15 @@ def main():
     run_p.add_argument("--max-iterations", type=int, default=50)
     run_p.add_argument("--timeout", type=int, default=600)
 
+    # batch
+    batch_p = sub.add_parser("batch", help="Run all tasks through agent")
+    batch_p.add_argument("--agent", "-a", required=True, help="Path to agent binary")
+    batch_p.add_argument("--category", "-c", help="Filter by category prefix")
+    batch_p.add_argument("--sample", "-s", type=int, help="Random sample of N tasks")
+    batch_p.add_argument("--concurrency", type=int, default=3, help="Parallel tasks")
+    batch_p.add_argument("--max-iterations", type=int, default=30)
+    batch_p.add_argument("--timeout", type=int, default=300)
+
     # coverage
     cov_p = sub.add_parser("coverage", help="Show coverage report")
     cov_p.add_argument("--dataset-dir", help="Dataset directory")
@@ -257,6 +383,8 @@ def main():
         cmd_evaluate(args)
     elif args.command == "run":
         cmd_run(args)
+    elif args.command == "batch":
+        cmd_batch(args)
     elif args.command == "coverage":
         cmd_coverage(args)
     else:
