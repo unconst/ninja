@@ -1,0 +1,61 @@
+{
+  "task_id": "diagnostic_38161640",
+  "category": "diagnostic",
+  "title": "Fix cascading bugs \u2014 each fix reveals the next",
+  "difficulty": "medium",
+  "goal": "The ETL pipeline has MULTIPLE bugs, but they cascade \u2014 you can only\ndiscover each one after fixing the previous one.\n\nRun: `python3 run_etl.py`\n\nFix ALL bugs until the output says \"ETL complete: N records processed\"\nwhere N > 0.\n\nHint: there are at least 4 distinct bugs in the pipeline.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "run_etl.py": "from etl import ETLPipeline\n\npipeline = ETLPipeline(\"data.csv\", \"output.json\")\npipeline.run()\n",
+      "etl.py": "import csv\nimport json\nfrom transformers import clean_record, enrich_record\nfrom loaders import load_csv, save_json\n\nclass ETLPipeline:\n    def __init__(self, input_path, output_path):\n        self.input_path = input_path\n        self.output_path = output_path\n        self.stats = {\"extracted\": 0, \"transformed\": 0, \"loaded\": 0, \"errors\": 0}\n\n    def run(self):\n        # Extract\n        try:\n            records = load_csv(self.input_path)\n        except Exception as e:\n            print(f\"Extract failed: {e}\")\n            return\n\n        self.stats[\"extracted\"] = len(records)\n        print(f\"Extracted {len(records)} records\")\n\n        # Transform\n        transformed = []\n        for record in records:\n            try:\n                cleaned = clean_record(record)\n                enriched = enrich_record(cleaned)\n                transformed.append(enriched)\n            except Exception as e:\n                self.stats[\"errors\"] += 1\n                continue\n\n        self.stats[\"transformed\"] = len(transformed)\n        print(f\"Transformed {len(transformed)} records\")\n\n        # Load\n        try:\n            count = save_json(transformed, self.output_path)\n            self.stats[\"loaded\"] = count\n        except Exception as e:\n            print(f\"Load failed: {e}\")\n            return\n\n        print(f\"ETL complete: {self.stats['loaded']} records processed\")\n",
+      "transformers.py": "from datetime import datetime\n\ndef clean_record(record):\n    \"\"\"Clean and normalize a record.\"\"\"\n    cleaned = {}\n    for key, value in record.items():\n        # Strip whitespace from all string values\n        if isinstance(value, str):\n            value = value.strip()\n        # Bug 2: converts empty strings to None, but later code expects strings\n        if value == \"\":\n            value = None\n        cleaned[key.lower().strip()] = value\n    return cleaned\n\ndef enrich_record(record):\n    \"\"\"Add derived fields.\"\"\"\n    # Bug 3: assumes 'date' field exists and is not None\n    date_str = record[\"date\"]\n    record[\"year\"] = datetime.strptime(date_str, \"%Y-%m-%d\").year\n    record[\"month\"] = datetime.strptime(date_str, \"%Y-%m-%d\").month\n\n    # Calculate full name\n    # Bug 4: concatenates None with strings when first/last name is empty\n    record[\"full_name\"] = record[\"first_name\"] + \" \" + record[\"last_name\"]\n\n    return record\n",
+      "loaders.py": "import csv\nimport json\n\ndef load_csv(path):\n    \"\"\"Load records from CSV file.\"\"\"\n    records = []\n    # Bug 1: opens with wrong encoding\n    with open(path, 'r', encoding='ascii') as f:\n        reader = csv.DictReader(f)\n        for row in reader:\n            records.append(dict(row))\n    return records\n\ndef save_json(records, path):\n    \"\"\"Save records to JSON file. Returns count.\"\"\"\n    with open(path, 'w') as f:\n        json.dump(records, f, indent=2, default=str)\n    return len(records)\n",
+      "data.csv": "first_name,last_name,date,email\nJohn,Doe,2024-01-15,john@example.com\nJan\u00e9,Smith,2024-02-20,jane@example.com\nBob,,2024-03-10,bob@example.com\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "4 bugs: 1) loaders.py: encoding='ascii' fails on '\u00e9', change to 'utf-8', 2) transformers.py: empty strings become None, 3) enrich_record: date_str can be None after cleaning, need None check, 4) full_name concatenation fails when first_name or last_name is None, need str() or 'or \"\"' fallback.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 run_etl.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "ETL complete:",
+      "records processed"
+    ],
+    "output_not_contains": [
+      "failed",
+      "Error",
+      "Traceback"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_editing",
+    "root_cause",
+    "multi_file",
+    "error_interp",
+    "decomposition"
+  ],
+  "source": "boundary_generator:cascading_failures",
+  "generated_at": "2026-03-11T10:15:30.801926+00:00",
+  "estimated_minutes": 15
+}

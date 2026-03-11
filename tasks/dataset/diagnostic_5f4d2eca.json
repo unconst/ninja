@@ -1,0 +1,58 @@
+{
+  "task_id": "diagnostic_5f4d2eca",
+  "category": "diagnostic",
+  "title": "Add new user role requiring changes across 5 files",
+  "difficulty": "medium",
+  "goal": "This project has a role-based access control system spread across 5 files.\nAdd a new role \"moderator\" with these permissions:\n- Can read and write posts (like editor)\n- Can delete posts (like admin)\n- Cannot manage users (unlike admin)\n- Has access level 3 (between editor=2 and admin=4)\n\nRun tests: `python3 -m pytest test_rbac.py -p no:xdist -p no:randomly -p no:cacheprovider -v`\nAll tests must pass including the new moderator tests.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "roles.py": "from enum import IntEnum\n\nclass Role(IntEnum):\n    VIEWER = 1\n    EDITOR = 2\n    ADMIN = 4\n\nROLE_NAMES = {\n    Role.VIEWER: \"Viewer\",\n    Role.EDITOR: \"Editor\",\n    Role.ADMIN: \"Admin\",\n}\n",
+      "permissions.py": "from roles import Role\n\n# Permission matrix: role -> set of allowed actions\nPERMISSIONS = {\n    Role.VIEWER: {\"read_posts\"},\n    Role.EDITOR: {\"read_posts\", \"write_posts\"},\n    Role.ADMIN: {\"read_posts\", \"write_posts\", \"delete_posts\", \"manage_users\"},\n}\n\ndef has_permission(role: Role, action: str) -> bool:\n    return action in PERMISSIONS.get(role, set())\n\ndef get_permissions(role: Role) -> set:\n    return PERMISSIONS.get(role, set()).copy()\n",
+      "user.py": "from roles import Role, ROLE_NAMES\nfrom permissions import has_permission\n\nclass User:\n    def __init__(self, name: str, role: Role):\n        self.name = name\n        self.role = role\n\n    def can(self, action: str) -> bool:\n        return has_permission(self.role, action)\n\n    def role_name(self) -> str:\n        return ROLE_NAMES.get(self.role, \"Unknown\")\n\n    def __repr__(self):\n        return f\"User({self.name}, {self.role_name()})\"\n",
+      "access_control.py": "from roles import Role\nfrom permissions import has_permission\n\ndef check_access(user, resource_type: str, action: str) -> bool:\n    \"\"\"Check if a user can perform an action on a resource type.\"\"\"\n    full_action = f\"{action}_{resource_type}\"\n    return has_permission(user.role, full_action)\n\ndef get_accessible_roles(action: str) -> list:\n    \"\"\"Get all roles that can perform a given action.\"\"\"\n    from permissions import PERMISSIONS\n    return [role for role, perms in PERMISSIONS.items() if action in perms]\n\ndef minimum_role_for(action: str) -> Role:\n    \"\"\"Get the minimum role that can perform an action.\"\"\"\n    roles = get_accessible_roles(action)\n    if not roles:\n        raise ValueError(f\"No role has permission: {action}\")\n    return min(roles)\n",
+      "test_rbac.py": "import pytest\nfrom roles import Role, ROLE_NAMES\nfrom permissions import has_permission, get_permissions\nfrom user import User\nfrom access_control import check_access, get_accessible_roles, minimum_role_for\n\n# Existing tests\ndef test_viewer_permissions():\n    assert has_permission(Role.VIEWER, \"read_posts\")\n    assert not has_permission(Role.VIEWER, \"write_posts\")\n\ndef test_editor_permissions():\n    assert has_permission(Role.EDITOR, \"read_posts\")\n    assert has_permission(Role.EDITOR, \"write_posts\")\n    assert not has_permission(Role.EDITOR, \"delete_posts\")\n\ndef test_admin_permissions():\n    assert has_permission(Role.ADMIN, \"read_posts\")\n    assert has_permission(Role.ADMIN, \"write_posts\")\n    assert has_permission(Role.ADMIN, \"delete_posts\")\n    assert has_permission(Role.ADMIN, \"manage_users\")\n\ndef test_user_can():\n    admin = User(\"alice\", Role.ADMIN)\n    assert admin.can(\"manage_users\")\n    viewer = User(\"bob\", Role.VIEWER)\n    assert not viewer.can(\"delete_posts\")\n\ndef test_role_names():\n    assert ROLE_NAMES[Role.VIEWER] == \"Viewer\"\n    assert ROLE_NAMES[Role.ADMIN] == \"Admin\"\n\ndef test_access_control():\n    admin = User(\"alice\", Role.ADMIN)\n    assert check_access(admin, \"posts\", \"read\")\n    viewer = User(\"bob\", Role.VIEWER)\n    assert not check_access(viewer, \"posts\", \"delete\")\n\ndef test_minimum_role():\n    assert minimum_role_for(\"read_posts\") == Role.VIEWER\n    assert minimum_role_for(\"manage_users\") == Role.ADMIN\n\n# Tests for the NEW moderator role\ndef test_moderator_exists():\n    assert hasattr(Role, \"MODERATOR\")\n    assert Role.MODERATOR == 3\n\ndef test_moderator_name():\n    assert ROLE_NAMES[Role.MODERATOR] == \"Moderator\"\n\ndef test_moderator_permissions():\n    assert has_permission(Role.MODERATOR, \"read_posts\")\n    assert has_permission(Role.MODERATOR, \"write_posts\")\n    assert has_permission(Role.MODERATOR, \"delete_posts\")\n    assert not has_permission(Role.MODERATOR, \"manage_users\")\n\ndef test_moderator_user():\n    mod = User(\"charlie\", Role.MODERATOR)\n    assert mod.can(\"delete_posts\")\n    assert not mod.can(\"manage_users\")\n    assert mod.role_name() == \"Moderator\"\n\ndef test_moderator_access_control():\n    mod = User(\"charlie\", Role.MODERATOR)\n    assert check_access(mod, \"posts\", \"delete\")\n    assert not check_access(mod, \"users\", \"manage\")\n\ndef test_moderator_in_accessible_roles():\n    roles = get_accessible_roles(\"delete_posts\")\n    assert Role.MODERATOR in roles\n    assert Role.ADMIN in roles\n\ndef test_moderator_level():\n    assert Role.VIEWER < Role.MODERATOR < Role.ADMIN\n\ndef test_delete_minimum_role():\n    # With moderator, minimum role for delete should be MODERATOR, not ADMIN\n    assert minimum_role_for(\"delete_posts\") == Role.MODERATOR\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Must modify roles.py (add MODERATOR=3), permissions.py (add moderator perms), and ROLE_NAMES in roles.py (add Moderator entry). All 4 existing files need awareness of the new role. The IntEnum ordering matters.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 -m pytest test_rbac.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "passed"
+    ],
+    "output_not_contains": [
+      "FAILED",
+      "ERROR"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_editing",
+    "multi_file",
+    "decomposition",
+    "test_running"
+  ],
+  "source": "diagnostic_generator:multi_file_cascade",
+  "generated_at": "2026-03-11T10:09:49.689352+00:00",
+  "estimated_minutes": 10
+}

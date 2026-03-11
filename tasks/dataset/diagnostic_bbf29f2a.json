@@ -1,0 +1,61 @@
+{
+  "task_id": "diagnostic_bbf29f2a",
+  "category": "diagnostic",
+  "title": "Fix deployment spanning Python, shell, and config",
+  "difficulty": "medium",
+  "goal": "The deployment system has a bug that causes it to fail.\nThe system has 3 layers:\n- deploy.sh (orchestrator shell script)\n- config.ini (configuration)\n- deploy_lib.py (Python library)\n\nRun: `bash deploy.sh`\n\nFix ALL issues until deploy.sh runs successfully and prints\n\"Deployment successful: 3 services deployed\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [
+      "chmod +x deploy.sh"
+    ],
+    "seed_files": {
+      "deploy.sh": "#!/bin/bash\nset -e\n\nCONFIG_FILE=\"config.ini\"\n\n# Read config\n# Bug 1: grep pattern is wrong \u2014 config uses '=' not ':'\nDEPLOY_ENV=$(grep \"^environment:\" \"$CONFIG_FILE\" | cut -d: -f2 | tr -d ' ')\nPORT=$(grep \"^port:\" \"$CONFIG_FILE\" | cut -d: -f2 | tr -d ' ')\n\necho \"Deploying to: $DEPLOY_ENV on port $PORT\"\n\n# Run Python deploy\npython3 deploy_lib.py \"$DEPLOY_ENV\" \"$PORT\"\n\necho \"Deployment successful: $(python3 -c \"import deploy_lib; print(deploy_lib.count_services('$DEPLOY_ENV'))\" 2>&1) services deployed\"\n",
+      "config.ini": "[deployment]\nenvironment = staging\nport = 8080\nmax_retries = 3\n\n[services]\nweb = enabled\napi = enabled\nworker = enabled\nscheduler = disabled\n",
+      "deploy_lib.py": "import sys\nimport configparser\n\ndef deploy(env, port):\n    config = configparser.ConfigParser()\n    config.read(\"config.ini\")\n\n    services = []\n    for svc, status in config[\"services\"].items():\n        if status.strip() == \"enabled\":\n            services.append(svc)\n\n    # Bug 2: port comparison uses string, not int\n    if port < 1024:\n        print(f\"Error: port {port} is privileged\")\n        sys.exit(1)\n\n    for svc in services:\n        print(f\"  Deploying {svc} to {env}:{port}\")\n\n    return len(services)\n\ndef count_services(env):\n    config = configparser.ConfigParser()\n    config.read(\"config.ini\")\n    count = 0\n    for svc, status in config[\"services\"].items():\n        if status.strip() == \"enabled\":\n            count += 1\n    return count\n\nif __name__ == \"__main__\":\n    if len(sys.argv) != 3:\n        print(\"Usage: deploy_lib.py <env> <port>\")\n        sys.exit(1)\n    deploy(sys.argv[1], sys.argv[2])\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Bug 1: deploy.sh greps for 'environment:' but config uses '= ' format (INI style). Fix: use grep 'environment' with '=' delimiter. Bug 2: deploy_lib.py compares port (string from sys.argv) with int 1024, TypeError. Fix: int(port).",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "bash deploy.sh 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "Deployment successful:",
+      "3 services deployed"
+    ],
+    "output_not_contains": [
+      "Error",
+      "Traceback"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_editing",
+    "shell_commands",
+    "config_reading",
+    "config_editing",
+    "root_cause",
+    "multi_file"
+  ],
+  "source": "boundary_generator:cross_tech_debug",
+  "generated_at": "2026-03-11T10:15:30.802199+00:00",
+  "estimated_minutes": 10
+}

@@ -23,6 +23,7 @@ class TaskCategory(str, Enum):
     DATA_ANALYSIS = "data_analysis"        # Data analysis and artifact generation
     MULTI_STEP = "multi_step"              # Long-horizon multi-step planning
     AMBIGUOUS = "ambiguous"                # Incomplete/ambiguous requests requiring investigation
+    DIAGNOSTIC = "diagnostic"              # Boundary-probing tasks designed to find failure modes
 
 
 class Capability(str, Enum):

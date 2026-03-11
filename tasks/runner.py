@@ -33,6 +33,8 @@ from tasks.generators.docs_reconciliation import DocsReconciliationGenerator
 from tasks.generators.repo_debug import RepoDebugGenerator
 from tasks.generators.ambiguous import AmbiguousGenerator
 from tasks.generators.web_search import WebSearchGenerator
+from tasks.generators.diagnostic import DiagnosticGenerator
+from tasks.generators.boundary import BoundaryGenerator
 from tasks.evaluators.evaluate import evaluate_task
 from tasks.coverage import CoverageTracker
 
@@ -46,6 +48,8 @@ GENERATORS = {
     "repo_debug": RepoDebugGenerator(),
     "ambiguous": AmbiguousGenerator(),
     "web_search": WebSearchGenerator(),
+    "diagnostic": DiagnosticGenerator(),
+    "boundary": BoundaryGenerator(),
 }
 
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "dataset")

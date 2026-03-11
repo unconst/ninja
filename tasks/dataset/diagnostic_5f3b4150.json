@@ -1,0 +1,73 @@
+{
+  "task_id": "diagnostic_5f3b4150",
+  "category": "diagnostic",
+  "title": "Find bug in large project with misleading module structure",
+  "difficulty": "medium",
+  "goal": "This project has 15+ modules in modules/, a pipeline.py, and a formatter.py.\nTests are failing.\n\nRun: `python3 -m pytest test_pipeline.py -p no:xdist -p no:randomly -p no:cacheprovider -v`\n\nFind and fix the bug. It's somewhere in the codebase \u2014 might be in any file.\nDon't waste time reading every module. Be strategic about where you look.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "modules/module_00.py": "\"\"\"Module 0 \u2014 data processing\"\"\"\n\ndef func_0_a(x):\n    return x * 1\n\ndef func_0_b(x, y):\n    return x + y + 0\n\ndef func_0_c(items):\n    return [item for item in items if item > 0]\n",
+      "modules/module_01.py": "\"\"\"Module 1 \u2014 data processing\"\"\"\n\ndef func_1_a(x):\n    return x * 2\n\ndef func_1_b(x, y):\n    return x + y + 1\n\ndef func_1_c(items):\n    return [item for item in items if item > 1]\n",
+      "modules/module_02.py": "\"\"\"Module 2 \u2014 data processing\"\"\"\n\ndef func_2_a(x):\n    return x * 3\n\ndef func_2_b(x, y):\n    return x + y + 2\n\ndef func_2_c(items):\n    return [item for item in items if item > 2]\n",
+      "modules/module_03.py": "\"\"\"Module 3 \u2014 data processing\"\"\"\n\ndef func_3_a(x):\n    return x * 4\n\ndef func_3_b(x, y):\n    return x + y + 3\n\ndef func_3_c(items):\n    return [item for item in items if item > 3]\n",
+      "modules/module_04.py": "\"\"\"Module 4 \u2014 data processing\"\"\"\n\ndef func_4_a(x):\n    return x * 5\n\ndef func_4_b(x, y):\n    return x + y + 4\n\ndef func_4_c(items):\n    return [item for item in items if item > 4]\n",
+      "modules/module_05.py": "\"\"\"Module 5 \u2014 utilities\"\"\"\n\ndef func_5_a(x):\n    return x * 6\n\ndef func_5_b(x, y):\n    return x + y + 5\n\ndef func_5_c(items):\n    return [item for item in items if item > 5]\n",
+      "modules/module_06.py": "\"\"\"Module 6 \u2014 utilities\"\"\"\n\ndef func_6_a(x):\n    return x * 7\n\ndef func_6_b(x, y):\n    return x + y + 6\n\ndef func_6_c(items):\n    return [item for item in items if item > 6]\n",
+      "modules/module_07.py": "\"\"\"Module 7 \u2014 utilities\"\"\"\n\ndef func_7_a(x):\n    return x * 8\n\ndef func_7_b(x, y):\n    return x + y + 7\n\ndef func_7_c(items):\n    return [item for item in items if item > 7]\n",
+      "modules/module_08.py": "\"\"\"Module 8 \u2014 utilities\"\"\"\n\ndef func_8_a(x):\n    return x * 9\n\ndef func_8_b(x, y):\n    return x + y + 8\n\ndef func_8_c(items):\n    return [item for item in items if item > 8]\n",
+      "modules/module_09.py": "\"\"\"Module 9 \u2014 utilities\"\"\"\n\ndef func_9_a(x):\n    return x * 10\n\ndef func_9_b(x, y):\n    return x + y + 9\n\ndef func_9_c(items):\n    return [item for item in items if item > 9]\n",
+      "modules/module_10.py": "\"\"\"Module 10 \u2014 formatters\"\"\"\n\ndef func_10_a(x):\n    return x * 11\n\ndef func_10_b(x, y):\n    return x + y + 10\n\ndef func_10_c(items):\n    return [item for item in items if item > 10]\n",
+      "modules/module_11.py": "\"\"\"Module 11 \u2014 formatters\"\"\"\n\ndef func_11_a(x):\n    return x * 12\n\ndef func_11_b(x, y):\n    return x + y + 11\n\ndef func_11_c(items):\n    return [item for item in items if item > 11]\n",
+      "modules/module_12.py": "\"\"\"Module 12 \u2014 formatters\"\"\"\n\ndef func_12_a(x):\n    return x * 13\n\ndef func_12_b(x, y):\n    return x + y + 12\n\ndef func_12_c(items):\n    return [item for item in items if item > 12]\n",
+      "modules/module_13.py": "\"\"\"Module 13 \u2014 formatters\"\"\"\n\ndef func_13_a(x):\n    return x * 14\n\ndef func_13_b(x, y):\n    return x + y + 13\n\ndef func_13_c(items):\n    return [item for item in items if item > 13]\n",
+      "modules/module_14.py": "\"\"\"Module 14 \u2014 formatters\"\"\"\n\ndef func_14_a(x):\n    return x * 15\n\ndef func_14_b(x, y):\n    return x + y + 14\n\ndef func_14_c(items):\n    return [item for item in items if item > 14]\n",
+      "modules/__init__.py": "",
+      "pipeline.py": "from modules.module_00 import func_0_a\nfrom modules.module_03 import func_3_b\nfrom modules.module_07 import func_7_a, func_7_c\nfrom modules.module_11 import func_11_b\nfrom modules.module_14 import func_14_a\nfrom formatter import format_result\n\ndef run_pipeline(data):\n    # Stage 1: scale\n    scaled = [func_0_a(x) for x in data]\n\n    # Stage 2: combine pairs\n    combined = []\n    for i in range(0, len(scaled) - 1, 2):\n        combined.append(func_3_b(scaled[i], scaled[i+1]))\n    if len(scaled) % 2 == 1:\n        combined.append(scaled[-1])\n\n    # Stage 3: filter\n    filtered = func_7_c(combined)\n\n    # Stage 4: amplify\n    amplified = [func_7_a(x) for x in filtered]\n\n    # Stage 5: aggregate\n    total = 0\n    for x in amplified:\n        total = func_11_b(total, x)\n\n    # Stage 6: final transform\n    result = func_14_a(total)\n\n    return format_result(result, len(data))\n",
+      "formatter.py": "def format_result(value, count):\n    # Bug: integer division truncates result\n    average = value // count  # Should be value / count (float division)\n    return {\n        \"total\": value,\n        \"count\": count,\n        \"average\": average,\n        \"formatted\": f\"Total: {value}, Avg: {average:.2f}\",\n    }\n",
+      "test_pipeline.py": "import pytest\nfrom pipeline import run_pipeline\n\ndef test_small_input():\n    result = run_pipeline([1, 2, 3, 4])\n    assert result[\"count\"] == 4\n    assert result[\"total\"] > 0\n    # Average should be float, not truncated int\n    assert isinstance(result[\"average\"], float), f\"average should be float, got {type(result['average'])}\"\n\ndef test_large_input():\n    result = run_pipeline(list(range(1, 11)))\n    assert result[\"count\"] == 10\n    assert result[\"total\"] > 0\n    # Average should not lose precision\n    assert result[\"average\"] == result[\"total\"] / result[\"count\"]\n\ndef test_formatted_output():\n    result = run_pipeline([5, 10, 15])\n    # Formatted string should show precise average\n    assert \".00\" in result[\"formatted\"] or \".\" in result[\"formatted\"]\n    # The average in the string should match the actual average\n    avg_str = result[\"formatted\"].split(\"Avg: \")[1]\n    assert float(avg_str) == pytest.approx(result[\"average\"], abs=0.01)\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Bug is in formatter.py: uses // (integer division) instead of / (float division). The modules/ directory is a distraction \u2014 the pipeline is fine, it's the output formatting.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 -m pytest test_pipeline.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "3 passed"
+    ],
+    "output_not_contains": [
+      "FAILED",
+      "ERROR"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_editing",
+    "code_search",
+    "root_cause",
+    "file_search",
+    "prioritization"
+  ],
+  "source": "diagnostic_generator:large_codebase_needle",
+  "generated_at": "2026-03-11T10:09:49.690242+00:00",
+  "estimated_minutes": 10
+}

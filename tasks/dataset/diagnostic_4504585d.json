@@ -1,0 +1,59 @@
+{
+  "task_id": "diagnostic_4504585d",
+  "category": "diagnostic",
+  "title": "Fix crash \u2014 root cause 3 files away from symptom",
+  "difficulty": "medium",
+  "goal": "The application crashes when processing orders.\nRun: `python3 main.py`\n\nThe error appears in order_processor.py but the fix is NOT there.\nTrace the actual root cause and fix it.\nAfter fixing, `python3 main.py` should print \"All orders processed successfully\"\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "main.py": "from order_processor import process_all_orders\n\norders = [\n    {\"id\": 1, \"items\": [\"apple\", \"banana\"], \"customer\": \"alice\"},\n    {\"id\": 2, \"items\": [\"cherry\"], \"customer\": \"bob\"},\n    {\"id\": 3, \"items\": [\"date\", \"elderberry\", \"fig\"], \"customer\": \"carol\"},\n]\n\nresults = process_all_orders(orders)\nprint(\"All orders processed successfully\")\nfor r in results:\n    print(f\"  Order {r['id']}: {r['status']} (total: ${r['total']:.2f})\")\n",
+      "order_processor.py": "from pricing import calculate_order_total\nfrom validator import validate_order\n\ndef process_all_orders(orders):\n    results = []\n    for order in orders:\n        validated = validate_order(order)\n        total = calculate_order_total(validated)\n        results.append({\n            \"id\": order[\"id\"],\n            \"status\": \"complete\",\n            \"total\": total,\n        })\n    return results\n",
+      "validator.py": "from config import get_config\n\ndef validate_order(order):\n    config = get_config()\n    max_items = config[\"max_items_per_order\"]\n    if len(order[\"items\"]) > max_items:\n        order[\"items\"] = order[\"items\"][:max_items]\n    # Add normalized customer name\n    order[\"customer_normalized\"] = order[\"customer\"].upper()\n    return order\n",
+      "pricing.py": "PRICES = {\n    \"apple\": 1.50, \"banana\": 0.75, \"cherry\": 2.00,\n    \"date\": 3.50, \"elderberry\": 4.00, \"fig\": 2.50,\n}\n\ndef calculate_order_total(order):\n    total = 0\n    for item in order[\"items\"]:\n        total += PRICES[item]\n    # Apply discount for validated customers\n    if order.get(\"customer_normalized\"):\n        total *= 0.9  # 10% discount\n    return total\n",
+      "config.py": "_CONFIG = None\n\ndef get_config():\n    global _CONFIG\n    if _CONFIG is None:\n        _CONFIG = _load_config()\n    return _CONFIG\n\ndef _load_config():\n    # Bug: max_items should be an int, but it's a string from \"config file\"\n    return {\n        \"max_items_per_order\": \"5\",  # Should be int 5\n        \"currency\": \"USD\",\n        \"tax_rate\": 0.08,\n    }\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "The root cause is in config.py: max_items_per_order is '5' (string) not 5 (int). The comparison len(items) > max_items in validator.py compares int > str, which raises TypeError in Python 3. Fix: change '5' to 5 in config.py.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 main.py 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "All orders processed successfully"
+    ],
+    "output_not_contains": [
+      "Error",
+      "Traceback",
+      "TypeError"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "root_cause",
+    "code_reading",
+    "code_editing",
+    "multi_file",
+    "error_interp"
+  ],
+  "source": "diagnostic_generator:distant_root_cause",
+  "generated_at": "2026-03-11T10:09:49.689005+00:00",
+  "estimated_minutes": 10
+}

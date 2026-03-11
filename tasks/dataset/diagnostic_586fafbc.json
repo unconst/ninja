@@ -1,0 +1,55 @@
+{
+  "task_id": "diagnostic_586fafbc",
+  "category": "diagnostic",
+  "title": "Fix performance regression \u2014 correct but too slow",
+  "difficulty": "medium",
+  "goal": "The search function works correctly but is too slow for large inputs.\n\nRun tests: `python3 -m pytest test_search.py -p no:xdist -p no:randomly -p no:cacheprovider -v`\n\nThe correctness tests pass but the performance test times out.\nOptimize the search without breaking any correctness tests.\nThe performance test requires completing 100K lookups in under 2 seconds.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "search.py": "class TextIndex:\n    def __init__(self):\n        self.documents = []\n\n    def add(self, doc_id, text):\n        self.documents.append({\"id\": doc_id, \"text\": text.lower()})\n\n    def search(self, query):\n        \"\"\"Find all documents containing the query.\"\"\"\n        query = query.lower()\n        results = []\n        # Bug: O(n) scan for every search \u2014 no index\n        for doc in self.documents:\n            if query in doc[\"text\"]:\n                results.append(doc[\"id\"])\n        return results\n\n    def search_all(self, queries):\n        \"\"\"Search for multiple queries, return union of results.\"\"\"\n        all_results = set()\n        for q in queries:\n            all_results.update(self.search(q))\n        return sorted(all_results)\n",
+      "test_search.py": "import pytest\nimport time\nfrom search import TextIndex\n\n@pytest.fixture\ndef small_index():\n    idx = TextIndex()\n    idx.add(1, \"the quick brown fox\")\n    idx.add(2, \"jumped over the lazy dog\")\n    idx.add(3, \"the fox and the hound\")\n    return idx\n\ndef test_basic_search(small_index):\n    assert small_index.search(\"fox\") == [1, 3]\n\ndef test_no_results(small_index):\n    assert small_index.search(\"cat\") == []\n\ndef test_case_insensitive(small_index):\n    assert small_index.search(\"FOX\") == [1, 3]\n\ndef test_multi_word(small_index):\n    assert small_index.search(\"brown fox\") == [1]\n\ndef test_search_all(small_index):\n    results = small_index.search_all([\"fox\", \"dog\"])\n    assert results == [1, 2, 3]\n\ndef test_empty_query(small_index):\n    # Empty string matches everything\n    assert len(small_index.search(\"\")) == 3\n\ndef test_add_and_search():\n    idx = TextIndex()\n    idx.add(1, \"hello world\")\n    assert idx.search(\"hello\") == [1]\n    idx.add(2, \"hello again\")\n    assert idx.search(\"hello\") == [1, 2]\n\ndef test_performance():\n    \"\"\"100K lookups on 10K documents must complete in <2s.\"\"\"\n    idx = TextIndex()\n    # Build index with 10K documents\n    words = [\"alpha\", \"beta\", \"gamma\", \"delta\", \"epsilon\",\n             \"zeta\", \"eta\", \"theta\", \"iota\", \"kappa\"]\n    for i in range(10000):\n        text = \" \".join(words[j] for j in range(10) if (i >> j) & 1)\n        if not text:\n            text = words[0]\n        idx.add(i, text)\n\n    # Measure search time\n    start = time.time()\n    for i in range(100000):\n        idx.search(words[i % 10])\n    elapsed = time.time() - start\n\n    assert elapsed < 2.0, f\"Too slow: {elapsed:.2f}s for 100K searches (limit: 2s)\"\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Build an inverted index (word -> set of doc_ids) in add(). Search looks up words in the index instead of scanning all documents. Must handle multi-word queries and substring matching correctly.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 -m pytest test_search.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "passed"
+    ],
+    "output_not_contains": [
+      "FAILED",
+      "ERROR"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_editing",
+    "root_cause",
+    "test_running",
+    "hypothesis_test"
+  ],
+  "source": "diagnostic_generator:performance_regression",
+  "generated_at": "2026-03-11T10:09:49.690512+00:00",
+  "estimated_minutes": 15
+}

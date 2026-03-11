@@ -1,0 +1,56 @@
+{
+  "task_id": "diagnostic_746f4af8",
+  "category": "diagnostic",
+  "title": "Implement feature and fix the broken test",
+  "difficulty": "medium",
+  "goal": "Implement a `TaskQueue` class in task_queue.py with these features:\n- `push(task, priority)` \u2014 add a task with numeric priority (lower = higher priority)\n- `pop()` \u2014 remove and return the highest-priority (lowest number) task\n- `peek()` \u2014 return highest-priority task without removing\n- `size()` \u2014 return number of tasks\n- `is_empty()` \u2014 return True if empty\n- Pop/peek should raise `IndexError` when queue is empty\n\nA test file is provided but WARNING: the test file itself has 2 bugs.\nYou must BOTH implement the class AND fix the broken tests.\n\nRun: `python3 -m pytest test_queue.py -p no:xdist -p no:randomly -p no:cacheprovider -v`\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "task_queue.py": "# TODO: Implement TaskQueue class\npass\n",
+      "test_queue.py": "import pytest\nfrom task_queue import TaskQueue\n\ndef test_push_pop():\n    q = TaskQueue()\n    q.push(\"low\", 10)\n    q.push(\"high\", 1)\n    q.push(\"med\", 5)\n    assert q.pop() == \"high\"\n    assert q.pop() == \"med\"\n    assert q.pop() == \"low\"\n\ndef test_peek():\n    q = TaskQueue()\n    q.push(\"a\", 3)\n    q.push(\"b\", 1)\n    assert q.peek() == \"b\"\n    assert q.size() == 2  # peek shouldn't remove\n\ndef test_empty():\n    q = TaskQueue()\n    assert q.is_empty()\n    q.push(\"x\", 1)\n    assert not q.is_empty()\n\ndef test_pop_empty():\n    q = TaskQueue()\n    with pytest.raises(IndexError):\n        q.pop()\n\ndef test_peek_empty():\n    q = TaskQueue()\n    with pytest.raises(IndexError):\n        q.peek()\n\ndef test_same_priority():\n    q = TaskQueue()\n    q.push(\"first\", 1)\n    q.push(\"second\", 1)\n    # Same priority: FIFO order\n    result = q.pop()\n    assert result == \"first\"\n\ndef test_size():\n    q = TaskQueue()\n    assert q.size() == 0\n    q.push(\"a\", 1)\n    q.push(\"b\", 2)\n    assert q.size() == 2\n    q.pop()\n    # Bug: test expects wrong size after pop\n    assert q.size() == 2  # BUG: should be 1\n\ndef test_mixed_operations():\n    q = TaskQueue()\n    q.push(\"a\", 5)\n    q.push(\"b\", 1)\n    assert q.pop() == \"b\"\n    q.push(\"c\", 3)\n    q.push(\"d\", 2)\n    assert q.pop() == \"d\"\n    # Bug: forgets about c, expects wrong value\n    assert q.pop() == \"d\"  # BUG: should be \"c\" (the only one with priority 3, and \"a\" has 5)\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "1) Implement TaskQueue using heapq with (priority, insertion_order, task) tuples for stable FIFO ordering. 2) Fix test_size: change assert q.size() == 2 to == 1. 3) Fix test_mixed_operations: change assert q.pop() == 'd' to == 'c'.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 -m pytest test_queue.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "8 passed"
+    ],
+    "output_not_contains": [
+      "FAILED",
+      "ERROR"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_writing",
+    "code_reading",
+    "code_editing",
+    "test_running",
+    "hypothesis_test",
+    "root_cause"
+  ],
+  "source": "diagnostic_generator:verify_own_implementation",
+  "generated_at": "2026-03-11T10:09:49.690634+00:00",
+  "estimated_minutes": 10
+}

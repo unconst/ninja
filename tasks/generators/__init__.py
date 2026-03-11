@@ -7,3 +7,5 @@ from .docs_reconciliation import DocsReconciliationGenerator
 from .repo_debug import RepoDebugGenerator
 from .ambiguous import AmbiguousGenerator
 from .web_search import WebSearchGenerator
+from .diagnostic import DiagnosticGenerator
+from .boundary import BoundaryGenerator

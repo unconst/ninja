@@ -1,0 +1,75 @@
+{
+  "task_id": "diagnostic_990549f4",
+  "category": "diagnostic",
+  "title": "Fix circular import without restructuring everything",
+  "difficulty": "medium",
+  "goal": "The application crashes on import with: `ImportError: cannot import name 'Registry' from partially initialized module 'registry'`\n\nThis is a circular import issue. Fix it with minimal changes.\n\nAfter fix: `python3 main.py` should print \"System initialized\"\nand `python3 -m pytest test_system.py -p no:xdist -p no:randomly -p no:cacheprovider -v` should pass.\n\nDo NOT restructure the entire project. Find the minimal fix.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "main.py": "from registry import Registry\nfrom handlers import DefaultHandler, SpecialHandler\n\nreg = Registry()\nreg.register(\"default\", DefaultHandler)\nreg.register(\"special\", SpecialHandler)\n\nfor name, handler_cls in reg.all():\n    h = handler_cls()\n    h.handle({\"type\": name, \"data\": \"test\"})\n\nprint(\"System initialized\")\n",
+      "registry.py": "class Registry:\n    def __init__(self):\n        self._handlers = {}\n\n    def register(self, name, handler_cls):\n        self._handlers[name] = handler_cls\n\n    def get(self, name):\n        return self._handlers.get(name)\n\n    def all(self):\n        return list(self._handlers.items())\n\n# Circular: registry imports from handlers to auto-register defaults\nfrom handlers import DefaultHandler\n_default_registry = Registry()\n_default_registry.register(\"default\", DefaultHandler)\n",
+      "handlers.py": "# Circular: handlers imports from registry to type-hint\nfrom registry import Registry\n\nclass BaseHandler:\n    registry: Registry = None  # Type hint causes the import\n\n    def handle(self, event: dict):\n        raise NotImplementedError\n\nclass DefaultHandler(BaseHandler):\n    def handle(self, event: dict):\n        print(f\"Default handling: {event['type']}\")\n\nclass SpecialHandler(BaseHandler):\n    def handle(self, event: dict):\n        print(f\"Special handling: {event['type']} - {event.get('data', '')}\")\n",
+      "test_system.py": "import pytest\n\ndef test_import_works():\n    from registry import Registry\n    from handlers import DefaultHandler, SpecialHandler\n    assert Registry is not None\n\ndef test_registry():\n    from registry import Registry\n    from handlers import DefaultHandler\n    reg = Registry()\n    reg.register(\"test\", DefaultHandler)\n    assert reg.get(\"test\") is DefaultHandler\n\ndef test_handler():\n    from handlers import DefaultHandler\n    h = DefaultHandler()\n    # Should not raise\n    h.handle({\"type\": \"test\"})\n\ndef test_main_runs(capsys):\n    import subprocess\n    result = subprocess.run([\"python3\", \"main.py\"], capture_output=True, text=True, timeout=10)\n    assert result.returncode == 0\n    assert \"System initialized\" in result.stdout\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Fix by either: 1) moving the auto-registration out of registry.py module scope, 2) using TYPE_CHECKING import in handlers.py, or 3) using a string annotation. The minimal fix is to remove the circular auto-registration at module level in registry.py.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "composite",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": null,
+    "expected_output": null,
+    "output_contains": null,
+    "output_not_contains": null,
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": [
+      {
+        "method": "command_output",
+        "check_command": "python3 main.py 2>&1",
+        "output_contains": [
+          "System initialized"
+        ],
+        "output_not_contains": [
+          "ImportError",
+          "Traceback"
+        ]
+      },
+      {
+        "method": "command_output",
+        "check_command": "python3 -m pytest test_system.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+        "output_contains": [
+          "passed"
+        ],
+        "output_not_contains": [
+          "FAILED",
+          "ERROR"
+        ]
+      }
+    ],
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_editing",
+    "root_cause",
+    "multi_file",
+    "error_interp"
+  ],
+  "source": "diagnostic_generator:circular_dependency",
+  "generated_at": "2026-03-11T10:09:49.690369+00:00",
+  "estimated_minutes": 10
+}

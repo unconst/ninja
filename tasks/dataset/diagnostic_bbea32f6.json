@@ -1,0 +1,55 @@
+{
+  "task_id": "diagnostic_bbea32f6",
+  "category": "diagnostic",
+  "title": "Fix state-dependent bug that only triggers on third call",
+  "difficulty": "medium",
+  "goal": "The session manager has a bug that only manifests after specific\nsequences of operations. The first two calls work fine; the third fails.\n\nRun: `python3 -m pytest test_session.py -p no:xdist -p no:randomly -p no:cacheprovider -v`\n\nSome tests pass, some fail. The bug is in session.py \u2014 it corrupts\ninternal state only under certain conditions.\n",
+  "hints": null,
+  "environment": {
+    "env_type": "directory",
+    "repo_url": null,
+    "base_commit": null,
+    "clone_depth": null,
+    "setup_commands": [],
+    "seed_files": {
+      "session.py": "import time\nimport hashlib\n\nclass SessionManager:\n    def __init__(self, max_sessions=100, timeout=3600):\n        self.max_sessions = max_sessions\n        self.timeout = timeout\n        self._sessions = {}\n        self._token_counter = 0\n\n    def create_session(self, user_id):\n        \"\"\"Create a new session, return session token.\"\"\"\n        # Evict expired sessions first\n        self._cleanup()\n\n        if len(self._sessions) >= self.max_sessions:\n            # Evict oldest session\n            oldest = min(self._sessions, key=lambda k: self._sessions[k][\"created\"])\n            del self._sessions[oldest]\n\n        token = self._generate_token(user_id)\n        self._sessions[token] = {\n            \"user_id\": user_id,\n            \"created\": time.time(),\n            \"last_access\": time.time(),\n            \"data\": {},\n        }\n        return token\n\n    def get_session(self, token):\n        \"\"\"Get session data. Returns None if expired/missing.\"\"\"\n        if token not in self._sessions:\n            return None\n        session = self._sessions[token]\n        if time.time() - session[\"last_access\"] > self.timeout:\n            del self._sessions[token]\n            return None\n        session[\"last_access\"] = time.time()\n        return session\n\n    def set_data(self, token, key, value):\n        \"\"\"Store data in session.\"\"\"\n        session = self.get_session(token)\n        if not session:\n            raise ValueError(\"Invalid session\")\n        session[\"data\"][key] = value\n\n    def get_data(self, token, key, default=None):\n        \"\"\"Retrieve data from session.\"\"\"\n        session = self.get_session(token)\n        if not session:\n            raise ValueError(\"Invalid session\")\n        return session[\"data\"].get(key, default)\n\n    def list_sessions(self, user_id=None):\n        \"\"\"List active sessions, optionally filtered by user.\"\"\"\n        self._cleanup()\n        result = []\n        for token, session in self._sessions.items():\n            if user_id is None or session[\"user_id\"] == user_id:\n                result.append({\n                    \"token\": token,\n                    \"user_id\": session[\"user_id\"],\n                    \"created\": session[\"created\"],\n                })\n        return result\n\n    def destroy_session(self, token):\n        \"\"\"Remove a session.\"\"\"\n        if token in self._sessions:\n            del self._sessions[token]\n            return True\n        return False\n\n    def _generate_token(self, user_id):\n        # Bug: uses counter that isn't incremented, so same user always\n        # gets the same token, overwriting previous session\n        raw = f\"{user_id}:{self._token_counter}\"\n        return hashlib.sha256(raw.encode()).hexdigest()[:32]\n\n    def _cleanup(self):\n        now = time.time()\n        expired = [t for t, s in self._sessions.items()\n                  if now - s[\"last_access\"] > self.timeout]\n        for t in expired:\n            del self._sessions[t]\n",
+      "test_session.py": "import pytest\nfrom session import SessionManager\n\n@pytest.fixture\ndef manager():\n    return SessionManager(max_sessions=10, timeout=3600)\n\ndef test_create_session(manager):\n    token = manager.create_session(\"user1\")\n    assert token is not None\n    assert len(token) == 32\n\ndef test_get_session(manager):\n    token = manager.create_session(\"user1\")\n    session = manager.get_session(token)\n    assert session is not None\n    assert session[\"user_id\"] == \"user1\"\n\ndef test_set_get_data(manager):\n    token = manager.create_session(\"user1\")\n    manager.set_data(token, \"cart\", [\"item1\"])\n    assert manager.get_data(token, \"cart\") == [\"item1\"]\n\ndef test_invalid_token(manager):\n    with pytest.raises(ValueError):\n        manager.set_data(\"fake_token\", \"key\", \"value\")\n\ndef test_multiple_users(manager):\n    \"\"\"Each user should get their own independent session.\"\"\"\n    t1 = manager.create_session(\"user1\")\n    t2 = manager.create_session(\"user2\")\n    # Tokens should be different\n    assert t1 != t2\n    # Sessions should be independent\n    manager.set_data(t1, \"name\", \"Alice\")\n    manager.set_data(t2, \"name\", \"Bob\")\n    assert manager.get_data(t1, \"name\") == \"Alice\"\n    assert manager.get_data(t2, \"name\") == \"Bob\"\n\ndef test_same_user_multiple_sessions(manager):\n    \"\"\"Same user can have multiple sessions (e.g., different devices).\"\"\"\n    t1 = manager.create_session(\"user1\")\n    t2 = manager.create_session(\"user1\")\n    # Should be different tokens\n    assert t1 != t2\n    # Should be independent sessions\n    manager.set_data(t1, \"device\", \"phone\")\n    manager.set_data(t2, \"device\", \"laptop\")\n    assert manager.get_data(t1, \"device\") == \"phone\"\n    assert manager.get_data(t2, \"device\") == \"laptop\"\n\ndef test_list_sessions(manager):\n    manager.create_session(\"user1\")\n    manager.create_session(\"user2\")\n    manager.create_session(\"user1\")\n    all_sessions = manager.list_sessions()\n    assert len(all_sessions) == 3\n    user1_sessions = manager.list_sessions(\"user1\")\n    assert len(user1_sessions) == 2\n\ndef test_destroy_session(manager):\n    token = manager.create_session(\"user1\")\n    assert manager.destroy_session(token)\n    assert manager.get_session(token) is None\n\ndef test_max_sessions(manager):\n    tokens = []\n    for i in range(12):  # Exceeds max_sessions=10\n        tokens.append(manager.create_session(f\"user{i}\"))\n    # Should have at most 10 sessions\n    sessions = manager.list_sessions()\n    assert len(sessions) <= 10\n"
+    },
+    "workdir": ".",
+    "env_vars": {}
+  },
+  "allowed_tools": [],
+  "ground_truth": "Bug in _generate_token: self._token_counter is never incremented, so the same user_id always generates the same token. The second create_session for the same user overwrites the first session. Fix: increment self._token_counter.",
+  "solution_patch": null,
+  "eval_spec": {
+    "method": "command_output",
+    "expected_patch": null,
+    "expected_content": {},
+    "expected_files": [],
+    "check_command": "python3 -m pytest test_session.py -p no:xdist -p no:randomly -p no:cacheprovider -v 2>&1",
+    "expected_output": null,
+    "output_contains": [
+      "passed"
+    ],
+    "output_not_contains": [
+      "FAILED",
+      "ERROR"
+    ],
+    "test_command": null,
+    "check_script": null,
+    "check_script_content": null,
+    "rubric": null,
+    "sub_evals": null,
+    "pass_threshold": 1.0
+  },
+  "capabilities": [
+    "code_reading",
+    "code_editing",
+    "root_cause",
+    "hypothesis_test",
+    "test_running"
+  ],
+  "source": "boundary_generator:hidden_state_bug",
+  "generated_at": "2026-03-11T10:15:30.802458+00:00",
+  "estimated_minutes": 10
+}
