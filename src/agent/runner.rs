@@ -1195,7 +1195,9 @@ impl AgentRunner {
                 need updating — especially: __init__.py __all__ lists and imports, type stubs (.pyi), \
                 documentation, and downstream consumers. When you REMOVE a function, also grep for its \
                 name in __init__.py files to clean up exports.\n\
-             5. **Verify.** Run tests or linters when available. Check your work makes sense.\n\
+             5. **Verify.** Run tests or linters when available. If the task specifies a verification \
+                command (like a grep to check for remaining references), run it BEFORE declaring done. \
+                If it shows remaining issues, fix them. Never stop while verification fails.\n\
              6. **Summarize.** When done, list every file changed with a brief description.\n\n\
              ## Critical Rules\n\
              - **START EDITING EARLY.** You MUST begin making file changes within your first 5 \
