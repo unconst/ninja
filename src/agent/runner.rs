@@ -907,7 +907,22 @@ impl AgentRunner {
                                             (format!("{}{}", output, lint_msg), false)
                                         }
                                     } else {
-                                        (output, false)
+                                        // Lint passed — check for signature changes on write_file/replace_lines
+                                        if tc.name == "write_file" || tc.name == "replace_lines" {
+                                            if let Some(ref old_content) = pre_edit_contents[i] {
+                                                let new_content = std::fs::read_to_string(&resolved).unwrap_or_default();
+                                                let sig_warning = self.check_signature_changes(old_content, &new_content);
+                                                if !sig_warning.is_empty() {
+                                                    (format!("{}{}", output, sig_warning), false)
+                                                } else {
+                                                    (output, false)
+                                                }
+                                            } else {
+                                                (output, false)
+                                            }
+                                        } else {
+                                            (output, false)
+                                        }
                                     }
                                 } else {
                                     (output, false)
@@ -1197,13 +1212,16 @@ impl AgentRunner {
              - **Propagate patterns.** When you make the same type of change (e.g., updating an import, \
                 adding a parameter, changing an API call) in one file, grep for the same pattern in \
                 ALL other files. Don't fix it in one place and forget the rest.\n\
-             - **Preserve existing names and signatures.** Do NOT rename fields, methods, attributes, \
-               or variables unless the task explicitly asks you to. When rewriting a function or \
-               module, keep ALL existing function signatures exactly as they are — same parameter \
-               names, same parameter order, same defaults. Before rewriting a file with write_file, \
-               read ALL callers first (grep for function names) to understand the calling convention. \
-               Renaming `self.sent` to `self.notifications` or `op` to `operator` or reordering \
-               params breaks other code that references the original API.\n\
+             - **Preserve existing names, signatures, and return types.** Do NOT rename fields, methods, \
+               attributes, or variables unless the task explicitly asks you to. When rewriting a \
+               function or module, keep ALL existing function signatures exactly as they are — same \
+               parameter names, same parameter order, same defaults, same return type. If a function \
+               returns a User object, the rewritten version must also return a User object (not a \
+               plain dict). Before rewriting a file with write_file, read ALL callers first (grep for \
+               function names) to understand: (1) what arguments callers pass, (2) what callers do \
+               with the return value (do they call .to_dict(), .id, .name on it?). Changing return \
+               types from objects to dicts or vice versa breaks callers just as badly as changing \
+               parameter names.\n\
              - **Preserve existing structures.** When the task says 'rename X to Y' or 'change X', \
                modify the existing data structure in place — do NOT delete it and rewrite from \
                scratch. Schema dicts, config defaults, class hierarchies should be updated, not \
@@ -1689,7 +1707,22 @@ print(json.dumps(result))
                                 Ok(format!("{}{}", output, lint_msg))
                             }
                         } else {
-                            Ok(output)
+                            // Lint passed — check for signature changes on write_file/replace_lines
+                            if tool_name == "write_file" || tool_name == "replace_lines" {
+                                if let Some(ref old_content) = pre_edit_content {
+                                    let new_content = std::fs::read_to_string(&resolved).unwrap_or_default();
+                                    let sig_warning = self.check_signature_changes(old_content, &new_content);
+                                    if !sig_warning.is_empty() {
+                                        Ok(format!("{}{}", output, sig_warning))
+                                    } else {
+                                        Ok(output)
+                                    }
+                                } else {
+                                    Ok(output)
+                                }
+                            } else {
+                                Ok(output)
+                            }
                         }
                     } else {
                         Ok(output)
@@ -1886,6 +1919,93 @@ print(json.dumps(result))
         format!(
             "\n\nWARNING: Duplicate definitions in {}:\n{}\nIn Python, only the LAST definition is used. Earlier ones are dead code.",
             path.file_name().unwrap_or_default().to_string_lossy(),
+            warnings.join("\n")
+        )
+    }
+
+    /// Compare Python function signatures between old and new file content.
+    /// Returns a warning string if any signatures changed, empty string otherwise.
+    fn check_signature_changes(&self, old_content: &str, new_content: &str) -> String {
+        // Extract function signatures: "def name(params) -> return_type"
+        fn extract_signatures(
+            content: &str,
+        ) -> std::collections::HashMap<String, (String, String)> {
+            let mut sigs = std::collections::HashMap::new();
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if let Some(rest) = trimmed.strip_prefix("def ") {
+                    if let Some(paren_start) = rest.find('(') {
+                        let name = rest[..paren_start].trim().to_string();
+                        if let Some(paren_end) = rest.find(')') {
+                            let params = rest[paren_start..=paren_end].to_string();
+                            // Extract return type annotation if present
+                            let after_paren = &rest[paren_end + 1..];
+                            let ret_type = if let Some(arrow) = after_paren.find("->") {
+                                after_paren[arrow + 2..]
+                                    .trim()
+                                    .trim_end_matches(':')
+                                    .trim()
+                                    .to_string()
+                            } else {
+                                String::new()
+                            };
+                            sigs.entry(name).or_insert((params, ret_type));
+                        }
+                    }
+                }
+            }
+            sigs
+        }
+
+        let old_sigs = extract_signatures(old_content);
+        let new_sigs = extract_signatures(new_content);
+
+        let mut changed = Vec::new();
+        let mut missing = Vec::new();
+        let mut ret_changed = Vec::new();
+        for (name, (old_params, old_ret)) in &old_sigs {
+            if name.starts_with('_') {
+                continue;
+            }
+            if let Some((new_params, new_ret)) = new_sigs.get(name) {
+                if old_params != new_params {
+                    let norm_old: String =
+                        old_params.split_whitespace().collect::<Vec<_>>().join(" ");
+                    let norm_new: String =
+                        new_params.split_whitespace().collect::<Vec<_>>().join(" ");
+                    if norm_old != norm_new {
+                        changed.push(format!(
+                            "  CHANGED params: def {}{} → def {}{}",
+                            name, old_params, name, new_params
+                        ));
+                    }
+                }
+                // Check return type changes
+                if !old_ret.is_empty() && old_ret != new_ret {
+                    ret_changed.push(format!(
+                        "  CHANGED return: def {} -> {} → def {} -> {}",
+                        name, old_ret, name, if new_ret.is_empty() { "???" } else { new_ret }
+                    ));
+                }
+            } else {
+                missing.push(format!("  MISSING: def {}{}", name, old_params));
+            }
+        }
+
+        let mut warnings = Vec::new();
+        warnings.extend(missing);
+        warnings.extend(changed);
+        warnings.extend(ret_changed);
+
+        if warnings.is_empty() {
+            return String::new();
+        }
+
+        format!(
+            "\n\nWARNING: This edit changed the file's public API:\n{}\n\
+             If other files call these functions, they will break with AttributeError or TypeError. \
+             You MUST preserve ALL original functions with their EXACT signatures AND return types. \
+             Read the calling code (grep for function names) and fix the mismatches.",
             warnings.join("\n")
         )
     }
