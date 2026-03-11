@@ -1192,7 +1192,9 @@ impl AgentRunner {
                 changes (>20 lines), use replace_lines. Read back after editing to confirm.\n\
              4. **Ripple check.** After making your core changes, use find_references or grep_search to \
                 find other files that reference the changed functions/classes/APIs. These files may also \
-                need updating — especially type stubs (.pyi), documentation, and downstream consumers.\n\
+                need updating — especially: __init__.py __all__ lists and imports, type stubs (.pyi), \
+                documentation, and downstream consumers. When you REMOVE a function, also grep for its \
+                name in __init__.py files to clean up exports.\n\
              5. **Verify.** Run tests or linters when available. Check your work makes sense.\n\
              6. **Summarize.** When done, list every file changed with a brief description.\n\n\
              ## Critical Rules\n\
@@ -1904,10 +1906,12 @@ print(json.dumps(result))
         let mut warnings = Vec::new();
         for ((indent, name), lines) in &defs {
             if lines.len() > 1 {
-                let lines_str: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+                let last = lines[lines.len() - 1];
+                let earlier: Vec<String> = lines[..lines.len()-1].iter().map(|l| l.to_string()).collect();
                 warnings.push(format!(
-                    "  '{}' defined {} times (lines {}). Last definition shadows the others.",
-                    name, lines.len(), lines_str.join(", ")
+                    "  '{}' defined {} times. Line {} is the active definition. \
+                     Lines {} are DEAD CODE (shadowed) — delete them with replace_lines.",
+                    name, lines.len(), last, earlier.join(", ")
                 ));
             }
         }
@@ -1917,7 +1921,9 @@ print(json.dumps(result))
         }
 
         format!(
-            "\n\nWARNING: Duplicate definitions in {}:\n{}\nIn Python, only the LAST definition is used. Earlier ones are dead code.",
+            "\n\nACTION REQUIRED — Duplicate definitions in {}:\n{}\n\
+             In Python, only the LAST definition is used. The earlier definitions are dead code \
+             that must be removed. Use replace_lines to delete the shadowed definitions NOW.",
             path.file_name().unwrap_or_default().to_string_lossy(),
             warnings.join("\n")
         )
