@@ -3,7 +3,7 @@
   "category": "diagnostic",
   "title": "Fix task processing pipeline where reordering in transform breaks persist stage",
   "difficulty": "hard",
-  "goal": "This task processing system has a pipeline with 3 stages: validate, transform, and persist. Each stage can have pre/post hooks. Tests are failing because tasks are being written to the wrong destinations.\n\nThe symptom: when you run `python3 -m pytest tests/ -x`, the persist stage writes task results to incorrect destinations. For example, task \"alpha\" ends up in destination \"slot_2\" instead of \"slot_0\".\n\nThe root cause is somewhere in the interaction between the stages and hooks. The transform stage's pre-hook reorders the task list, but a later stage depends on the original order.\n\nFix the bug so all tests pass: `python3 -m pytest tests/ -x`\n\nConstraints:\n- Do NOT modify any files in the `tests/` directory\n- The TaskProcessor class must still exist in processor.py\n- The sort/priority functionality should still work (don't just remove sorting entirely — the transform stage should still process higher-priority tasks first)\n- The fix should address the ordering mismatch, not paper over it\n",
+  "goal": "This task processing system has a pipeline with 3 stages: validate, transform, and persist. Each stage can have pre/post hooks. Tests are failing because tasks are being written to the wrong destinations.\n\nThe symptom: when you run `python3 -m pytest tests/ -x`, the persist stage writes task results to incorrect destinations. For example, task \"alpha\" ends up in destination \"slot_2\" instead of \"slot_0\".\n\nThe root cause is somewhere in the interaction between the stages and hooks. The transform stage's pre-hook reorders the task list, but a later stage depends on the original order.\n\nFix the bug so all tests pass: `python3 -m pytest tests/ -x`\n\nConstraints:\n- Do NOT modify any files in the `tests/` directory\n- The TaskProcessor class must still exist in processor.py\n- The sort/priority functionality should still work (don't just remove sorting entirely \u2014 the transform stage should still process higher-priority tasks first)\n- The fix should address the ordering mismatch, not paper over it\n",
   "hints": "The persist stage uses zip(self.tasks, self.destination_map) to pair tasks with destinations based on position. But after the transform pre-hook sorts self.tasks by priority, the positional pairing is wrong. The fix should make the persist stage look up destinations by task ID rather than by position.",
   "environment": {
     "env_type": "empty",
@@ -25,7 +25,7 @@
     "env_vars": {}
   },
   "allowed_tools": [],
-  "ground_truth": "The bug is in processor.py's _persist_stage method. It uses `zip(self.tasks, destinations)` to pair tasks with destination slots positionally. But the pre_transform hook (sort_by_priority in hooks.py) sorts self.tasks by priority, changing their order. After sorting, task 'beta' (priority 3) moves to position 0, so it gets paired with slot_0 instead of its assigned slot_1. The fix: in _persist_stage, instead of using positional zip, look up each task's destination by its task_id using self.destination_map.get_slot_for_task(task.task_id). The DestinationMap already has this method — it just isn't being used.",
+  "ground_truth": "The bug is in processor.py's _persist_stage method. It uses `zip(self.tasks, destinations)` to pair tasks with destination slots positionally. But the pre_transform hook (sort_by_priority in hooks.py) sorts self.tasks by priority, changing their order. After sorting, task 'beta' (priority 3) moves to position 0, so it gets paired with slot_0 instead of its assigned slot_1. The fix: in _persist_stage, instead of using positional zip, look up each task's destination by its task_id using self.destination_map.get_slot_for_task(task.task_id). The DestinationMap already has this method \u2014 it just isn't being used.",
   "solution_patch": null,
   "eval_spec": {
     "method": "script_check",
@@ -38,54 +38,7 @@
     "output_not_contains": null,
     "test_command": null,
     "check_script": null,
-    "check_script_content": "#!/bin/bash\nset +e\ncd \"$WORKDIR\"\n\nSCORE=0\nTOTAL=6\n\ncheck() {\n    local desc=\"$1\"\n    local passed=\"$2\"\n    if [ \"$passed\" -eq 1 ]; then\n        echo \"PASS: $desc\"\n        SCORE=$((SCORE + 1))\n    else\n        echo \"FAIL: $desc\"\n    fi\n}\n\n# 1. All tests pass\nOUTPUT=$(python3 -m pytest tests/ -x -v 2>&1)\nif [ $? -eq 0 ]; then\n    check \"all tests pass\" 1\nelse\n    echo \"  Test output: $OUTPUT\"\n    check \"all tests pass\" 0\nfi\n\n# 2. Test files unchanged\nif grep -q 'class TestOrderingBug' tests/test_processor.py && grep -q 'class TestMixedValidity' tests/test_processor.py; then\n    check \"test files unchanged\" 1\nelse\n    check \"test files unchanged\" 0\nfi\n\n# 3. At least one of processor.py, hooks.py, or destinations.py was modified\n# (We check that the fix is structural, not just deleting the sort hook)\nMODIFIED=0\nif python3 -c \"\nimport processor, hooks, destinations\n# Verify sort_by_priority still exists and works\nfrom processor import Task, TaskProcessor\nfrom destinations import DestinationMap\ntasks = [Task('a', {'value': 1}, priority=1), Task('b', {'value': 2}, priority=10)]\ndm = DestinationMap(['a', 'b'])\np = TaskProcessor(tasks, dm)\np._validate_stage()\np._transform_stage()\n# After transform, higher priority should be first (sort still works)\nassert p.tasks[0].task_id == 'b', 'Sort hook no longer working'\nprint('SORT_WORKS')\n\" 2>&1 | grep -q 'SORT_WORKS'; then\n    check \"sort_by_priority hook still functional\" 1\nelse\n    check \"sort_by_priority hook still functional\" 0\nfi\n\n# 4. TaskProcessor class still exists in processor.py\nif grep -q 'class TaskProcessor' processor.py; then\n    check \"TaskProcessor class exists in processor.py\" 1\nelse\n    check \"TaskProcessor class exists in processor.py\" 0\nfi\n\n# 5. The fix addresses ordering correctly (functional verification)\npython3 << 'PYCHECK'\nimport sys\nsys.path.insert(0, '.')\nfrom processor import Task, TaskProcessor\nfrom destinations import DestinationMap\n\n# Create tasks where priority order differs from insertion order\ntasks = [\n    Task('first',  {'value': 10}, priority=1),\n    Task('second', {'value': 20}, priority=3),\n    Task('third',  {'value': 30}, priority=2),\n]\ndm = DestinationMap(['first', 'second', 'third'])\nproc = TaskProcessor(tasks, dm)\nresults = proc.run_pipeline()\n\n# Verify each task went to its correct slot\nall_data = dm.get_all_data()\nassert all_data['slot_0'] is not None and all_data['slot_0']['task_id'] == 'first', \\\n    f\"slot_0 should have 'first', got {all_data['slot_0']}"
-\nassert all_data['slot_1'] is not None and all_data['slot_1']['task_id'] == 'second', \
-    f"slot_1 should have 'second', got {all_data['slot_1']}"
-\nassert all_data['slot_2'] is not None and all_data['slot_2']['task_id'] == 'third', \
-    f"slot_2 should have 'third', got {all_data['slot_2']}"
-\nprint('ORDERING_CORRECT')
-PYCHECK
-
-if [ $? -eq 0 ]; then
-    check "ordering fix verified functionally" 1
-else
-    check "ordering fix verified functionally" 0
-fi
-
-# 6. processor.py or hooks.py or destinations.py was modified
-# (verify the persist stage no longer does naive positional zip)
-if ! grep -q 'for task, dest in zip(self.tasks, destinations)' processor.py; then
-    check "naive positional zip removed from persist stage" 1
-else
-    # If zip is still there, check if it's been fixed in another way
-    # by running a quick functional test
-    python3 -c "
-from processor import Task, TaskProcessor
-from destinations import DestinationMap
-tasks = [Task('a', {'value': 1}, priority=1), Task('b', {'value': 2}, priority=10)]
-dm = DestinationMap(['a', 'b'])
-proc = TaskProcessor(tasks, dm)
-results = proc.run_pipeline()
-assert results['a']['destination'] == 'slot_0'
-assert results['b']['destination'] == 'slot_1'
-print('OK')
-" 2>&1 | grep -q 'OK'
-    if [ $? -eq 0 ]; then
-        check "naive positional zip removed from persist stage" 1
-    else
-        check "naive positional zip removed from persist stage" 0
-    fi
-fi
-
-echo ""
-echo "Score: $SCORE/$TOTAL"
-
-if [ "$SCORE" -ge "$TOTAL" ]; then
-    exit 0
-else
-    exit 1
-fi
-",
+    "check_script_content": "#!/bin/bash\nset +e\ncd \"$WORKDIR\"\n\nSCORE=0\nTOTAL=6\n\ncheck() {\n    local desc=\"$1\"\n    local passed=\"$2\"\n    if [ \"$passed\" -eq 1 ]; then\n        echo \"PASS: $desc\"\n        SCORE=$((SCORE + 1))\n    else\n        echo \"FAIL: $desc\"\n    fi\n}\n\n# 1. All tests pass\nOUTPUT=$(python3 -m pytest tests/ -x -v 2>&1)\nif [ $? -eq 0 ]; then\n    check \"all tests pass\" 1\nelse\n    echo \"  Test output: $OUTPUT\"\n    check \"all tests pass\" 0\nfi\n\n# 2. Test files unchanged\nif grep -q 'class TestOrderingBug' tests/test_processor.py && grep -q 'class TestMixedValidity' tests/test_processor.py; then\n    check \"test files unchanged\" 1\nelse\n    check \"test files unchanged\" 0\nfi\n\n# 3. At least one of processor.py, hooks.py, or destinations.py was modified\n# (We check that the fix is structural, not just deleting the sort hook)\nMODIFIED=0\nif python3 -c \"\nimport processor, hooks, destinations\n# Verify sort_by_priority still exists and works\nfrom processor import Task, TaskProcessor\nfrom destinations import DestinationMap\ntasks = [Task('a', {'value': 1}, priority=1), Task('b', {'value': 2}, priority=10)]\ndm = DestinationMap(['a', 'b'])\np = TaskProcessor(tasks, dm)\np._validate_stage()\np._transform_stage()\n# After transform, higher priority should be first (sort still works)\nassert p.tasks[0].task_id == 'b', 'Sort hook no longer working'\nprint('SORT_WORKS')\n\" 2>&1 | grep -q 'SORT_WORKS'; then\n    check \"sort_by_priority hook still functional\" 1\nelse\n    check \"sort_by_priority hook still functional\" 0\nfi\n\n# 4. TaskProcessor class still exists in processor.py\nif grep -q 'class TaskProcessor' processor.py; then\n    check \"TaskProcessor class exists in processor.py\" 1\nelse\n    check \"TaskProcessor class exists in processor.py\" 0\nfi\n\n# 5. The fix addresses ordering correctly (functional verification)\npython3 << 'PYCHECK'\nimport sys\nsys.path.insert(0, '.')\nfrom processor import Task, TaskProcessor\nfrom destinations import DestinationMap\n\n# Create tasks where priority order differs from insertion order\ntasks = [\n    Task('first',  {'value': 10}, priority=1),\n    Task('second', {'value': 20}, priority=3),\n    Task('third',  {'value': 30}, priority=2),\n]\ndm = DestinationMap(['first', 'second', 'third'])\nproc = TaskProcessor(tasks, dm)\nresults = proc.run_pipeline()\n\n# Verify each task went to its correct slot\nall_data = dm.get_all_data()\nassert all_data['slot_0'] is not None and all_data['slot_0']['task_id'] == 'first', \\\n    f\"slot_0 should have 'first', got {all_data['slot_0']}\"\nassert all_data['slot_1'] is not None and all_data['slot_1']['task_id'] == 'second', \\\n    f\"slot_1 should have 'second', got {all_data['slot_1']}\"\nassert all_data['slot_2'] is not None and all_data['slot_2']['task_id'] == 'third', \\\n    f\"slot_2 should have 'third', got {all_data['slot_2']}\"\nprint('ORDERING_CORRECT')\nPYCHECK\n\nif [ $? -eq 0 ]; then\n    check \"ordering fix verified functionally\" 1\nelse\n    check \"ordering fix verified functionally\" 0\nfi\n\n# 6. processor.py or hooks.py or destinations.py was modified\n# (verify the persist stage no longer does naive positional zip)\nif ! grep -q 'for task, dest in zip(self.tasks, destinations)' processor.py; then\n    check \"naive positional zip removed from persist stage\" 1\nelse\n    # If zip is still there, check if it's been fixed in another way\n    # by running a quick functional test\n    python3 -c \"\nfrom processor import Task, TaskProcessor\nfrom destinations import DestinationMap\ntasks = [Task('a', {'value': 1}, priority=1), Task('b', {'value': 2}, priority=10)]\ndm = DestinationMap(['a', 'b'])\nproc = TaskProcessor(tasks, dm)\nresults = proc.run_pipeline()\nassert results['a']['destination'] == 'slot_0'\nassert results['b']['destination'] == 'slot_1'\nprint('OK')\n\" 2>&1 | grep -q 'OK'\n    if [ $? -eq 0 ]; then\n        check \"naive positional zip removed from persist stage\" 1\n    else\n        check \"naive positional zip removed from persist stage\" 0\n    fi\nfi\n\necho \"\"\necho \"Score: $SCORE/$TOTAL\"\n\nif [ \"$SCORE\" -ge \"$TOTAL\" ]; then\n    exit 0\nelse\n    exit 1\nfi",
     "rubric": null,
     "sub_evals": null,
     "pass_threshold": 1.0
