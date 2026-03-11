@@ -1319,6 +1319,7 @@ for fpath in files:
         with open(fpath) as f:
             tree = ast.parse(f.read())
         symbols = []
+        imports = []
         for node in ast.iter_child_nodes(tree):
             if isinstance(node, ast.ClassDef):
                 methods = [n.name for n in ast.iter_child_nodes(node) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and not n.name.startswith('_')]
@@ -1329,8 +1330,23 @@ for fpath in files:
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if not node.name.startswith('_'):
                     symbols.append("def {}".format(node.name))
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                mod = node.module.split('.')[0]
+                if mod not in ('os', 'sys', 'typing', 're', 'json', 'collections', 'functools', 'itertools', 'pathlib', 'abc', 'io', 'copy', 'enum', 'dataclasses', 'contextlib', 'warnings', 'logging', 'textwrap', 'inspect', 'importlib', 'unittest', 'pytest', 'math', 'datetime', 'time', 'hashlib', 'base64', 'struct', 'string', 'operator') and not mod.startswith('_'):
+                    imports.append(node.module)
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    mod = alias.name.split('.')[0]
+                    if mod not in ('os', 'sys', 'typing', 're', 'json', 'collections', 'functools', 'itertools', 'pathlib', 'abc', 'io', 'copy', 'enum', 'dataclasses', 'contextlib', 'warnings', 'logging', 'textwrap', 'inspect', 'importlib', 'unittest', 'pytest', 'math', 'datetime', 'time', 'hashlib', 'base64', 'struct', 'string', 'operator') and not mod.startswith('_'):
+                        imports.append(alias.name)
+        parts = []
         if symbols:
-            result[fpath] = ", ".join(symbols[:8])
+            parts.append(", ".join(symbols[:8]))
+        if imports:
+            unique_imports = list(dict.fromkeys(imports))[:4]
+            parts.append("imports: " + ", ".join(unique_imports))
+        if parts:
+            result[fpath] = " | ".join(parts)
     except Exception:
         pass
 print(json.dumps(result))
