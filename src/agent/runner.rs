@@ -235,6 +235,13 @@ impl AgentRunner {
                 } else {
                     diff_stat.lines().take(20).collect::<Vec<_>>().join("\n")
                 };
+                let plan_recovery = match std::fs::read_to_string("/tmp/.ninja_plan.md") {
+                    Ok(plan) if !plan.trim().is_empty() => {
+                        let trunc = safe_truncate(plan.trim(), 2000);
+                        format!("\n\nYour plan (from /tmp/.ninja_plan.md):\n```\n{}\n```", trunc)
+                    }
+                    _ => String::new(),
+                };
                 self.conversation.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
@@ -245,7 +252,7 @@ impl AgentRunner {
                          4. Have you identified ALL files that need changes? Don't forget: \
                          docs, changelog, config files (pyproject.toml, setup.cfg), \
                          CI workflows, type stubs, __init__.py exports, test output files.\n\n\
-                         Current changes:\n```\n{}\n```", iteration + 1, remaining, diff_preview
+                         Current changes:\n```\n{}\n```{}", iteration + 1, remaining, diff_preview, plan_recovery
                     )),
                 });
             } else if remaining == 5 {
@@ -505,6 +512,11 @@ impl AgentRunner {
         let mut completion_check_done = false;
         let mut last_write_iteration: usize = 0; // Track last iteration with a write/edit tool
         let mut last_idle_nudge: usize = 0;
+        let mut edit_successes: usize = 0;
+        let mut edit_failures: usize = 0;
+        let mut consecutive_edit_failures: usize = 0;
+        let mut last_test_checkpoint: usize = 0;
+        let mut first_edit_iteration: Option<usize> = None;
 
         for iteration in 0..self.config.max_iterations {
             rollout.iteration_count = (iteration + 1) as u64;
@@ -558,12 +570,30 @@ impl AgentRunner {
                         diff_preview
                     )),
                 });
-            } else if iteration == 20 || iteration == 40 {
+            } else if iteration == 20 || iteration == 30 || iteration == 40 || iteration == 60 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 let diff_preview = if diff_stat.is_empty() {
                     "No files modified yet.".to_string()
                 } else {
                     diff_stat.lines().take(20).collect::<Vec<_>>().join("\n")
+                };
+                // Auto-recover plan file at major checkpoints
+                let plan_recovery = match std::fs::read_to_string("/tmp/.ninja_plan.md") {
+                    Ok(plan) if !plan.trim().is_empty() => {
+                        let trunc = safe_truncate(plan.trim(), 2000);
+                        format!("\n\nYour plan (from /tmp/.ninja_plan.md):\n```\n{}\n```", trunc)
+                    }
+                    _ => String::new(),
+                };
+                // Add edit quality stats at checkpoints for longer tasks
+                let total_edits_so_far = edit_successes + edit_failures;
+                let edit_stats = if total_edits_so_far > 0 {
+                    format!("\n\nEdit quality: {}/{} succeeded ({:.0}%), {} consecutive failures",
+                        edit_successes, total_edits_so_far,
+                        100.0 * edit_successes as f64 / total_edits_so_far as f64,
+                        consecutive_edit_failures)
+                } else {
+                    String::new()
                 };
                 messages.push(Message {
                     role: "user".to_string(),
@@ -575,7 +605,7 @@ impl AgentRunner {
                          4. Have you identified ALL files that need changes? Don't forget: \
                          docs, changelog, config files (pyproject.toml, setup.cfg), \
                          CI workflows, type stubs, __init__.py exports, test output files.\n\n\
-                         Current changes:\n```\n{}\n```", iteration + 1, remaining, diff_preview
+                         Current changes:\n```\n{}\n```{}{}", iteration + 1, remaining, diff_preview, plan_recovery, edit_stats
                     )),
                 });
             } else if remaining == 5 {
@@ -929,6 +959,74 @@ impl AgentRunner {
                 }
             }
 
+            // Track edit success/failure from tool results
+            for (i, tc) in response.tool_calls.iter().enumerate() {
+                if tc.name == "edit_file" || tc.name == "replace_lines" || tc.name == "write_file" {
+                    if first_edit_iteration.is_none() {
+                        first_edit_iteration = Some(iteration);
+                    }
+                    if let ContentBlock::ToolResult { content, is_error, .. } = &result_blocks[i] {
+                        let failed = *is_error == Some(true)
+                            || content.contains("EDIT REVERTED")
+                            || content.contains("LINT ERRORS")
+                            || content.contains("String not found")
+                            || content.contains("not found in file")
+                            || content.contains("SYNTAX ERROR");
+                        if failed {
+                            edit_failures += 1;
+                            consecutive_edit_failures += 1;
+                        } else {
+                            edit_successes += 1;
+                            consecutive_edit_failures = 0;
+                        }
+                    }
+                }
+            }
+
+            // Strategy switch enforcement: after 3 consecutive edit failures, inject hard directive
+            if consecutive_edit_failures >= 3 {
+                messages.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(format!(
+                        "[SYSTEM] STRATEGY SWITCH REQUIRED — {} consecutive edit failures. STOP your current approach.\n\
+                         1. Re-read the target file(s) completely — your cached view is stale.\n\
+                         2. Re-read /tmp/.ninja_plan.md to review what you've already tried.\n\
+                         3. Use `think` to reason about a fundamentally different approach.\n\
+                         4. If edit_file keeps failing, switch to write_file or replace_lines.\n\
+                         5. If you're fighting the same code section, step back and check if your \
+                         understanding of the problem is correct.\n\
+                         Previous edit success rate: {}/{} ({:.0}%)",
+                        consecutive_edit_failures,
+                        edit_successes,
+                        edit_successes + edit_failures,
+                        if edit_successes + edit_failures > 0 {
+                            100.0 * edit_successes as f64 / (edit_successes + edit_failures) as f64
+                        } else { 0.0 }
+                    )),
+                });
+                consecutive_edit_failures = 0; // Reset after injecting
+            }
+
+            // Edit quality degradation warning: if success rate drops below 50% after 6+ edits
+            let total_edits = edit_successes + edit_failures;
+            if total_edits >= 6 && edit_failures > edit_successes {
+                let success_rate = 100.0 * edit_successes as f64 / total_edits as f64;
+                if total_edits % 4 == 0 { // Don't spam — check every 4 edits
+                    messages.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(format!(
+                            "[SYSTEM] EDIT QUALITY WARNING — Your edit success rate is {:.0}% ({}/{} edits succeeded). \
+                             SLOW DOWN. Before each edit:\n\
+                             1. Re-read the FULL target file (not just a section)\n\
+                             2. Copy the EXACT text you want to replace (including whitespace)\n\
+                             3. Use replace_lines with line numbers when edit_file fails\n\
+                             4. After each successful edit, verify with read_file",
+                            success_rate, edit_successes, total_edits
+                        )),
+                    });
+                }
+            }
+
             // Update routing state based on what tools were used
             let all_read = Self::all_tools_read_only(&response.tool_calls);
             self.last_was_read_only = all_read;
@@ -955,6 +1053,42 @@ impl AgentRunner {
                          with implementing them now.".to_string()
                     ),
                 });
+            }
+
+            // Periodic test checkpoint: every 15 iterations after first edit,
+            // auto-run tests to catch semantic errors early before they cascade.
+            if let Some(first_edit) = first_edit_iteration {
+                if iteration > first_edit
+                    && iteration >= 15
+                    && (last_test_checkpoint == 0 || iteration - last_test_checkpoint >= 15)
+                    && edit_successes > 0
+                {
+                    last_test_checkpoint = iteration;
+                    // Run a quick test to detect silent regressions
+                    let test_input = serde_json::json!({});
+                    if let Ok(test_output) = tools::execute_tool("run_tests", &test_input, &self.config.workdir) {
+                        let has_failures = test_output.contains("FAILED")
+                            || test_output.contains("Error")
+                            || test_output.contains("error:");
+                        if has_failures {
+                            // Extract last 20 lines of test output for context
+                            let tail: String = test_output.lines()
+                                .rev().take(20).collect::<Vec<_>>()
+                                .into_iter().rev().collect::<Vec<_>>().join("\n");
+                            messages.push(Message {
+                                role: "user".to_string(),
+                                content: MessageContent::Text(format!(
+                                    "[SYSTEM] TEST CHECKPOINT (iteration {}) — Tests are FAILING. \
+                                     Fix these before making more changes. Errors compound when you \
+                                     edit more code on top of broken code.\n\
+                                     Test output (last 20 lines):\n```\n{}\n```\n\
+                                     Re-read the failing files and fix the regressions first.",
+                                    iteration + 1, tail
+                                )),
+                            });
+                        }
+                    }
+                }
             }
 
             // Shrink old tool results to prevent cumulative context bloat.
@@ -1977,17 +2111,27 @@ print(json.dumps(result))
             _ => String::new(),
         };
 
+        // Auto-read plan file to preserve it through compaction
+        let plan_content = std::fs::read_to_string("/tmp/.ninja_plan.md")
+            .unwrap_or_default();
+        let plan_section = if plan_content.trim().is_empty() {
+            String::new()
+        } else {
+            let truncated_plan = safe_truncate(plan_content.trim(), 3000);
+            format!("\n\n## Your Plan (auto-recovered from /tmp/.ninja_plan.md)\n```\n{}\n```\n\
+                     Review this plan and continue executing it.", truncated_plan)
+        };
+
         let mut compacted = Vec::new();
         // Keep original prompt
         compacted.push(messages[0].clone());
-        // Insert summary as a user message with git diff awareness
+        // Insert summary as a user message with git diff awareness + plan recovery
         compacted.push(Message {
             role: "user".to_string(),
             content: MessageContent::Text(format!(
-                "[SYSTEM] The conversation has been compacted to save context space.\n\n{}{}\n\n\
-                Continue working on the task. If you wrote a plan to /tmp/.ninja_plan.md, re-read it now. \
-                Check your todo list and complete any remaining changes.",
-                summary, git_diff_info
+                "[SYSTEM] The conversation has been compacted to save context space.\n\n{}{}{}\n\n\
+                Continue working on the task. Check your todo list and complete any remaining changes.",
+                summary, git_diff_info, plan_section
             )),
         });
         // Keep the recent messages (last 4)
@@ -2181,6 +2325,16 @@ print(json.dumps(result))
                         }
                         // Don't shrink error results — they're usually short and important
                         if *is_error == Some(true) {
+                            continue;
+                        }
+                        // Don't shrink results containing failure signals — these are critical context
+                        // for avoiding error compounding in longer-running tasks
+                        if content.contains("EDIT REVERTED")
+                            || content.contains("LINT ERRORS")
+                            || content.contains("SYNTAX ERROR")
+                            || content.contains("TEST CHECKPOINT")
+                            || content.contains("String not found")
+                        {
                             continue;
                         }
                         let tool_name = tool_name_map.get(tool_use_id.as_str())
