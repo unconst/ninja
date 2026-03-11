@@ -741,6 +741,25 @@ impl AgentRunner {
 
                 let parallel_start = Instant::now();
 
+                // Save file contents before editing for auto-revert on syntax errors
+                let mut pre_edit_contents: Vec<Option<String>> = vec![None; response.tool_calls.len()];
+                for (i, tc) in response.tool_calls.iter().enumerate() {
+                    if tc.name == "replace_lines" || tc.name == "write_file" {
+                        if let Some(path_str) = tc.input.get("path").and_then(|v| v.as_str()) {
+                            if path_str.ends_with(".py") {
+                                let resolved = if Path::new(path_str).is_absolute() {
+                                    PathBuf::from(path_str)
+                                } else {
+                                    self.config.workdir.join(path_str)
+                                };
+                                if let Ok(content) = std::fs::read_to_string(&resolved) {
+                                    pre_edit_contents[i] = Some(content);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Pre-resolve: handle MCP tools and git clone interception before spawning
                 // Each entry: (index, Option<pre-resolved result>)
                 let mut pre_resolved: Vec<Option<Result<String, String>>> = vec![None; response.tool_calls.len()];
@@ -812,7 +831,21 @@ impl AgentRunner {
                                     };
                                     let lint_msg = self.lint_python_file(&resolved);
                                     if !lint_msg.is_empty() {
-                                        (format!("{}{}", output, lint_msg), false)
+                                        // Auto-revert on syntax errors if we have the original content
+                                        if (lint_msg.contains("invalid-syntax") || lint_msg.contains("SYNTAX ERROR"))
+                                            && pre_edit_contents[i].is_some()
+                                        {
+                                            let original = pre_edit_contents[i].as_ref().unwrap();
+                                            let _ = std::fs::write(&resolved, original);
+                                            (format!(
+                                                "EDIT REVERTED — your {} introduced a syntax error.\n{}\n\n\
+                                                 The file has been restored to its previous state. \
+                                                 Please fix the syntax and try again.",
+                                                tc.name, lint_msg
+                                            ), false)
+                                        } else {
+                                            (format!("{}{}", output, lint_msg), false)
+                                        }
                                     } else {
                                         (output, false)
                                     }
