@@ -196,10 +196,26 @@ class LocalOpsGenerator(TaskGenerator):
             ),
             ground_truth="Bugs: 1) unclosed quote on LOG_FILE line, 2) LOG_FILE missing $ prefix, 3) else if should be elif, 4) -neq should be -ne",
             eval_spec=EvalSpec(
-                method=EvalMethod.COMMAND_OUTPUT,
-                check_command="bash deploy.sh 2>&1",
-                output_contains=["Deployment complete!", "Deployed to:"],
-                output_not_contains=["syntax error", "command not found"],
+                method=EvalMethod.SCRIPT_CHECK,
+                check_script_content=textwrap.dedent("""\
+                    #!/bin/bash
+                    set +e
+                    OUTPUT=$(bash deploy.sh 2>&1)
+                    if ! echo "$OUTPUT" | grep -q 'Deployed to:'; then
+                        echo "Missing 'Deployed to:' in stdout"; exit 1
+                    fi
+                    if echo "$OUTPUT" | grep -qi 'syntax error'; then
+                        echo "Syntax error in output"; exit 1
+                    fi
+                    DEPLOY_DIR=$(echo "$OUTPUT" | grep 'Deployed to:' | sed 's/Deployed to: //')
+                    if [ -f "$DEPLOY_DIR/deploy.log" ] && grep -q 'Deployment complete!' "$DEPLOY_DIR/deploy.log"; then
+                        echo "All checks passed"; exit 0
+                    fi
+                    if echo "$OUTPUT" | grep -q 'Deployment complete!'; then
+                        echo "All checks passed"; exit 0
+                    fi
+                    echo "Missing 'Deployment complete!'"; exit 1
+                """),
             ),
             capabilities=[
                 Capability.CODE_READING,

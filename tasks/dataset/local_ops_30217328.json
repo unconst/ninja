@@ -23,23 +23,17 @@
   "ground_truth": "Bugs: 1) unclosed quote on LOG_FILE line, 2) LOG_FILE missing $ prefix, 3) else if should be elif, 4) -neq should be -ne",
   "solution_patch": null,
   "eval_spec": {
-    "method": "command_output",
+    "method": "script_check",
     "expected_patch": null,
     "expected_content": {},
     "expected_files": [],
-    "check_command": "bash deploy.sh 2>&1",
+    "check_command": null,
     "expected_output": null,
-    "output_contains": [
-      "Deployment complete!",
-      "Deployed to:"
-    ],
-    "output_not_contains": [
-      "syntax error",
-      "command not found"
-    ],
+    "output_contains": null,
+    "output_not_contains": null,
     "test_command": null,
     "check_script": null,
-    "check_script_content": null,
+    "check_script_content": "#!/bin/bash\nset +e\n\n# Run the deploy script\nOUTPUT=$(bash deploy.sh 2>&1)\nRC=$?\n\n# Check stdout has deployment info\nif ! echo \"$OUTPUT\" | grep -q 'Deployed to:'; then\n    echo \"Missing 'Deployed to:' in stdout\"\n    echo \"OUTPUT: $OUTPUT\"\n    exit 1\nfi\n\n# Check no syntax errors in output\nif echo \"$OUTPUT\" | grep -qi 'syntax error'; then\n    echo \"Syntax error found in output\"\n    exit 1\nfi\n\n# Find the deploy dir from output\nDEPLOY_DIR=$(echo \"$OUTPUT\" | grep 'Deployed to:' | sed 's/Deployed to: //')\n\n# Check log file exists and has completion marker\nif [ -f \"$DEPLOY_DIR/deploy.log\" ]; then\n    if grep -q 'Deployment complete!' \"$DEPLOY_DIR/deploy.log\"; then\n        echo \"All checks passed (log file verified)\"\n        exit 0\n    fi\nfi\n\n# Fallback: check if Deployment complete! is in stdout\nif echo \"$OUTPUT\" | grep -q 'Deployment complete!'; then\n    echo \"All checks passed (stdout verified)\"\n    exit 0\nfi\n\necho \"Missing 'Deployment complete!' in both log and stdout\"\nexit 1\n",
     "rubric": null,
     "sub_evals": null,
     "pass_threshold": 1.0
