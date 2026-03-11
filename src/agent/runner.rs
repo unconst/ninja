@@ -259,11 +259,10 @@ impl AgentRunner {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
                         "[SYSTEM] 5 iterations remaining. Wrap up your changes.\n\
-                         1. Review your todo list — complete any remaining items.\n\
-                         2. Check: did you update ALL related files? Think about: \
-                         docs, changelog, config files (pyproject.toml, tox.ini), \
-                         CI/workflow files, type stubs, __init__.py exports.\n\
-                         3. If the task mentioned specific files, verify you modified each one.\n\n\
+                         1. Re-read /tmp/.ninja_plan.md to check your original file list.\n\
+                         2. Compare that list against the diff below. Any planned files NOT \
+                         in the diff still need editing — even small changes like docstrings or version bumps.\n\
+                         3. Complete any pending todo items before finishing.\n\n\
                          {}", diff_section
                     )),
                 });
@@ -590,11 +589,10 @@ impl AgentRunner {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
                         "[SYSTEM] 5 iterations remaining. Wrap up your changes.\n\
-                         1. Review your todo list — complete any remaining items.\n\
-                         2. Check: did you update ALL related files? Think about: \
-                         docs, changelog, config files (pyproject.toml, tox.ini), \
-                         CI/workflow files, type stubs, __init__.py exports.\n\
-                         3. If the task mentioned specific files, verify you modified each one.\n\n\
+                         1. Re-read /tmp/.ninja_plan.md to check your original file list.\n\
+                         2. Compare that list against the diff below. Any planned files NOT \
+                         in the diff still need editing — even small changes like docstrings or version bumps.\n\
+                         3. Complete any pending todo items before finishing.\n\n\
                          {}", diff_section
                     )),
                 });
