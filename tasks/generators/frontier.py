@@ -27,7 +27,7 @@ class FrontierGenerator(TaskGenerator):
     def category(self) -> TaskCategory:
         return TaskCategory.DIAGNOSTIC
 
-    def generate(self, count: int = 6, difficulty: str = "hard") -> list[Task]:
+    def generate(self, count: int = 8, difficulty: str = "hard") -> list[Task]:
         generators = [
             self._adversarial_code_review,
             self._incomplete_spec_implementation,
@@ -35,6 +35,8 @@ class FrontierGenerator(TaskGenerator):
             self._hidden_edge_case_trap,
             self._legacy_code_archaeology,
             self._concurrent_bug_hunt,
+            self._rename_with_ripple_effects,
+            self._feature_flag_removal,
         ]
 
         tasks = []
@@ -2017,6 +2019,739 @@ exit(1)
                 Capability.ROOT_CAUSE_ANALYSIS,
                 Capability.CODE_EDITING,
                 Capability.HYPOTHESIS_TESTING,
+            ],
+            source="frontier_generator",
+            estimated_minutes=10,
+        )
+
+    def _rename_with_ripple_effects(self, difficulty: str) -> Task:
+        """Rename a core function and update ALL 7 files that reference it.
+
+        Key difficulty: The core rename is trivial. But the agent must find
+        and update ALL references across tests, docs, __init__.py exports,
+        CLI entry point, config defaults, and type stubs. Missing even 1 file
+        means the evaluation fails.
+        """
+        files = {}
+
+        files["mathlib/__init__.py"] = textwrap.dedent('''\
+            """MathLib — a small math utilities library."""
+            __version__ = "1.2.0"
+
+            from .core import calculate_average, calculate_median, calculate_stddev
+            from .formatters import format_result, format_table
+        ''')
+
+        files["mathlib/core.py"] = textwrap.dedent('''\
+            """Core statistical functions."""
+            import math
+            from typing import Union
+
+
+            def calculate_average(values: list[Union[int, float]]) -> float:
+                """Calculate the arithmetic mean of a list of numbers."""
+                if not values:
+                    raise ValueError("Cannot calculate average of empty list")
+                return sum(values) / len(values)
+
+
+            def calculate_median(values: list[Union[int, float]]) -> float:
+                """Calculate the median of a list of numbers."""
+                if not values:
+                    raise ValueError("Cannot calculate median of empty list")
+                sorted_vals = sorted(values)
+                n = len(sorted_vals)
+                if n % 2 == 0:
+                    return (sorted_vals[n//2 - 1] + sorted_vals[n//2]) / 2
+                return float(sorted_vals[n//2])
+
+
+            def calculate_stddev(values: list[Union[int, float]]) -> float:
+                """Calculate the population standard deviation."""
+                if len(values) < 2:
+                    raise ValueError("Need at least 2 values for stddev")
+                avg = calculate_average(values)
+                variance = sum((x - avg) ** 2 for x in values) / len(values)
+                return math.sqrt(variance)
+        ''')
+
+        files["mathlib/formatters.py"] = textwrap.dedent('''\
+            """Output formatting utilities."""
+            from .core import calculate_average, calculate_median
+
+
+            def format_result(values: list, stat: str = "average") -> str:
+                """Format a statistical result as a human-readable string."""
+                if stat == "average":
+                    result = calculate_average(values)
+                elif stat == "median":
+                    result = calculate_median(values)
+                else:
+                    raise ValueError(f"Unknown stat: {stat}")
+                return f"The {stat} is {result:.2f}"
+
+
+            def format_table(data: dict[str, list]) -> str:
+                """Format multiple datasets as a comparison table."""
+                lines = ["Dataset          | Average  | Median"]
+                lines.append("-" * 40)
+                for name, values in data.items():
+                    avg = calculate_average(values)
+                    med = calculate_median(values)
+                    lines.append(f"{name:16s} | {avg:8.2f} | {med:.2f}")
+                return "\\n".join(lines)
+        ''')
+
+        files["mathlib/cli.py"] = textwrap.dedent('''\
+            """Command-line interface for mathlib."""
+            import sys
+            from .core import calculate_average, calculate_median, calculate_stddev
+
+
+            def main():
+                if len(sys.argv) < 3:
+                    print("Usage: mathlib <stat> <value1> <value2> ...")
+                    print("  stat: average, median, stddev")
+                    sys.exit(1)
+
+                stat = sys.argv[1]
+                values = [float(x) for x in sys.argv[2:]]
+
+                if stat == "average":
+                    result = calculate_average(values)
+                elif stat == "median":
+                    result = calculate_median(values)
+                elif stat == "stddev":
+                    result = calculate_stddev(values)
+                else:
+                    print(f"Unknown stat: {stat}")
+                    sys.exit(1)
+
+                print(f"{result:.4f}")
+
+
+            if __name__ == "__main__":
+                main()
+        ''')
+
+        files["tests/__init__.py"] = ""
+
+        files["tests/test_core.py"] = textwrap.dedent('''\
+            """Tests for core statistical functions."""
+            import sys
+            import os
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from mathlib.core import calculate_average, calculate_median, calculate_stddev
+
+
+            def test_average():
+                assert calculate_average([1, 2, 3, 4, 5]) == 3.0
+                assert calculate_average([10]) == 10.0
+                try:
+                    calculate_average([])
+                    assert False, "Should raise ValueError"
+                except ValueError:
+                    pass
+                print("PASS: test_average")
+
+
+            def test_median():
+                assert calculate_median([1, 2, 3]) == 2.0
+                assert calculate_median([1, 2, 3, 4]) == 2.5
+                assert calculate_median([5]) == 5.0
+                print("PASS: test_median")
+
+
+            def test_stddev():
+                assert abs(calculate_stddev([2, 4, 4, 4, 5, 5, 7, 9]) - 2.0) < 0.01
+                try:
+                    calculate_stddev([1])
+                    assert False, "Should raise ValueError"
+                except ValueError:
+                    pass
+                print("PASS: test_stddev")
+
+
+            if __name__ == "__main__":
+                test_average()
+                test_median()
+                test_stddev()
+                print("\\nAll tests passed")
+        ''')
+
+        files["tests/test_formatters.py"] = textwrap.dedent('''\
+            """Tests for formatting functions."""
+            import sys
+            import os
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from mathlib.formatters import format_result, format_table
+
+
+            def test_format_result():
+                assert "3.00" in format_result([1, 2, 3, 4, 5], "average")
+                assert "3.00" in format_result([1, 2, 3, 4, 5], "median")
+                print("PASS: test_format_result")
+
+
+            def test_format_table():
+                data = {"set_a": [1, 2, 3], "set_b": [10, 20, 30]}
+                result = format_table(data)
+                assert "set_a" in result
+                assert "set_b" in result
+                print("PASS: test_format_table")
+
+
+            if __name__ == "__main__":
+                test_format_result()
+                test_format_table()
+                print("\\nAll tests passed")
+        ''')
+
+        files["README.md"] = textwrap.dedent('''\
+            # MathLib
+
+            A small statistics library for Python.
+
+            ## Usage
+
+            ```python
+            from mathlib import calculate_average, calculate_median, calculate_stddev
+
+            data = [1, 2, 3, 4, 5]
+            print(calculate_average(data))  # 3.0
+            print(calculate_median(data))   # 3.0
+            print(calculate_stddev(data))   # 1.414
+            ```
+
+            ## CLI
+
+            ```bash
+            python -m mathlib.cli average 1 2 3 4 5
+            # 3.0000
+            ```
+
+            ## API Reference
+
+            ### `calculate_average(values) -> float`
+            Calculate the arithmetic mean.
+
+            ### `calculate_median(values) -> float`
+            Calculate the median.
+
+            ### `calculate_stddev(values) -> float`
+            Calculate population standard deviation.
+        ''')
+
+        eval_script = textwrap.dedent('''\
+            #!/bin/bash
+            cd "$WORKDIR"
+
+            SCORE=0
+            TOTAL=7
+
+            check() {
+                local desc="$1"
+                local passed="$2"
+                if [ "$passed" -eq 1 ]; then
+                    echo "PASS: $desc"
+                    SCORE=$((SCORE + 1))
+                else
+                    echo "FAIL: $desc"
+                fi
+            }
+
+            # 1. Core function renamed in core.py
+            if grep -q "def compute_mean" mathlib/core.py && ! grep -q "def calculate_average" mathlib/core.py; then
+                check "core.py: calculate_average -> compute_mean" 1
+            else
+                check "core.py: calculate_average -> compute_mean" 0
+            fi
+
+            # 2. __init__.py exports updated
+            if grep -q "compute_mean" mathlib/__init__.py && ! grep -q "calculate_average" mathlib/__init__.py; then
+                check "__init__.py: export updated" 1
+            else
+                check "__init__.py: export updated" 0
+            fi
+
+            # 3. formatters.py import+usage updated
+            if grep -q "compute_mean" mathlib/formatters.py && ! grep -q "calculate_average" mathlib/formatters.py; then
+                check "formatters.py: import+usage updated" 1
+            else
+                check "formatters.py: import+usage updated" 0
+            fi
+
+            # 4. cli.py updated
+            if grep -q "compute_mean" mathlib/cli.py && ! grep -q "calculate_average" mathlib/cli.py; then
+                check "cli.py: usage updated" 1
+            else
+                check "cli.py: usage updated" 0
+            fi
+
+            # 5. test_core.py updated
+            if grep -q "compute_mean" tests/test_core.py && ! grep -q "calculate_average" tests/test_core.py; then
+                check "test_core.py: updated" 1
+            else
+                check "test_core.py: updated" 0
+            fi
+
+            # 6. test_formatters.py still passes
+            OUTPUT=$(python3 tests/test_formatters.py 2>&1)
+            if echo "$OUTPUT" | grep -q "All tests passed"; then
+                check "test_formatters.py: still passes" 1
+            else
+                check "test_formatters.py: still passes" 0
+            fi
+
+            # 7. README.md updated
+            if grep -q "compute_mean" README.md && ! grep -q "calculate_average" README.md; then
+                check "README.md: documentation updated" 1
+            else
+                check "README.md: documentation updated" 0
+            fi
+
+            echo ""
+            echo "Score: $SCORE/$TOTAL"
+
+            if [ "$SCORE" -ge 7 ]; then
+                exit 0
+            else
+                exit 1
+            fi
+        ''')
+
+        return Task(
+            task_id="frontier_rename_ripple",
+            category=TaskCategory.DIAGNOSTIC,
+            title="Rename function and update ALL 7 files",
+            difficulty="hard",
+            goal=textwrap.dedent("""\
+                Rename the function `calculate_average` to `compute_mean` throughout
+                the entire MathLib project.
+
+                This rename must be applied consistently across ALL files that reference
+                this function:
+                - Source code (definition, imports, usages)
+                - Tests (imports, assertions)
+                - Documentation (README.md)
+                - Any other files that reference the old name
+
+                After the rename, all tests must still pass.
+
+                Use grep or find_references to locate ALL occurrences before editing.
+            """),
+            hints="Don't forget: __init__.py, cli.py, formatters.py, tests, README.md",
+            environment=EnvironmentSetup(
+                seed_files=files
+            ),
+            ground_truth="Must update 7 files: core.py (definition), __init__.py (export), formatters.py (import+usage), cli.py (import+usage), test_core.py (import+usage), README.md (docs), and ensure test_formatters.py still passes.",
+            eval_spec=EvalSpec(
+                method=EvalMethod.SCRIPT_CHECK,
+                check_script_content=eval_script,
+            ),
+            capabilities=[
+                Capability.CODE_EDITING,
+                Capability.MULTI_FILE_REASONING,
+                Capability.CODE_SEARCH,
+            ],
+            source="frontier_generator",
+            estimated_minutes=8,
+        )
+
+    def _feature_flag_removal(self, difficulty: str) -> Task:
+        """Remove a feature flag and all its conditional branches across 6+ files.
+
+        Key difficulty: The flag is referenced in many places — source, tests,
+        config, docs, CLI args. Agent must find and clean up ALL traces.
+        Leaving any dangling reference causes test failures.
+        """
+        import json as _json
+        files = {}
+
+        files["app/__init__.py"] = textwrap.dedent('''\
+            """TaskRunner — a simple task execution framework."""
+            __version__ = "2.1.0"
+        ''')
+
+        files["app/config.py"] = textwrap.dedent('''\
+            """Configuration management."""
+            import json
+            import os
+
+            DEFAULT_CONFIG = {
+                "max_workers": 4,
+                "timeout": 30,
+                "log_level": "INFO",
+                "enable_experimental_cache": True,  # Feature flag — REMOVE THIS
+                "cache_ttl": 300,
+                "output_format": "json",
+            }
+
+
+            class Config:
+                def __init__(self, config_path=None, **overrides):
+                    self._data = dict(DEFAULT_CONFIG)
+                    if config_path and os.path.exists(config_path):
+                        with open(config_path) as f:
+                            self._data.update(json.load(f))
+                    self._data.update(overrides)
+
+                def get(self, key, default=None):
+                    return self._data.get(key, default)
+
+                @property
+                def cache_enabled(self):
+                    return self._data.get("enable_experimental_cache", False)
+        ''')
+
+        files["app/cache.py"] = textwrap.dedent('''\
+            """Simple in-memory cache with TTL support."""
+            import time
+
+
+            class Cache:
+                def __init__(self, ttl=300):
+                    self._store = {}
+                    self._ttl = ttl
+
+                def get(self, key):
+                    if key in self._store:
+                        value, timestamp = self._store[key]
+                        if time.time() - timestamp < self._ttl:
+                            return value
+                        del self._store[key]
+                    return None
+
+                def set(self, key, value):
+                    self._store[key] = (value, time.time())
+
+                def clear(self):
+                    self._store.clear()
+
+                @property
+                def size(self):
+                    return len(self._store)
+        ''')
+
+        files["app/executor.py"] = textwrap.dedent('''\
+            """Task executor with optional caching."""
+            from .config import Config
+            from .cache import Cache
+
+
+            class TaskExecutor:
+                def __init__(self, config: Config):
+                    self.config = config
+                    self._cache = Cache(ttl=config.get("cache_ttl", 300)) if config.cache_enabled else None
+                    self._stats = {"executed": 0, "cached": 0, "errors": 0}
+
+                def execute(self, task_name: str, fn, *args, **kwargs):
+                    """Execute a task, optionally using cache."""
+                    if self._cache is not None:
+                        cache_key = f"{task_name}:{args}:{kwargs}"
+                        cached = self._cache.get(cache_key)
+                        if cached is not None:
+                            self._stats["cached"] += 1
+                            return cached
+
+                    try:
+                        result = fn(*args, **kwargs)
+                        self._stats["executed"] += 1
+                        if self._cache is not None:
+                            cache_key = f"{task_name}:{args}:{kwargs}"
+                            self._cache.set(cache_key, result)
+                        return result
+                    except Exception as e:
+                        self._stats["errors"] += 1
+                        raise
+
+                @property
+                def stats(self):
+                    return dict(self._stats)
+
+                def clear_cache(self):
+                    if self._cache is not None:
+                        self._cache.clear()
+        ''')
+
+        files["app/cli.py"] = textwrap.dedent('''\
+            """CLI entry point."""
+            import argparse
+            import json
+            import sys
+            from .config import Config
+            from .executor import TaskExecutor
+
+
+            def parse_args():
+                parser = argparse.ArgumentParser(description="TaskRunner")
+                parser.add_argument("--config", help="Config file path")
+                parser.add_argument("--workers", type=int, help="Max workers")
+                parser.add_argument("--enable-cache", action="store_true",
+                                    help="Enable experimental caching")
+                parser.add_argument("--no-cache", action="store_true",
+                                    help="Disable experimental caching")
+                parser.add_argument("--format", choices=["json", "text"], default="json")
+                return parser.parse_args()
+
+
+            def main():
+                args = parse_args()
+                overrides = {}
+                if args.workers:
+                    overrides["max_workers"] = args.workers
+                if args.enable_cache:
+                    overrides["enable_experimental_cache"] = True
+                if args.no_cache:
+                    overrides["enable_experimental_cache"] = False
+
+                config = Config(config_path=args.config, **overrides)
+                executor = TaskExecutor(config)
+
+                result = executor.execute("demo", lambda: {"status": "ok"})
+                if args.format == "json":
+                    print(json.dumps(result))
+                else:
+                    print(f"Result: {result}")
+
+                stats = executor.stats
+                if config.cache_enabled:
+                    print(f"Cache: {stats['cached']} hits")
+        ''')
+
+        files["tests/__init__.py"] = ""
+
+        files["tests/test_executor.py"] = textwrap.dedent('''\
+            """Tests for task executor."""
+            import sys
+            import os
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from app.config import Config
+            from app.executor import TaskExecutor
+
+
+            def test_basic_execution():
+                config = Config(enable_experimental_cache=False)
+                executor = TaskExecutor(config)
+                result = executor.execute("test", lambda: 42)
+                assert result == 42
+                assert executor.stats["executed"] == 1
+                print("PASS: test_basic_execution")
+
+
+            def test_execution_with_cache():
+                config = Config(enable_experimental_cache=True)
+                executor = TaskExecutor(config)
+                counter = [0]
+                def slow_task():
+                    counter[0] += 1
+                    return counter[0]
+
+                r1 = executor.execute("count", slow_task)
+                r2 = executor.execute("count", slow_task)
+                assert r1 == r2 == 1
+                assert executor.stats["cached"] == 1
+                print("PASS: test_execution_with_cache")
+
+
+            def test_error_tracking():
+                config = Config(enable_experimental_cache=False)
+                executor = TaskExecutor(config)
+                try:
+                    executor.execute("fail", lambda: 1/0)
+                except ZeroDivisionError:
+                    pass
+                assert executor.stats["errors"] == 1
+                print("PASS: test_error_tracking")
+
+
+            if __name__ == "__main__":
+                test_basic_execution()
+                test_execution_with_cache()
+                test_error_tracking()
+                print("\\nAll tests passed")
+        ''')
+
+        files["README.md"] = textwrap.dedent('''\
+            # TaskRunner
+
+            A simple task execution framework with built-in caching.
+
+            ## Configuration
+
+            ```json
+            {
+                "max_workers": 4,
+                "timeout": 30,
+                "enable_experimental_cache": true,
+                "cache_ttl": 300
+            }
+            ```
+
+            ### Cache (Experimental)
+
+            Set `enable_experimental_cache: true` to enable result caching.
+            Cache TTL defaults to 300 seconds.
+
+            CLI flags: `--enable-cache` / `--no-cache`
+
+            ## Usage
+
+            ```python
+            from app.config import Config
+            from app.executor import TaskExecutor
+
+            config = Config(enable_experimental_cache=True)
+            executor = TaskExecutor(config)
+            result = executor.execute("my_task", my_function, arg1, arg2)
+            ```
+        ''')
+
+        files["config.json"] = _json.dumps({
+            "max_workers": 2,
+            "timeout": 60,
+            "enable_experimental_cache": True,
+            "cache_ttl": 600,
+        }, indent=2)
+
+        eval_script = textwrap.dedent('''\
+            #!/bin/bash
+            cd "$WORKDIR"
+
+            SCORE=0
+            TOTAL=8
+
+            check() {
+                local desc="$1"
+                local passed="$2"
+                if [ "$passed" -eq 1 ]; then
+                    echo "PASS: $desc"
+                    SCORE=$((SCORE + 1))
+                else
+                    echo "FAIL: $desc"
+                fi
+            }
+
+            # 1. Config no longer has the feature flag
+            if ! grep -q "enable_experimental_cache" app/config.py; then
+                check "config.py: flag removed from defaults" 1
+            else
+                check "config.py: flag removed from defaults" 0
+            fi
+
+            # 2. Executor always uses cache (no conditional)
+            if grep -q "Cache(" app/executor.py && ! grep -q "cache_enabled" app/executor.py; then
+                check "executor.py: cache always enabled" 1
+            else
+                check "executor.py: cache always enabled" 0
+            fi
+
+            # 3. CLI removed --enable-cache and --no-cache flags
+            if ! grep -q "enable.cache" app/cli.py && ! grep -q "no.cache" app/cli.py; then
+                check "cli.py: cache flags removed" 1
+            else
+                check "cli.py: cache flags removed" 0
+            fi
+
+            # 4. Tests no longer reference the flag
+            if ! grep -q "enable_experimental_cache" tests/test_executor.py; then
+                check "test_executor.py: flag references removed" 1
+            else
+                check "test_executor.py: flag references removed" 0
+            fi
+
+            # 5. README updated
+            if ! grep -qi "experimental" README.md && ! grep -q "enable_experimental_cache" README.md; then
+                check "README.md: experimental references removed" 1
+            else
+                check "README.md: experimental references removed" 0
+            fi
+
+            # 6. config.json updated
+            if ! grep -q "enable_experimental_cache" config.json; then
+                check "config.json: flag removed" 1
+            else
+                check "config.json: flag removed" 0
+            fi
+
+            # 7. Tests still pass
+            OUTPUT=$(python3 tests/test_executor.py 2>&1)
+            if echo "$OUTPUT" | grep -q "All tests passed"; then
+                check "tests pass after refactor" 1
+            else
+                echo "  Test output: $OUTPUT"
+                check "tests pass after refactor" 0
+            fi
+
+            # 8. Cache works without flag
+            OUTPUT2=$(python3 -c "
+import sys, os
+sys.path.insert(0, '.')
+from app.config import Config
+from app.executor import TaskExecutor
+config = Config()
+executor = TaskExecutor(config)
+ct = [0]
+def f():
+    ct[0] += 1
+    return ct[0]
+r1 = executor.execute('t', f)
+r2 = executor.execute('t', f)
+assert r1 == r2 == 1, f'Cache broken: r1={r1}, r2={r2}'
+print('CACHE_OK')
+" 2>&1)
+            if echo "$OUTPUT2" | grep -q "CACHE_OK"; then
+                check "cache works without flag" 1
+            else
+                echo "  Cache test: $OUTPUT2"
+                check "cache works without flag" 0
+            fi
+
+            echo ""
+            echo "Score: $SCORE/$TOTAL"
+
+            if [ "$SCORE" -ge 8 ]; then
+                exit 0
+            else
+                exit 1
+            fi
+        ''')
+
+        return Task(
+            task_id="frontier_feature_flag_removal",
+            category=TaskCategory.DIAGNOSTIC,
+            title="Remove feature flag and clean up ALL 8 references",
+            difficulty="hard",
+            goal=textwrap.dedent("""\
+                The `enable_experimental_cache` feature flag in TaskRunner is being
+                promoted to a permanent feature. Remove the feature flag and make
+                caching always enabled.
+
+                This means:
+                1. Remove the `enable_experimental_cache` config option and `cache_enabled` property
+                2. Make the executor always create and use the cache (no conditional)
+                3. Remove the `--enable-cache` and `--no-cache` CLI flags
+                4. Update tests to not reference the flag
+                5. Update README and config.json to remove references
+                6. Cache functionality must still work — just without the flag
+
+                After cleanup, ALL tests must still pass and the cache must still work.
+                Use grep to find ALL occurrences of the flag before making changes.
+            """),
+            hints="Search for 'enable_experimental_cache', 'cache_enabled', 'enable-cache', 'no-cache', and 'experimental' across all files.",
+            environment=EnvironmentSetup(
+                seed_files=files
+            ),
+            ground_truth="Must update 6+ files: config.py (remove flag+property), executor.py (always create cache), cli.py (remove --enable-cache/--no-cache), test_executor.py (remove flag refs), README.md (remove experimental docs), config.json (remove flag). Cache must still work.",
+            eval_spec=EvalSpec(
+                method=EvalMethod.SCRIPT_CHECK,
+                check_script_content=eval_script,
+            ),
+            capabilities=[
+                Capability.CODE_EDITING,
+                Capability.MULTI_FILE_REASONING,
+                Capability.CODE_SEARCH,
+                Capability.CODE_READING,
             ],
             source="frontier_generator",
             estimated_minutes=10,
