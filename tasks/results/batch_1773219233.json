@@ -1,0 +1,47 @@
+[
+  {
+    "task_id": "multi_step_59572a87",
+    "category": "multi_step",
+    "title": "Bootstrap Python CLI tool from specification",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 84.41705965995789,
+    "exit_code": 0
+  },
+  {
+    "task_id": "multi_step_07046a28",
+    "category": "multi_step",
+    "title": "Build REST API server from data model",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 135.99680352210999,
+    "exit_code": 0
+  },
+  {
+    "task_id": "multi_step_d7b32dfa",
+    "category": "multi_step",
+    "title": "Migrate SQLite database to JSON API format",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 58.61512231826782,
+    "exit_code": 0
+  },
+  {
+    "task_id": "multi_step_d4d28752",
+    "category": "multi_step",
+    "title": "Add test suite to untested project",
+    "passed": false,
+    "score": 0.3333333333333333,
+    "elapsed": 184.1146273612976,
+    "exit_code": 0
+  },
+  {
+    "task_id": "multi_step_f8151568",
+    "category": "multi_step",
+    "title": "Refactor monolithic script into modules",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 123.9902856349945,
+    "exit_code": 0
+  }
+]
