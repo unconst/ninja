@@ -200,6 +200,34 @@ impl AgentRunner {
                         ),
                     });
                 }
+            } else if iteration == 10 {
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                if diff_stat.is_empty() {
+                    self.conversation.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(
+                            "[SYSTEM] CRITICAL — 10 iterations used with ZERO files modified. \
+                             You MUST start editing files NOW. Stop reading and start implementing. \
+                             You have a plan — execute it. Open the most important file and make \
+                             your first edit immediately in your next response.".to_string()
+                        ),
+                    });
+                }
+            } else if iteration == 15 {
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let diff_preview = if diff_stat.is_empty() {
+                    "WARNING: Still no files modified.".to_string()
+                } else {
+                    diff_stat.lines().take(15).collect::<Vec<_>>().join("\n")
+                };
+                self.conversation.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(format!(
+                        "[SYSTEM] MID-RUN CHECK — Iteration 15. Progress so far:\n```\n{}\n```\n\n\
+                         If no files are modified yet, you are falling behind. Start editing immediately.",
+                        diff_preview
+                    )),
+                });
             } else if iteration == 20 || iteration == 40 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 let diff_preview = if diff_stat.is_empty() {
@@ -469,7 +497,7 @@ impl AgentRunner {
         let mut cumulative_input_tokens: u64 = 0;
         let mut completion_check_done = false;
         let mut last_write_iteration: usize = 0; // Track last iteration with a write/edit tool
-        let mut idle_nudge_done = false;
+        let mut last_idle_nudge: usize = 0;
 
         for iteration in 0..self.config.max_iterations {
             rollout.iteration_count = (iteration + 1) as u64;
@@ -495,6 +523,34 @@ impl AgentRunner {
                         ),
                     });
                 }
+            } else if iteration == 10 {
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                if diff_stat.is_empty() {
+                    messages.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(
+                            "[SYSTEM] CRITICAL — 10 iterations used with ZERO files modified. \
+                             You MUST start editing files NOW. Stop reading and start implementing. \
+                             You have a plan — execute it. Open the most important file and make \
+                             your first edit immediately in your next response.".to_string()
+                        ),
+                    });
+                }
+            } else if iteration == 15 {
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let diff_preview = if diff_stat.is_empty() {
+                    "WARNING: Still no files modified.".to_string()
+                } else {
+                    diff_stat.lines().take(15).collect::<Vec<_>>().join("\n")
+                };
+                messages.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(format!(
+                        "[SYSTEM] MID-RUN CHECK — Iteration 15. Progress so far:\n```\n{}\n```\n\n\
+                         If no files are modified yet, you are falling behind. Start editing immediately.",
+                        diff_preview
+                    )),
+                });
             } else if iteration == 20 || iteration == 40 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 let diff_preview = if diff_stat.is_empty() {
@@ -840,9 +896,10 @@ impl AgentRunner {
                 content: MessageContent::Blocks(result_blocks),
             });
 
-            // Nudge if 10+ iterations without any file modifications
-            if !idle_nudge_done && iteration > 10 && iteration - last_write_iteration >= 10 {
-                idle_nudge_done = true;
+            // Nudge if 7+ consecutive read-only iterations (re-fires every 7)
+            let idle_gap = iteration - last_write_iteration;
+            if iteration > 7 && idle_gap >= 7 && (last_idle_nudge == 0 || iteration - last_idle_nudge >= 7) {
+                last_idle_nudge = iteration;
                 messages.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(
