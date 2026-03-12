@@ -127,8 +127,8 @@ impl ApiClient {
         if self.api_base_url.contains("anthropic.com") {
             return ApiFormat::Anthropic;
         }
-        // Direct OpenAI API
-        if self.api_base_url.contains("openai.com") {
+        // Direct OpenAI API or Chutes (OpenAI-compatible)
+        if self.api_base_url.contains("openai.com") || self.api_base_url.contains("chutes.ai") {
             return ApiFormat::OpenAI;
         }
         // OpenRouter: detect from model prefix
@@ -513,7 +513,15 @@ impl ApiClient {
                 }
                 r
             }
-            ApiFormat::OpenAI => req.header("Authorization", format!("Bearer {}", self.api_key)),
+            ApiFormat::OpenAI => {
+                // Chutes API uses plain key, not Bearer prefix
+                let auth_value = if self.api_key.starts_with("cpk_") {
+                    self.api_key.clone()
+                } else {
+                    format!("Bearer {}", self.api_key)
+                };
+                req.header("Authorization", auth_value)
+            }
         };
 
         let resp = req
@@ -634,7 +642,15 @@ impl ApiClient {
                 }
                 r
             }
-            ApiFormat::OpenAI => req.header("Authorization", format!("Bearer {}", self.api_key)),
+            ApiFormat::OpenAI => {
+                // Chutes API uses plain key, not Bearer prefix
+                let auth_value = if self.api_key.starts_with("cpk_") {
+                    self.api_key.clone()
+                } else {
+                    format!("Bearer {}", self.api_key)
+                };
+                req.header("Authorization", auth_value)
+            }
         };
 
         let resp = req
