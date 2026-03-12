@@ -171,16 +171,45 @@ ninja --prompt "Implement feature X" --max-iterations 75 --thinking-budget 10000
 | Cost per task | $0.16 avg |
 | Max iterations | 75 |
 
-*Baseline on 215/731 tasks (29% sample). Full 651-task run in progress (~48% done).*
+*Full 651-task run in progress (439/651 done, ~$72 spent). Updated numbers when complete.*
 
 **Failure breakdown** (196 failures with patches):
 - 60% wrong fix / misdiagnosis — patch doesn't address actual issue
 - 12% partial fix — some tests pass, not all
 - 6% regressions — fixes one thing, breaks another
-- 12% Go binary pollution — compiled `.test` artifacts in diffs
+- 12% Go binary pollution — compiled `.test` artifacts in diffs (now fixed)
 - 7% no patch — couldn't localize the bug at all
 
 **Top failure mode**: The agent finds plausible files and produces reasonable-looking patches, but misunderstands what the failing tests actually require. Localization + comprehension is the primary bottleneck, not patch quality.
+
+### Performance Over Time
+
+```
+SWE-Bench Pro pass@1
+────────────────────────────────────────────────────
+Date        Score     Sample  Notes
+────────────────────────────────────────────────────
+2026-03-11  19/215     8.8%  First baseline (29% sample)
+2026-03-12  ??/651      ???  Full run in progress (67% done)
+────────────────────────────────────────────────────
+SOTA: ~46% (SEAL scaffold)
+Claude 4.5 Sonnet raw: 23.7%
+
+ 50% ┤
+     │
+ 40% ┤
+     │
+ 30% ┤
+     │                                          ← target
+ 20% ┤
+     │
+ 10% ┤  ■ 8.8%
+     │
+  0% ┼──┬──────────────────────────────────────
+     Mar 11   (full run pending)
+```
+
+*Chart updated after each eval run. Goal: close the gap to Claude 4.5 Sonnet raw (23.7%) through general-purpose improvements, not benchmark-specific hacks.*
 
 ### Frontier Tasks (175 custom diagnostic tasks)
 
