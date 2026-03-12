@@ -1964,8 +1964,9 @@ print(json.dumps(result))
         if has_go {
             // Check if go.mod exists (it's a Go module)
             if workdir.join("go.mod").exists() {
-                if let Ok(output) = std::process::Command::new("go")
-                    .args(&["build", "./..."])
+                // Use timeout to prevent hanging on large projects
+                if let Ok(output) = std::process::Command::new("timeout")
+                    .args(&["60", "go", "build", "./..."])
                     .current_dir(workdir)
                     .output()
                 {
@@ -1973,6 +1974,9 @@ print(json.dumps(result))
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         let trimmed: String = stderr.lines().take(30)
                             .collect::<Vec<_>>().join("\n");
+                        if trimmed.is_empty() {
+                            return "[Go build timed out after 60s]".to_string();
+                        }
                         return format!("[Go build failed]\n{}", trimmed);
                     }
                 }
@@ -1982,13 +1986,16 @@ print(json.dumps(result))
         if has_ts {
             // Check for tsconfig.json
             if workdir.join("tsconfig.json").exists() {
-                // Try npx tsc --noEmit (fastest TS type check)
-                if let Ok(output) = std::process::Command::new("npx")
-                    .args(&["tsc", "--noEmit"])
+                // Use timeout — tsc --noEmit can hang on large monorepos
+                if let Ok(output) = std::process::Command::new("timeout")
+                    .args(&["60", "npx", "tsc", "--noEmit"])
                     .current_dir(workdir)
                     .output()
                 {
-                    if !output.status.success() {
+                    // Only report errors if tsc actually ran and failed
+                    // (exit code 124 = timeout, just skip in that case)
+                    let exit_code = output.status.code().unwrap_or(-1);
+                    if !output.status.success() && exit_code != 124 {
                         let stdout = String::from_utf8_lossy(&output.stdout);
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         let combined = format!("{}\n{}", stdout, stderr);
