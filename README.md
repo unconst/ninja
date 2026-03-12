@@ -165,32 +165,40 @@ ninja --prompt "Implement feature X" --max-iterations 75 --thinking-budget 10000
 
 | Metric | Value |
 |--------|-------|
-| **pass@1** | **19/215 (8.8%)** |
-| Patch rate | 93% (199/215 produced patches) |
-| Near-misses | 26 tasks (partial test fixes) |
-| Cost per task | $0.16 avg |
+| **pass@1** | **69/615 (11.2%)** |
+| Total tasks | 651 (615 with patches, 36 no-patch) |
+| Near-misses | 52 tasks (partial F2P passes) |
+| Regressions | 6 tasks (F2P pass, P2P fail) |
+| Docker timeouts | 23 tasks |
+| Cost per task | ~$0.14 avg |
 | Max iterations | 75 |
 
-*Full 651-task run in progress (439/651 done, ~$72 spent). Updated numbers when complete.*
+**By repository:**
+| Repo | Pass Rate | Tasks |
+|------|-----------|-------|
+| ansible/ansible | 15/90 (17%) | 96 |
+| NodeBB/NodeBB | 7/43 (16%) | 44 |
+| future-architect/vuls | 9/58 (16%) | 62 |
+| qutebrowser/qutebrowser | 11/73 (15%) | 79 |
+| flipt-io/flipt | 9/82 (11%) | 85 |
+| gravitational/teleport | 5/69 (7%) | 76 |
+| navidrome/navidrome | 4/56 (7%) | 57 |
+| protonmail/webclients | 5/61 (8%) | 65 |
 
-**Failure breakdown** (196 failures with patches):
-- 60% wrong fix / misdiagnosis — patch doesn't address actual issue
-- 12% partial fix — some tests pass, not all
-- 6% regressions — fixes one thing, breaks another
-- 12% Go binary pollution — compiled `.test` artifacts in diffs (now fixed)
-- 7% no patch — couldn't localize the bug at all
-
-**Top failure mode**: The agent finds plausible files and produces reasonable-looking patches, but misunderstands what the failing tests actually require. Localization + comprehension is the primary bottleneck, not patch quality.
+**Near-miss analysis** (52 tasks with partial test passes):
+- 15 tasks are just 1 test away from passing
+- Top failure modes: partial propagation, scope truncation, wrong refactoring strategy, spec misreading
+- 2 tasks at 90%+ F2P pass rate (navidrome 93%, teleport 92%)
 
 ### Performance Over Time
 
 ```
 SWE-Bench Pro pass@1
 ────────────────────────────────────────────────────
-Date        Score     Sample  Notes
+Date        Score       Rate   Notes
 ────────────────────────────────────────────────────
-2026-03-11  19/215     8.8%  First baseline (29% sample)
-2026-03-12  ??/651      ???  Full run in progress (67% done)
+2026-03-11  19/215      8.8%  First baseline (29% sample)
+2026-03-12  69/615     11.2%  Full run (Claude via OpenRouter)
 ────────────────────────────────────────────────────
 SOTA: ~46% (SEAL scaffold)
 Claude 4.5 Sonnet raw: 23.7%
@@ -203,13 +211,13 @@ Claude 4.5 Sonnet raw: 23.7%
      │                                          ← target
  20% ┤
      │
- 10% ┤  ■ 8.8%
+ 10% ┤  ■ 8.8%  ■ 11.2%
      │
-  0% ┼──┬──────────────────────────────────────
-     Mar 11   (full run pending)
+  0% ┼──┬──────┬──────────────────────────────
+     Mar 11  Mar 12
 ```
 
-*Chart updated after each eval run. Goal: close the gap to Claude 4.5 Sonnet raw (23.7%) through general-purpose improvements, not benchmark-specific hacks.*
+*Goal: close the gap to Claude 4.5 Sonnet raw (23.7%) through general-purpose improvements, not benchmark-specific hacks. Next run will use Chutes (Kimi-K2.5-TEE) instead of OpenRouter.*
 
 ### Frontier Tasks (175 custom diagnostic tasks)
 
