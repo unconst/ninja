@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_86_8overrides",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation: ~80 locations, 12 files, 8 overriding subclasses, traps",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 217.08547115325928,
+  "exit_code": 1,
+  "result": {
+    "score": 0.875,
+    "details": "  FAIL: 16/22 tests pass\ntests/test_dataflow.py::TestLogFlow::test_logs FAILED                    [ 31%] [ 31%]\ntests/test_dataflow.py::TestAsyncFlow::test_queues_then_flushes FAILED   [ 36%] [ 36%]\ntests/test_dataflow.py::TestPriorityFlow::test_priority_ordering FAILED  [ 40%] [ 40%]\ntests/test_dataflow.py::TestBatchFlow::test_batch FAILED                 [ 45%] [ 45%]\ntests/test_dataflow.py::TestValidatingFlow::test_valid FAILED            [ 95%] [ 95%]\n  PASS: No 'class DataFlow' remains\n  PASS: No 'def process' methods remain\n  FAIL: 1 .process() calls remain\n  PASS: core.py has class StreamFlow\n  PASS: core.py has transform(self, item)\n  PASS: __init__.py imports StreamFlow\n  PASS: No transform methods use 'record'\n  PASS: record_type preserved (14)\n  PASS: _record_count preserved\n  PASS: RECORD_PREFIX preserved\n  PASS: process_async preserved\n  PASS: DataFlowError preserved\n  PASS: factory.py uses StreamFlow\n  PASS: router.py uses StreamFlow and transform\n  PASS: process_reverse preserved\n\nScore: 14/16\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_86_8overrides_ocz8pq60"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_5",
+  "category": "diagnostic",
+  "title": "Rename constant across 5 ripple locations (easy propagation)",
+  "difficulty": "medium",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 112.68653631210327,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All 10 tests pass\n  PASS: No DEFAULT_TIMEOUT references remain\n  PASS: config.py has REQUEST_TIMEOUT_MS = 30000\n  PASS: __init__.py imports REQUEST_TIMEOUT_MS\n  PASS: http.py uses REQUEST_TIMEOUT_MS\n  PASS: retry.py uses REQUEST_TIMEOUT_MS\n  PASS: pool.py uses REQUEST_TIMEOUT_MS\n\nScore: 7/7\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_propagation_5_w_p8jxfm"
+}

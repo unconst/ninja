@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_dead_code_elimination",
+  "category": "diagnostic",
+  "title": "Find and remove dead code without breaking dynamic dispatch or internal helpers",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 123.24962520599365,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_dead_code_elimination_s_7zwmp1"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_git_archaeology",
+  "category": "diagnostic",
+  "title": "Use git history to find and fix a regression introduced by a refactoring commit",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 74.84319472312927,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "=== Running regression tests ===\nPASS: test_basic_arithmetic\nPASS: test_division_by_zero\nPASS: test_history\nPASS: test_integer_division_negative\nPASS: test_integer_division_positive\nPASS: test_power_and_modulo\nPASS: test_unknown_operation\n\nResults: 7/7\n\nTests passed: 7/7\nAll tests passed.\n\n=== Checking fix is minimal ===\nChanged Python files: calculator.py\nformatter.py\nmain.py\nTest file not modified \u2014 good.\n\n=== Checking int_divide implementation ===\nint_divide implementation correct\n\n=== Checki",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_git_archaeology_cu_uhpmh"
+}

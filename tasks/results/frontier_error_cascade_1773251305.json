@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_error_cascade",
+  "category": "diagnostic",
+  "title": "Fix cascading scheduler bugs that mask each other",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 169.65478539466858,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "/tmp/tmp34k257lh.sh: line 2: Validate all 4 bugs are fixed in the scheduler.: command not found\n/tmp/tmp34k257lh.sh: line 3: import: command not found\n/tmp/tmp34k257lh.sh: line 4: import: command not found\n/tmp/tmp34k257lh.sh: line 5: import: command not found\n/tmp/tmp34k257lh.sh: line 7: fails: command not found\n/tmp/tmp34k257lh.sh: line 10: syntax error near unexpected token `('\n/tmp/tmp34k257lh.sh: line 10: `result = subprocess.run('\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 2"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_error_cascade_1m71t7pu"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_interface_preservation",
+  "category": "diagnostic",
+  "title": "Optimize data serializer while preserving public API exactly",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 307.1935148239136,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "=== Interface Preservation Eval ===\n--- Check 1: Public API signatures ---\n  All public API signatures verified\n--- Check 2: Round-trip serialize/deserialize ---\n  Round-trip passed (500 records)\n--- Check 3: Wire format preserved ---\n  Wire format exactly preserved\n--- Check 4: Validation catches expected errors ---\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_interface_preservation_o2fx9bnb"
+}

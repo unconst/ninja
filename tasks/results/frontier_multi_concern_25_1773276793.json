@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_25",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation 25: Rename class + method + parameter across command system (25 locations)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 180.13133025169373,
+  "exit_code": 0,
+  "result": {
+    "score": 0.7,
+    "details": "  FAIL: 11/24 tests pass\ntests/test_cmdsys.py::TestDeleteCmd::test_delete FAILED                  [ 20%] [ 20%]\ntests/test_cmdsys.py::TestDeleteCmd::test_delete_not_found FAILED        [ 25%] [ 25%]\ntests/test_cmdsys.py::TestUpdateCmd::test_update FAILED                  [ 29%] [ 29%]\ntests/test_cmdsys.py::TestUpdateCmd::test_undo_update FAILED             [ 33%] [ 33%]\ntests/test_cmdsys.py::TestQueryCmd::test_query_all FAILED                [ 37%] [ 37%]\n  PASS: No 'class Command' base class\n  PASS: No 'def execute' methods remain\n  FAIL: 3 .execute() calls remain\n  PASS: base.py has class Action\n  PASS: base.py has perform(self, env)\n  PASS: __init__.py imports Action\n  PASS: No perform methods use 'context' parameter\n  PASS: dispatcher.py uses Action\n  FAIL: validator.py missing Action or .perform()\n\nScore: 7/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_25_yza0uug8"
+}

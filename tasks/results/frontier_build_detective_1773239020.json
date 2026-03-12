@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_build_detective",
+  "category": "diagnostic",
+  "title": "Fix broken build system with 3 interacting config issues",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 102.28932929039001,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: make build succeeded\nPASS: Extension import works - fast_sum([1,2,3]) = 6.0\nPASS: make test succeeded\nPASS: numpy version constraints are consistent\nAll checks passed\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/root/ninja/tmp_tasks"
+}

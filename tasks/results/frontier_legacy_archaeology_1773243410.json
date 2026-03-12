@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_legacy_archaeology",
+  "category": "diagnostic",
+  "title": "Fix regressions in legacy pricing engine",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 210.9999396800995,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_legacy_archaeology_g1z8iyza"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_selective_migration",
+  "category": "diagnostic",
+  "title": "Migrate only legacy API functions, leave modern functions untouched",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 213.53642392158508,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_selective_migration_24ykjmep"
+}

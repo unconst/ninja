@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_test_generation",
+  "category": "diagnostic",
+  "title": "Write comprehensive pytest tests for a library management module",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 139.50306057929993,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "=== Phase 1: Check test file exists ===\nPASS: tests/test_library.py exists\n\n=== Phase 2: Run tests against original library.py ===\n============================= test session starts ==============================\nplatform linux -- Python 3.10.20, pytest-9.0.2, pluggy-1.6.0 -- /root/Arbos/.venv/bin/python3\ncachedir: .pytest_cache\nrootdir: /tmp/task_frontier_test_generation_2s5lqr9b\ncollecting ... collected 48 items\n\ntests/test_library.py::TestBook::test_book_creation_valid PASSED         [  2%]\ntests/test_library.py::TestBook::test_book_creation_multiple_copies PASSED [  4%]\ntests/test_library.py::TestBook::test_book_creation_whitespace_trimming PASSED [  6%]\ntests/test_library.py::TestBook::test_book_creation_invalid_title PASSED [  8%]\ntests/test_library.py::TestBook::test_book_creation_invalid_author PASSED [ 10%]\ntests/test_library.py::TestBook::test_book_creation_invalid_isbn PASSED  [ 12%]\ntests/test_library.py::TestBook::test_book_creation_invalid_copies PASSED [ 14%]\ntests/test_library.py::TestBook::test_book_checkout_success PASSED       [ 16%]\ntests/test_library.py::TestBook::test_book_checkout_none_available PASSED [ 18%]\ntests/test_library.py::TestBook::test_book_return_success PASSED         [ 20%]\ntests/test_library.py::TestBook::test_book_return_all_returned PASSED    [ 22%]\ntests/test_library.py::TestBook::test_book_is_available_property PASSED  [ 25%]\ntests/test_library.py::TestBook::test_book_repr PASSED                   [ 27%]\ntests/test_library.py::TestLibrary::test_library_creation PASSED         [ 29%]\ntests/test_library.py::TestLibrary::test_add_book_success PASSED         [ 31%]\ntests/test_library.py::TestLibrary::test_add_book_duplicate_isbn PASSED  [ 33%]\ntests/test_library.py::TestLibrary::test_remove_book_success PASSED      [ 35%]\ntests/test_library.py::TestLibrary::test_remove_book_not_found PASSED    [ 37%]\ntests/test_library.py::TestLibrary::test_get_book_exists PASSED          [ 39%]\ntests/test_library.py::TestLibrary::test_get_book_n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_test_generation_2s5lqr9b"
+}

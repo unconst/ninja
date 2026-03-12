@@ -1,0 +1,155 @@
+[
+  {
+    "task_id": "frontier_event_bus_bugs",
+    "category": "diagnostic",
+    "title": "Fix 3 interacting bugs in event bus system",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 51.518385887145996,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_edge_case_trap",
+    "category": "diagnostic",
+    "title": "Build duration parser with 13 edge-case tests",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 57.17610812187195,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_feature_flag_removal",
+    "category": "diagnostic",
+    "title": "Remove feature flag and clean up ALL 8 references",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 100.49701046943665,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_hidden_dependency",
+    "category": "diagnostic",
+    "title": "Fix pipeline bug \u2014 root cause is 4 layers deep",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 57.91505193710327,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_adversarial_review",
+    "category": "diagnostic",
+    "title": "Security review: find ALL 5 bugs in auth module",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 138.9572296142578,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_large_codebase",
+    "category": "diagnostic",
+    "title": "Fix config type coercion in 20-file TaskFlow project",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 49.305519819259644,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_incomplete_spec",
+    "category": "diagnostic",
+    "title": "Build markdown table formatter with hidden edge cases",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 156.5303976535797,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_large_file_middleware",
+    "category": "diagnostic",
+    "title": "Add middleware plugin type to large plugin registry system",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 133.35242533683777,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_legacy_archaeology",
+    "category": "diagnostic",
+    "title": "Fix regressions in legacy pricing engine",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 120.2491283416748,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_red_herring",
+    "category": "diagnostic",
+    "title": "Fix stale cache bug \u2014 obvious fix breaks performance tests",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 55.170950174331665,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_performance_profiling",
+    "category": "diagnostic",
+    "title": "Profile and fix 4 performance bottlenecks in data pipeline",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 134.81908988952637,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_state_machine",
+    "category": "diagnostic",
+    "title": "Implement order processor with state machine + business rules",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 72.24321961402893,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_rename_ripple",
+    "category": "diagnostic",
+    "title": "Rename function and update ALL 7 files",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 98.08968424797058,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_symptom_debug",
+    "category": "diagnostic",
+    "title": "Debug config system: nested overrides silently dropped",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 78.25441145896912,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_visitor_extension",
+    "category": "diagnostic",
+    "title": "Add 2 new node types to visitor-pattern AST interpreter",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 106.43200922012329,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_test_generation",
+    "category": "diagnostic",
+    "title": "Write comprehensive tests for an untested calculator module",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 189.2260274887085,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_type_propagation",
+    "category": "diagnostic",
+    "title": "Refactor tags from str to list[str] across 10 files",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 173.46325135231018,
+    "exit_code": 1
+  }
+]

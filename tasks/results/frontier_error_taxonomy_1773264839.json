@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_error_taxonomy",
+  "category": "diagnostic",
+  "title": "Replace generic exceptions with proper error taxonomy across 8 files",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 169.76827192306519,
+  "exit_code": 1,
+  "result": {
+    "score": 0.7272727272727273,
+    "details": "PASS: errors.py exists and is importable\nPASS: error hierarchy correct\nPASS: status codes correct\nPASS: error codes correct\nPASS: no generic raise Exception in source files\n  Found 4 violations of except Exception\nFAIL: no bare except Exception in source files\nPASS: auth.py raises AuthenticationError\nPASS: users.py raises NotFoundError\nPASS: validators.py raises ValidationError\n  App test output: Traceback (most recent call last):\n  File \"<string>\", line 5, in <module>\nAssertionError: Expected 404, got 500\n[2026-03-11 21:33:59] GET /users\nFAIL: app.py returns correct HTTP status for errors\n  Test output summary: 8/11 tests passed\nFAIL: all tests pass\n\nScore: 8/11\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_error_taxonomy_oeyrgzyr"
+}

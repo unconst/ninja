@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_type_propagation",
+  "category": "diagnostic",
+  "title": "Refactor tags from str to list[str] across 10 files",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 104.09235167503357,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_type_propagation_n1jalla0"
+}

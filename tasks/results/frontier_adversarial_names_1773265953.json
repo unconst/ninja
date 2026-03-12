@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_adversarial_names",
+  "category": "diagnostic",
+  "title": "Fix bugs when variable names and comments are deliberately misleading",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 180.37377643585205,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: test_blacklist_add_remove\n  PASS: test_blacklist_is_actually_allowlist\n  PASS: test_calculate_discount_is_actually_tax\n  PASS: test_config_debug_mode_inverted\n  PASS: test_config_verbose_errors_inverted\n  PASS: test_retry_handler_success\n  PASS: test_retry_handler_uses_timeout\n  PASS: test_sort_ascending_by_key_is_descending\n  PASS: test_sort_ascending_is_actually_descending\n  PASS: test_total_after_discount_adds_tax\n\n10 passed, 0 failed out of 10 tests\nALL TESTS PASSED\n\nCHECK 1 PASS: All tests pass\nCHECK 2 PASS: pricing.py exists\nCHECK 3 PASS: access_control.py exists\nCHECK 4 PASS: tests/test_all.py not modified\nCHECK 5 PASS: 5/5 source files modified (need >= 4)\nCHECK 6 PASS: All source files importable\n\nScore: 6/6\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_adversarial_names_o7s3ig3t"
+}

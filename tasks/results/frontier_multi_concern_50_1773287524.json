@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_50",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation: ~50 locations, 12 files, with trap variables",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 163.85640621185303,
+  "exit_code": 0,
+  "result": {
+    "score": 0.8888888888888888,
+    "details": "  FAIL: 12/29 tests pass\ntests/test_databus.py::TestFilterBus::test_passes_filter FAILED          [ 17%] [ 17%]\ntests/test_databus.py::TestLogBus::test_logs_records FAILED              [ 27%] [ 27%]\ntests/test_databus.py::TestLogBus::test_log_for_type FAILED              [ 31%] [ 31%]\ntests/test_databus.py::TestAsyncBus::test_queues_then_flushes FAILED     [ 34%] [ 34%]\ntests/test_databus.py::TestAsyncBus::test_pending_count FAILED           [ 37%] [ 37%]\n  PASS: No 'class DataBus' remains\n  PASS: No 'def process' methods remain\n  FAIL: 9 .process() calls remain\n  PASS: core.py has class StreamBus\n  PASS: core.py has transform(self, item)\n  PASS: __init__.py imports StreamBus\n  PASS: No transform methods use 'record' parameter\n  PASS: record_type preserved (16 occurrences)\n  PASS: _record_count preserved\n  PASS: RECORD_PREFIX preserved\n  PASS: process_async preserved\n  PASS: DataBusError class preserved\n  PASS: factory.py uses StreamBus\n  PASS: router.py uses StreamBus and transform\n  PASS: chain_bus.py uses StreamBus\n  PASS: bidi_bus.py process_reverse preserved\n  PASS: No 'import DataBus' remaining\n\nScore: 16/18\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_50_yt295pyb"
+}

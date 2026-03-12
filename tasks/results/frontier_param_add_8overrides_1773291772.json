@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_param_add_8overrides",
+  "category": "diagnostic",
+  "title": "Add priority parameter to process() across 8 overriding subclasses",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 163.04223942756653,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (17)\n  PASS: core.py process has priority parameter\n  PASS: core.py stores _last_priority\n  PASS: filter_pipeline has priority\n  PASS: log_pipeline has priority\n  PASS: async_pipeline has priority\n  PASS: batch_pipeline has priority\n  PASS: bidi_pipeline has priority\n  PASS: chain_pipeline has priority\n  PASS: validating_pipeline has priority\n  PASS: priority_pipeline has priority\n  PASS: process_reverse unchanged\n  PASS: process_async unchanged\n  PASS: router passes priority\n\nScore: 14/14\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_param_add_8overrides_enx4occw"
+}

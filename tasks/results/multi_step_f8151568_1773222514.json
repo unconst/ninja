@@ -1,0 +1,22 @@
+{
+  "task_id": "multi_step_f8151568",
+  "category": "multi_step",
+  "title": "Refactor monolithic script into modules",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 141.27231979370117,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_multi_step_f8151568_vu2h1t41"
+}

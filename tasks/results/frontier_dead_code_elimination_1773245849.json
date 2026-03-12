@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_dead_code_elimination",
+  "category": "diagnostic",
+  "title": "Find and remove dead code without breaking dynamic dispatch or internal helpers",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 137.4015393257141,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: tests still pass after cleanup\nPASS: old_power removed from math_ops.py\nPASS: compute_factorial removed from math_ops.py\nPASS: deprecated_round removed from math_ops.py\nPASS: old_sanitize removed from string_ops.py\nPASS: _validate_numbers preserved (used internally)\nPASS: multiply preserved (used via getattr dispatch)\nPASS: unused compute_factorial import removed from main.py\n\nScore: 8/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_dead_code_elimination_zqbpdrt7"
+}

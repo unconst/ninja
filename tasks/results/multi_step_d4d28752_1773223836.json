@@ -1,0 +1,32 @@
+{
+  "task_id": "multi_step_d4d28752",
+  "category": "multi_step",
+  "title": "Add test suite to untested project",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 188.86482429504395,
+  "exit_code": 0,
+  "result": {
+    "score": 0.6666666666666666,
+    "details": "Composite: 2/3 sub-evals passed",
+    "checks": [
+      {
+        "name": "exists:tests/",
+        "passed": true,
+        "detail": "exists"
+      },
+      {
+        "name": "contains:passed",
+        "passed": true,
+        "detail": "found"
+      },
+      {
+        "name": "contains:passed",
+        "passed": false,
+        "detail": "not found"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_multi_step_d4d28752_jfwg_sy4"
+}

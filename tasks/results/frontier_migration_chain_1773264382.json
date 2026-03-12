@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_migration_chain",
+  "category": "diagnostic",
+  "title": "Migrate User model from flat fields to nested sub-objects across 7 files",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 223.47194957733154,
+  "exit_code": 1,
+  "result": {
+    "score": 0.75,
+    "details": "PASS: models.py has NameInfo class\nPASS: models.py has AddressInfo class\nPASS: User uses nested name and address\nPASS: user_service.py uses nested name access\nPASS: search_service.py uses nested structure\nPASS: notification_service.py uses nested name\nPASS: notification_service.py uses nested address\nPASS: api/users.py handles nested JSON\nFAIL: No old flat field access patterns remain\n  Found old patterns:\n./models.py:28:        self.street = street\n./models.py:29:        self.city = city\n./models.py:30:        self.state = state\n./models.py:31:        self.zip_code = zip_code\n./models.py:36:            \"street\": self.street,\n./models.py:37:            \"city\": self.city, \n./models.py:38:            \"state\": self.state,\n./models.py:39:            \"zip_code\": self.zip_code\nFAIL: to_dict() produces nested output\n  Error: Traceback (most recent call last):\n  File \"<string>\", line 7, in <module>\nTypeError: User.__init__() missing 4 required positional arguments: 'street', 'city', 'state', and 'zip_code'\nPASS: from_dict() accepts nested input\nFAIL: All 18 tests pass (11/18 passed)\n  Test output (last 20 lines):\nFAIL: test_create_and_get_user: 'User' object has no attribute 'first_name'\nPASS: test_delete_user\nPASS: test_format_search_result\nFAIL: test_get_users_by_state: 'User' object has no attribute 'state'\nPASS: test_list_users\nPASS: test_mailing_label\nFAIL: test_search_advanced: 'User' object has no attribute 'last_name'\nFAIL: test_search_by_location: 'User' object has no attribute 'city'\nPASS: test_search_by_name\nFAIL: test_update_user: 'User' object has no attribute 'first_name'\nPASS: test_user_creation\nFAIL: test_user_from_dict: 'name'\nPASS: test_user_full_address\nPASS: test_user_full_name\nFAIL: test_user_roundtrip: \nPASS: test_user_to_dict\nPASS: test_welcome_email\n\nResults: 11/18 passed\n7 TESTS FAILED\n\nScore: 9/12\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_migration_chain_ovqlskbp"
+}

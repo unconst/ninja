@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_shadow_deletion",
+  "category": "diagnostic",
+  "title": "Fix failing tests caused by multiple shadow function definitions across mathcore modules",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 74.28600597381592,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass\n  PASS: Exactly 1 circle_area definition\n  PASS: Exactly 1 rectangle_perimeter definition\n  PASS: Exactly 1 weighted_mean definition\n  PASS: Exactly 1 celsius_to_fahrenheit definition\n  PASS: triangle_area preserved\n  PASS: median preserved\n  PASS: trimmed_mean preserved\n\nScore: 8/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_multi_shadow_deletion_u51y0u9m"
+}

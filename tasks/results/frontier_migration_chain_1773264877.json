@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_migration_chain",
+  "category": "diagnostic",
+  "title": "Migrate User model from flat fields to nested sub-objects across 7 files",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 207.12530374526978,
+  "exit_code": 1,
+  "result": {
+    "score": 0.6666666666666666,
+    "details": "PASS: models.py has NameInfo class\nPASS: models.py has AddressInfo class\nPASS: User uses nested name and address\nPASS: user_service.py uses nested name access\nPASS: search_service.py uses nested structure\nPASS: notification_service.py uses nested name\nFAIL: notification_service.py uses nested address\nPASS: api/users.py handles nested JSON\nFAIL: No old flat field access patterns remain\n  Found old patterns:\n./tests/test_models.py:31:    assert user.first_name == \"John\"\n./tests/test_models.py:32:    assert user.last_name == \"Doe\"\n./tests/test_models.py:34:    assert user.street == \"123 Main St\"\n./tests/test_models.py:83:    assert user.first_name == \"John\"\n./tests/test_models.py:84:    assert user.street == \"123 Main St\"\n./tests/test_models.py:106:    assert user.first_name == \"Bob\"\n./tests/test_models.py:107:    assert user.last_name == \"Wilson\"\n./tests/test_models.py:108:    assert user.street == \"321 Elm St\"\n./models.py:29:        self.street = street\n./models.py:30:        self.city = city\nFAIL: to_dict() produces nested output\n  Error: Traceback (most recent call last):\n  File \"<string>\", line 8, in <module>\n  File \"/tmp/task_frontier_migration_chain_okao0fgg/./models.py\", line 144, in to_dict\n    \"name\": self.name.to_dict(),\nAttributeError: 'int' object has no attribute 'to_dict'\nPASS: from_dict() accepts nested input\nFAIL: All 18 tests pass (12/18 passed)\n  Test output (last 20 lines):\nPASS: test_create_and_get_user\nPASS: test_delete_user\nFAIL: test_format_search_result: \nPASS: test_get_users_by_state\nPASS: test_list_users\nPASS: test_mailing_label\nPASS: test_search_advanced\nPASS: test_search_by_location\nPASS: test_search_by_name\nPASS: test_update_user\nFAIL: test_user_creation: \nPASS: test_user_from_dict\nFAIL: test_user_full_address: \nFAIL: test_user_full_name: \nFAIL: test_user_roundtrip: \nFAIL: test_user_to_dict: \nPASS: test_welcome_email\n\nResults: 12/18 passed\n6 TESTS FAILED\n\nScore: 8/12\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_migration_chain_okao0fgg"
+}

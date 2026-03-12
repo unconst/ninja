@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_shadow_override",
+  "category": "diagnostic",
+  "title": "Fix failing normalize_whitespace tests in textprocessor module",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 66.56491875648499,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_shadow_override_bm6fzv6u"
+}

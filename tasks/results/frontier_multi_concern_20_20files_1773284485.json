@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_20_20files",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation 20 locs / 20 files: Rename class + method + param with trap variables",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 121.47991752624512,
+  "exit_code": 0,
+  "result": {
+    "score": 0.7857142857142857,
+    "details": "  FAIL: 0/2 tests pass\n==================================== ERRORS ====================================\n___________________ ERROR collecting tests/test_dispatch.py ____________________\n  PASS: No 'class Dispatcher' remains\n  PASS: No 'def dispatch(' methods remain\n  PASS: core.py has class Coordinator\n  PASS: core.py has def coordinate(self, job)\n  PASS: __init__.py exports Coordinator\n  PASS: task_id preserved (16 occurrences)\n  PASS: task_type preserved (13 occurrences)\n  PASS: task_priority preserved (9 occurrences)\n  PASS: dispatch_log preserved (7 occurrences)\n  PASS: TASK_PREFIX preserved (7 occurrences)\n  FAIL: 3 'import Dispatcher' references remain\n  PASS: DispatchError class preserved\n  FAIL: 8 standalone 'Dispatcher' references remain\ndispatch/registry.py:from .core import Dispatcher\ndispatch/registry.py:        if not isinstance(dispatcher, Dispatcher):\ndispatch/registry.py:            raise TypeError(\"Expected Dispatcher\")\ndispatch/config.py:    \"\"\"Factory: create a Dispatcher subclass with defaults.\"\"\"\ndispatch/monitor.py:from .core import Dispatcher\ndispatch/monitor.py:    def __init__(self, target: Dispatcher):\ndispatch/scheduler.py:from .core import Dispatcher\ndispatch/scheduler.py:def schedule(dispatcher: Dispatcher, tasks, task_priority=1):\n\nScore: 11/14\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_20_20files_0i00xuyi"
+}

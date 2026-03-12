@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_constraint_migration",
+  "category": "diagnostic",
+  "title": "Migrate database layer from SQLite to JSON \u2014 without modifying models or API",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 166.0626256465912,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "Traceback (most recent call last):\n  File \"<stdin>\", line 74, in <module>\n  File \"/tmp/task_frontier_constraint_migration_usmwjgik/api.py\", line 64, in handle_create_post\n    post = db.create_post(\nTypeError: create_post() missing 1 required positional argument: 'content'\nTraceback (most recent call last):\n  File \"<stdin>\", line 9, in <module>\nTypeError: create_user() takes 2 positional arguments but 3 were given\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_constraint_migration_usmwjgik"
+}

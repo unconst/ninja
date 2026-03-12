@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_config_parser",
+  "category": "diagnostic",
+  "title": "Implement 14 features in config file parser across multiple methods",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 222.67269039154053,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "--- Basic ---\nPASS basic_host\nPASS basic_port\n\n--- Comments ---\nPASS comment_skip\nPASS comment_host\nPASS comment_inline\nPASS comment_inline_strip\n\n--- Type Coercion ---\nPASS type_int\nPASS type_bool_true\nPASS type_bool_false\nPASS type_float\nPASS type_string\n\n--- Quoted Strings ---\nPASS quoted_basic\nPASS quoted_spaces\n\n--- Sections ---\nPASS section_server\nPASS section_server_host\nPASS section_db\nPASS section_db_port\n\n--- Nested Sections ---\nPASS nested_server\nPASS nested_ssl\nPASS nested_cert\n\n--- Lists ---\nPASS list_ports\nPASS list_names\n\n--- Interpolation ---\nPASS interp_basic\nPASS interp_chained\n\n--- Include ---\nPASS include_key\nPASS include_port\nPASS include_original\n\n--- Defaults ---\nPASS defaults_used\nPASS defaults_override\nPASS defaults_kept\n\n--- Env Override ---\nPASS env_override_host\nPASS env_override_port\nPASS env_no_override\n\n--- Validation ---\nPASS validate_ok\nPASS validate_fail\n\n--- Merge ---\nPASS merge_override\nPASS merge_add\nPASS merge_keep\n\n--- Errors ---\nPASS error_unclosed_section\nPASS error_has_line_number\nPASS error_undefined_var\n\n--- Dot Get ---\nPASS dot_get_basic\nPASS dot_get_nested\nPASS dot_get_default\n\n=== RESULTS: 44 passed, 0 failed ===\n\nParsed: PASS=44 FAIL=0\nAll 44 checks passed\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_config_parser_7l8mm8q9"
+}

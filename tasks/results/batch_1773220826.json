@@ -1,0 +1,74 @@
+[
+  {
+    "task_id": "repo_debug_22a90cb6",
+    "category": "repo_debug",
+    "title": "Fix broken imports after module rename",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 41.72483515739441,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_0e8776f5",
+    "category": "repo_debug",
+    "title": "Fix LRU cache eviction bug",
+    "passed": false,
+    "score": 0.6666666666666666,
+    "elapsed": 57.222644329071045,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_4c6a9dbc",
+    "category": "repo_debug",
+    "title": "Find and fix bug using git history",
+    "passed": false,
+    "score": 0.8333333333333333,
+    "elapsed": 84.87599492073059,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_615d1756",
+    "category": "repo_debug",
+    "title": "Fix shared mutable state causing flaky tests",
+    "passed": false,
+    "score": 0.6666666666666666,
+    "elapsed": 54.30369448661804,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_5b54e599",
+    "category": "repo_debug",
+    "title": "Fix test regression after feature addition",
+    "passed": false,
+    "score": 0.8333333333333333,
+    "elapsed": 75.02857780456543,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_b03e9114",
+    "category": "repo_debug",
+    "title": "Fix edge case crashes in URL parser",
+    "passed": false,
+    "score": 0.6666666666666666,
+    "elapsed": 69.77661156654358,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_e99a457d",
+    "category": "repo_debug",
+    "title": "Fix off-by-one error in pagination",
+    "passed": false,
+    "score": 0.6666666666666666,
+    "elapsed": 55.578447103500366,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_bbba0371",
+    "category": "repo_debug",
+    "title": "Fix broken code after incomplete refactoring",
+    "passed": false,
+    "score": 0.6666666666666666,
+    "elapsed": 99.59292602539062,
+    "exit_code": 1
+  }
+]

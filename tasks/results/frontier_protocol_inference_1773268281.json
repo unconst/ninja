@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_protocol_inference",
+  "category": "diagnostic",
+  "title": "Reconstruct a data pipeline class from test code alone (no spec)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 86.63308429718018,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "=== Check 1: Pipeline class exists with name, stages, errors ===\nPASS: Pipeline class has required attributes\n\n=== Check 2: Method chaining ===\nPASS: add_stage returns self\n\n=== Check 3: Error accumulation ===\nPASS: Errors accumulate across stages\n\n=== Check 4: Summary format ===\nPASS: Summary format matches exactly\n\n=== Check 5: Registry stage lookup ===\nPASS: String stages resolve from STAGE_REGISTRY\n\n=== Check 6: Reset clears state ===\nPASS: Reset clears errors and run state\n\n=== Check 7: At least 8/12 tests pass ===\nPASS: 12/12 tests pass (>= 8 threshold)\n\n=== Check 8: All 12 tests pass ===\nPASS: All 12 tests pass\n\nResults: 8 passed, 0 failed out of 8 checks\nScore: 8/8\nALL CHECKS PASSED\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_protocol_inference_gop_057n"
+}

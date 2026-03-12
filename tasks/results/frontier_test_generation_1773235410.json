@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_test_generation",
+  "category": "diagnostic",
+  "title": "Write comprehensive tests for an untested calculator module",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 205.98471784591675,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_test_generation_lpkk3ggh"
+}

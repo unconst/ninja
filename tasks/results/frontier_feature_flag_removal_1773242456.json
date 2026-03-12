@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_feature_flag_removal",
+  "category": "diagnostic",
+  "title": "Remove feature flag and clean up ALL 8 references",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 166.36737871170044,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: config.py: flag removed from defaults\nPASS: executor.py: cache always enabled\nPASS: cli.py: cache flags removed\nPASS: test_executor.py: flag references removed\nPASS: README.md: experimental references removed\nPASS: config.json: flag removed\nPASS: tests pass after refactor\nPASS: cache works without flag\n\nScore: 8/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_feature_flag_removal_9ur1bv6c"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_async_conversion_4file",
+  "category": "diagnostic",
+  "title": "Convert synchronous data pipeline to async/await across 4 files",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 166.93990993499756,
+  "exit_code": 1,
+  "result": {
+    "score": 0.5,
+    "details": "=== Async Conversion Evaluation ===\n\n--- Coroutine Function Checks + Return Value Checks (24 tests) ---\nPASS: Database.connect is async\nPASS: Database.query is async\nPASS: Database.insert is async\nPASS: Database.close is async\nFAIL: Could not import cache: invalid syntax (cache.py, line 15)\nPASS: ApiClient.fetch is async\nPASS: ApiClient.post is async\nPASS: ApiClient.download is async\nFAIL: Could not import service: invalid syntax (cache.py, line 15)\n\n--- Return Value Checks (7 tests) ---\nPASS: Database.connect() returns self\nPASS: Database.insert() returns correct row\nPASS: Database.query() returns correct rows\nFAIL: Cache return value test error: invalid syntax (cache.py, line 15)\nFAIL: ApiClient return value test error: __init__() should return None, not 'coroutine'\n\nCoroutine + return checks: 10\nPYSCORE:10\n\n--- Pattern Checks: async def usage in each file (4 tests) ---\nPASS: database.py uses async def for all methods\nPASS: cache.py uses async def for all methods\nPASS: api_client.py uses async def for all methods\nPASS: service.py uses async def for all methods\n\nCoroutine + return value checks: 10 / 24\nPattern checks: 4 / 4\nScore: 14/28\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_async_conversion_4file_rsjdcop5"
+}

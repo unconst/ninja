@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_error_message_quality",
+  "category": "diagnostic",
+  "title": "Improve unhelpful error messages across a validation library",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 123.04096102714539,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "=== Error Message Quality Eval ===\n\n--- Check 1: All tests pass ---\n  PASS: All tests pass\n\n--- Check 2: No bare \"invalid\" error messages ---\n  PASS: No bare \"invalid\" messages found\n\n--- Check 3: No bare \"wrong\" error messages ---\n  PASS: No bare \"wrong\" messages found\n\n--- Check 4: No other bare unhelpful messages ---\n  PASS: No bare \"bad\"/\"no\"/\"error\"/\"fail\"/\"nope\" messages found\n\n--- Check 5: Exception types unchanged ---\n  PASS: ValueError count=26 (expected 26), TypeError count=6 (expected",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_error_message_quality_obms9i9e"
+}

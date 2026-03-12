@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_residue_hunt",
+  "category": "diagnostic",
+  "title": "Remove hot_reload feature and ALL 15 residual references",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 294.3783948421478,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_residue_hunt_f4ww8uyf"
+}

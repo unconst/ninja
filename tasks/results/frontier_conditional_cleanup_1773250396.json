@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_conditional_cleanup",
+  "category": "diagnostic",
+  "title": "Remove analytics feature without breaking caching or rate limiting",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 226.2159833908081,
+  "exit_code": 1,
+  "result": {
+    "score": 1.0,
+    "details": "PASS [1/12]: features/analytics.py was removed\nPASS [2/12]: analytics_enabled removed from config.py\nPASS [3/12]: analytics settings removed from config.py\nPASS [4/12]: no analytics references in production code\nPASS [5/12]: AnalyticsTracker removed from features/__init__.py\nPASS [6/12]: shared.py preserved with format_timestamp and hash_key\nPASS [7/12]: caching module still importable\nPASS [8/12]: rate_limiting module still importable\nPASS [9/12]: app.py importable and handles requests\nPASS [10",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_conditional_cleanup_iu73cdzn"
+}

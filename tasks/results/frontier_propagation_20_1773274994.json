@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_20",
+  "category": "diagnostic",
+  "title": "Propagation 20: Dual-rename across task queue library (20 locations)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 124.05211186408997,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (23)\n  PASS: No TaskError references\n  PASS: No create_task references\n  PASS: core.py has JobError class\n  PASS: core.py has create_job function\n  PASS: __init__.py imports JobError and create_job\n  PASS: scheduler.py uses new names\n  PASS: pipeline.py uses new names\n  PASS: retry.py uses JobError\n  PASS: monitor.py uses JobError\n\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_propagation_20_kk81v_xp"
+}

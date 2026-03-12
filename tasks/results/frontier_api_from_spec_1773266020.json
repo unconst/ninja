@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_api_from_spec",
+  "category": "diagnostic",
+  "title": "Implement a REST API from scratch given only a spec and test suite",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 245.80116653442383,
+  "exit_code": 1,
+  "result": {
+    "score": 0.625,
+    "details": "=== Check 1: models.py with required classes ===\nPASS: models.py has Product, CartItem, Cart\n\n=== Check 2: store.py with ProductStore ===\nPASS: store.py has ProductStore\n\n=== Check 3: cart.py with CartManager ===\nPASS: cart.py has CartManager\n\n=== Check 4: api.py is a Flask app ===\nPASS: api.py exports a Flask app\n\n=== Check 5: validators.py exists ===\nPASS: validators.py exists\n\n=== Check 6: At least 10/15 tests pass ===\nFAIL: Only 8/15 tests pass (need >= 10)\ntests/test_api.py::test_add_to_cart FAILED                               [ 46%] [ 46%]\ntests/test_api.py::test_cart_subtotal FAILED                             [ 53%] [ 53%]\ntests/test_api.py::test_remove_from_cart FAILED                          [ 66%] [ 66%]\ntests/test_api.py::test_checkout_empty_cart FAILED                       [ 80%] [ 80%]\ntests/test_api.py::test_checkout_success FAILED                          [ 86%] [ 86%]\ntests/test_api.py::test_get_product_by_id FAILED                         [ 93%] [ 93%]\ntests/test_api.py::test_list_products_empty FAILED                       [100%] [100%]\n\n=== Check 7: All 15 tests pass ===\nFAIL: 8 passed, 7 failed, 0 errors\n\n=== Check 8: No hardcoded/preloaded product data ===\nFAIL: ProductStore has preloaded data\n\nResults: 5 passed, 3 failed out of 8 checks\nScore: 5/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_api_from_spec_odq3fxxi"
+}

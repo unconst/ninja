@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_schema_migration",
+  "category": "diagnostic",
+  "title": "Migrate schema field names across 6 files consistently",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 102.54778742790222,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_schema_migration_1sbz7spt"
+}

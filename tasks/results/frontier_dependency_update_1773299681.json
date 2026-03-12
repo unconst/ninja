@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_dependency_update",
+  "category": "diagnostic",
+  "title": "Update 6 consumer files after database.py API breaking changes",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 173.63601922988892,
+  "exit_code": 1,
+  "result": {
+    "score": 0.9473684210526315,
+    "details": "============================= test session starts ==============================\nplatform linux -- Python 3.10.20, pytest-9.0.2, pluggy-1.6.0 -- /root/Arbos/.venv/bin/python3\ncachedir: .pytest_cache\nbenchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)\nhypothesis profile 'default'\nPyQt5 5.15.11 -- Qt runtime 5.15.18 -- Qt compiled 5.15.14\nrootdir: /tmp/task_frontier_dependency_update_y7pwra6u\nplugins: github-actions-annotate-failures-0.4.0, benchmark-5.2.3, Faker-40.8.0, xdist-3.8.0, instafail-0.5.0, timeout-2.4.0, mock-3.15.1, cov-7.0.0, django-4.11.1, bdd-8.1.0, asyncio-1.3.0, rerunfailures-16.1, pretty-1.3.0, hypothesis-6.151.9, qt-4.5.0, anyio-4.12.1, xvfb-3.1.1\nasyncio: mode=strict, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollecting ... collected 30 items\n\ntests/test_all.py::TestUsers::test_get_user_store PASSED                 [  3%]\ntests/test_all.py::TestUsers::test_find_user PASSED                      [  6%]\ntests/test_all.py::TestUsers::test_find_user_not_found PASSED            [ 10%]\ntests/test_all.py::TestUsers::test_create_user PASSED                    [ 13%]\ntests/test_all.py::TestUsers::test_create_duplicate_user PASSED          [ 16%]\ntests/test_all.py::TestProducts::test_get_product_db PASSED              [ 20%]\ntests/test_all.py::TestProducts::test_search_products PASSED             [ 23%]\ntests/test_all.py::TestProducts::test_add_product PASSED                 [ 26%]\ntests/test_all.py::TestProducts::test_remove_product PASSED              [ 30%]\ntests/test_all.py::TestProducts::test_count_products PASSED              [ 33%]\ntests/test_all.py::TestOrders::test_get_order_db PASSED                  [ 36%]\ntests/test_all.py::TestOrders::test_find_orders PASSED                   [ 40%]\ntests/test_all.py::TestOrders::test_place_order PASSED                   [ 43%]\ntests/test",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_dependency_update_y7pwra6u"
+}

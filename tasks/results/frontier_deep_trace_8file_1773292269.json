@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_deep_trace_8file",
+  "category": "diagnostic",
+  "title": "Trace data corruption through 8-file pipeline with 3 interacting bugs",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 102.59508562088013,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (8)\n  PASS: Validator no longer modifies price\n  PASS: Enricher uses self._tax_rate in enrich()\n  PASS: Aggregator accumulates computed_total\n  PASS: Single item total correct (110.00)\n  PASS: Bulk discount total correct (156.75)\n  PASS: Tax rate correctly enriched (0.15)\n  PASS: Validator preserves original price (100.0)\n\nScore: 8/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_deep_trace_8file_0kp4qaq1"
+}

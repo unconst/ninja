@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_refactor_extract_5module",
+  "category": "diagnostic",
+  "title": "Extract monolithic module into 5 separate modules while keeping tests green",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 486.1909120082855,
+  "exit_code": 1,
+  "result": {
+    "score": 0.475,
+    "details": "PASS: models.py exists\nPASS: validation.py exists\nPASS: storage.py exists\nPASS: scheduling.py exists\nPASS: reporting.py exists\n============================= test session starts ==============================\nplatform linux -- Python 3.10.20, pytest-9.0.2, pluggy-1.6.0 -- /root/Arbos/.venv/bin/python3\ncachedir: .pytest_cache\nbenchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)\nhypothesis profile 'default'\nPyQt5 5.15.11 -- Qt runtime 5.15.18 -- Qt compiled 5.15.14\nrootdir: /tmp/task_frontier_refactor_extract_5module_fenj33jn\nplugins: github-actions-annotate-failures-0.4.0, benchmark-5.2.3, Faker-40.8.0, xdist-3.8.0, instafail-0.5.0, timeout-2.4.0, mock-3.15.1, cov-7.0.0, django-4.11.1, bdd-8.1.0, asyncio-1.3.0, rerunfailures-16.1, pretty-1.3.0, hypothesis-6.151.9, qt-4.5.0, anyio-4.12.1, xvfb-3.1.1\nasyncio: mode=strict, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollecting ... collected 35 items\n\ntests/test_taskmanager.py::TestModels::test_task_to_dict PASSED          [  2%]\ntests/test_taskmanager.py::TestModels::test_project_to_dict PASSED       [  5%]\ntests/test_taskmanager.py::TestModels::test_tag_to_dict PASSED           [  8%]\ntests/test_taskmanager.py::TestModels::test_task_filter_defaults PASSED  [ 11%]\ntests/test_taskmanager.py::TestModels::test_constants PASSED             [ 14%]\ntests/test_taskmanager.py::TestValidation::test_validate_task_valid PASSED [ 17%]\ntests/test_taskmanager.py::TestValidation::test_validate_task_empty_title PASSED [ 20%]\ntests/test_taskmanager.py::TestValidation::test_validate_task_invalid_priority PASSED [ 22%]\ntests/test_taskmanager.py::TestValidation::test_validate_project_valid PASSED [ 25%]\ntests/test_taskmanager.py::TestValidation::test_validate_project_empty_name PASSED [ 28%]\ntests/test_taskmanager.py::TestStorage::test_create_task_success FAILED  [ 31%",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_refactor_extract_5module_fenj33jn"
+}

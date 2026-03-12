@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_protocol_compliance",
+  "category": "diagnostic",
+  "title": "Protocol Compliance: Match Spec Exactly Across 6 Files",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 230.56227374076843,
+  "exit_code": 1,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: TestUserCreation\nFAIL: TestUserGet\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\nResults (0.19s):\n         1 failed\n        21 deselected\nFAIL: TestUserUpdate\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\nResults (0.20s):\n         1 failed\n         1 passed\n        21 deselected\nPASS: TestUserDelete\nPASS: TestUserList\nFAIL: TestPostCreation\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\nResults (0.20s):\n         1 failed\n         2 passed\n        20 deselected\nPASS: TestPostList\nPASS: TestPostDelete\nPASS: TestErrorFormat\n\nScore: 6/9\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_protocol_compliance_6um3rsz5"
+}

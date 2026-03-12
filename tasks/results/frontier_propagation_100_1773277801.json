@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_100",
+  "category": "diagnostic",
+  "title": "Propagation 100: Dual-rename across graph library (100 locations, 22 files)",
+  "difficulty": "very_hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 162.44710397720337,
+  "exit_code": 0,
+  "result": {
+    "score": 0.7,
+    "details": "  FAIL: 51/76 tests pass\ntests/test_graphlib.py::TestPathFinder::test_path_to_objects FAILED      [ 19%] [ 19%]\ntests/test_graphlib.py::TestGraphSearch::test_find_node FAILED           [ 23%] [ 23%]\ntests/test_graphlib.py::TestTraversal::test_walk FAILED                  [ 28%] [ 28%]\ntests/test_graphlib.py::TestLayoutEngine::test_empty_raises FAILED       [ 34%] [ 34%]\ntests/test_graphlib.py::TestGraphMerger::test_merge_empty_raises FAILED  [ 43%] [ 43%]\n  FAIL: 21 NodeError references remain\n  FAIL: 22 create_node references remain\n  PASS: core.py has GraphError class\n  PASS: core.py has create_vertex function\n  PASS: __init__.py imports GraphError and create_vertex\n  PASS: builder.py uses new names\n  PASS: serialize.py uses new names\n  PASS: import_mod.py uses new names\n  PASS: optimize.py uses GraphError\n\nScore: 7/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_propagation_100_3famkm0e"
+}

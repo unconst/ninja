@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_dependency_hell",
+  "category": "diagnostic",
+  "title": "Untangle Python dependency conflicts preventing pip install",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 128.13003253936768,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_dependency_hell_rkjp6e1m"
+}

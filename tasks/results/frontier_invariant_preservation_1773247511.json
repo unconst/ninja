@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_invariant_preservation",
+  "category": "diagnostic",
+  "title": "Optimize binary codec without breaking wire format invariants",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 124.19325852394104,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: All codec tests pass\nPASS: test_codec.py unchanged\nPASS: test_models.py unchanged\nPASS: benchmark.py unchanged\nPASS: models.py unchanged\nPASS: codec.py uses bytearray\nPASS: All model tests pass\nPASS: Exhaustive round-trip verification\n\nScore: 8/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_invariant_preservation_2h1q6ymb"
+}

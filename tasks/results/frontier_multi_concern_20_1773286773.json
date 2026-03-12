@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_20",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation 20: Rename class + method + parameter across event system (20 locations)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 248.84494543075562,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (15)\n  PASS: No EventBus references\n  PASS: No 'def emit' methods remain\n  PASS: No .emit() calls remain\n  PASS: bus.py has class MessageBroker\n  PASS: bus.py has publish(self, msg)\n  PASS: __init__.py imports MessageBroker\n  PASS: No publish methods use 'event' parameter\n  PASS: dispatcher.py uses MessageBroker\n  PASS: registry.py uses MessageBroker and publish\n\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_20_igiccbpt"
+}

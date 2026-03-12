@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_safe_refactor",
+  "category": "diagnostic",
+  "title": "Refactor messy registry module without breaking tests",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 267.59843039512634,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "--- Check 1: Tests pass ---\nPASS: All tests pass\n--- Check 2: No long if/elif chains ---\nPASS: No long if/elif chains (found 0 elif arms)\n--- Check 3: No type().__name__ checks and validation deduplicated ---\nPASS: No type().__name__ checks (0 occurrences)\n--- Check 4: Line count reduced ---\nPASS: Line count reduced (145 < 150)\n--- Check 5: All 5 plugin types work ---\nAll 5 plugin types register and dispatch correctly\nPASS: All 5 plugin types register and dispatch\n--- Check 6: Other files unmodi",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_safe_refactor_331xh9oy"
+}

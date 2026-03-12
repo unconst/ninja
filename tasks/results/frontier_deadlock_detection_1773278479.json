@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_deadlock_detection",
+  "category": "diagnostic",
+  "title": "Find and fix deadlocks in concurrent resource manager",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 143.52894067764282,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: test_deadlock.py is unchanged\nPASS: resource_manager.py is importable\n--- Basic tests ---\ncollecting ... collected 20 items / 15 deselected / 5 selected\n\ntest_deadlock.py::TestBasicOperations::test_add_and_get PASSED           [ 20%]\ntest_deadlock.py::TestBasicOperations::test_set_value PASSED             [ 40%]\ntest_deadlock.py::TestBasicOperations::test_transfer_single_thread PASSED [ 60%]\ntest_deadlock.py::TestBasicOperations::test_batch_process_single_thread PASSED [ 80%]\ntest_deadlock.py::TestBasicOperations::test_audit_single_thread PASSED   [100%]\nResults (0.16s):\n         5 passed\n        15 deselected\nPASS: All 5 basic tests pass\n\n=== Full test run 1/2 ===\ntest_deadlock.py::TestLockOrderingDeadlock::test_bidirectional_transfer PASSED [ 40%]\ntest_deadlock.py::TestLockOrderingDeadlock::test_audit_both_directions PASSED [ 45%]\ntest_deadlock.py::TestLockOrderingDeadlock::test_transfer_audit_stress PASSED [ 50%]\ntest_deadlock.py::TestSelfDeadlock::test_get_status_single_resource PASSED [ 55%]\ntest_deadlock.py::TestSelfDeadlock::test_get_status_different_resources PASSED [ 60%]\ntest_deadlock.py::TestSelfDeadlock::test_get_status_same_resource_sequential PASSED [ 65%]\ntest_deadlock.py::TestSelfDeadlock::test_get_status_concurrent_same_resource PASSED [ 70%]\ntest_deadlock.py::TestSelfDeadlock::test_get_status_stress PASSED        [ 75%]\ntest_deadlock.py::TestDiningPhilosophersDeadlock::test_batch_opposite_order_two_resources PASSED [ 80%]\ntest_deadlock.py::TestDiningPhilosophersDeadlock::test_batch_opposite_order_three_resources PASSED [ 85%]\ntest_deadlock.py::TestDiningPhilosophersDeadlock::test_batch_partial_overlap PASSED [ 90%]\ntest_deadlock.py::TestDiningPhilosophersDeadlock::test_batch_four_way_circular PASSED [ 95%]\ntest_deadlock.py::TestDiningPhilosophersDeadlock::test_batch_stress_mixed_orders PASSED [100%]\nResults (1.97s):\n        20 passed\n\n=== Full test run 2/2 ===\ntest_deadlock.py::TestLockOrderingDeadlock::test_bidirectional_transfer PASSED [ 40",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_deadlock_detection_33vj0xw2"
+}

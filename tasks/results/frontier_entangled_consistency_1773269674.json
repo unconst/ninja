@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_entangled_consistency",
+  "category": "diagnostic",
+  "title": "Add SCROLL event type across 10 entangled modules in event processing system",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 240.16414952278137,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: SCROLL in EventType enum\nPASS: ScrollHandler registered and works\nPASS: Pipeline routes SCROLL\nPASS: Serializer handles SCROLL\nPASS: Analytics tracks SCROLL\nPASS: Filter handles SCROLL\nPASS: Transformer handles SCROLL\nPASS: API endpoint for SCROLL\nPASS: Validator validates SCROLL\nPASS: Config has SCROLL defaults\nPASS: Existing tests still pass\nPASS: All scroll + integration tests pass\n\nScore: 12/12\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_entangled_consistency_i5s15ry1"
+}

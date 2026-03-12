@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_implicit_ordering",
+  "category": "diagnostic",
+  "title": "Fix task processing pipeline where reordering in transform breaks persist stage",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 76.21123790740967,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: all tests pass\nPASS: test files unchanged\nPASS: sort_by_priority hook still functional\nPASS: TaskProcessor class exists in processor.py\nORDERING_CORRECT\nPASS: ordering fix verified functionally\nPASS: naive positional zip removed from persist stage\n\nScore: 6/6\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_implicit_ordering_bcodm9x9"
+}

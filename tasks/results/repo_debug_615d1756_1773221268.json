@@ -1,0 +1,32 @@
+{
+  "task_id": "repo_debug_615d1756",
+  "category": "repo_debug",
+  "title": "Fix shared mutable state causing flaky tests",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 45.025468826293945,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "3/3 output checks passed",
+    "checks": [
+      {
+        "name": "contains:5 passed",
+        "passed": true,
+        "detail": "found"
+      },
+      {
+        "name": "not_contains:FAILED",
+        "passed": true,
+        "detail": "correctly absent"
+      },
+      {
+        "name": "not_contains:ERROR",
+        "passed": true,
+        "detail": "correctly absent"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_repo_debug_615d1756_j2uwssov"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_query_builder",
+  "category": "diagnostic",
+  "title": "Complete a SQL query builder to handle all SQL clauses",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 128.4099292755127,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: test_query.py is unchanged\n--- Basic SELECT ---\nPASS basic_select_star\nPASS basic_no_params\nPASS basic_select_cols\n\n--- DISTINCT ---\nPASS distinct\n\n--- WHERE ---\nPASS where_clause\nPASS where_params\nPASS where_multiple\nPASS where_multi_params\n\n--- JOIN ---\nPASS join_inner\nPASS join_left\n\n--- ORDER BY ---\nPASS order_by_asc\nPASS order_by_multi\n\n--- GROUP BY + HAVING ---\nPASS group_by\nPASS having\nPASS having_params\n\n--- LIMIT / OFFSET ---\nPASS limit\nPASS limit_offset\n\n--- Aliases ---\nPASS alias_table\n\n--- Combined ---\nPASS combined_select\nPASS combined_join\nPASS combined_where\nPASS combined_order\nPASS combined_limit\nPASS combined_params\n\n--- Count ---\nPASS count_sql\nPASS count_where\nPASS count_params\n\n--- Delete ---\nPASS delete_sql\nPASS delete_where\nPASS delete_params\n\n--- Clause Order ---\nPASS order_select_first\nPASS order_from_before_join\nPASS order_join_before_where\nPASS order_where_before_group\nPASS order_group_before_having\nPASS order_having_before_order\nPASS order_order_before_limit\nPASS order_limit_before_offset\n\n--- Error Handling ---\nPASS error_having_no_group\nPASS error_offset_no_limit\n\n\n=== RESULTS: 40 passed, 0 failed ===\n\nScore: 40/40\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_query_builder_0jnplgmf"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_constraint_migration",
+  "category": "diagnostic",
+  "title": "Migrate database layer from SQLite to JSON \u2014 without modifying models or API",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 219.76607489585876,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "Traceback (most recent call last):\n  File \"<stdin>\", line 49, in <module>\n  File \"/tmp/task_frontier_constraint_migration_8swdeg83/api.py\", line 28, in handle_get_user\n    user = db.get_user(request['user_id'])\n  File \"/tmp/task_frontier_constraint_migration_8swdeg83/db.py\", line 54, in get_user\n    raise ValueError(f\"User with ID {user_id} not found\")\nValueError: User with ID 99999 not found\nTraceback (most recent call last):\n  File \"<stdin>\", line 36, in <module>\n  File \"/tmp/task_frontier_con",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_constraint_migration_8swdeg83"
+}

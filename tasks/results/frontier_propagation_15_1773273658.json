@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_15",
+  "category": "diagnostic",
+  "title": "Propagation 15: Dual-rename across validation library (15 locations)",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 166.23336601257324,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (32)\n  PASS: No ValidationError references\n  PASS: No bare 'validate' references\n  PASS: core.py has CheckFailure class\n  PASS: core.py has check function\n  PASS: __init__.py imports check and CheckFailure\n  PASS: rules.py uses CheckFailure\n  PASS: composite.py uses CheckFailure\n  PASS: report.py uses CheckFailure\n  PASS: utils.py references check correctly\n\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_propagation_15_tbr4b3q0"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_migration_chain",
+  "category": "diagnostic",
+  "title": "Migrate User model from flat fields to nested sub-objects across 7 files",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 289.2749032974243,
+  "exit_code": 0,
+  "result": {
+    "score": 0.8333333333333334,
+    "details": "PASS: models.py has NameInfo class\nPASS: models.py has AddressInfo class\nPASS: User uses nested name and address\nPASS: user_service.py uses nested name access\nPASS: search_service.py uses nested structure\nPASS: notification_service.py uses nested name\nPASS: notification_service.py uses nested address\nPASS: api/users.py handles nested JSON\nFAIL: No old flat field access patterns remain\n  Found old patterns:\n./models.py:32:        self.street = street\n./models.py:33:        self.city = city\n./models.py:34:        self.state = state\n./models.py:35:        self.zip_code = zip_code\n./models.py:40:            \"street\": self.street,\n./models.py:41:            \"city\": self.city,\n./models.py:42:            \"state\": self.state,\n./models.py:43:            \"zip_code\": self.zip_code\n./models.py:54:                self.street == other.street and \n./models.py:55:                self.city == other.city and \nFAIL: to_dict() produces nested output\n  Error: Traceback (most recent call last):\n  File \"<string>\", line 7, in <module>\nTypeError: User.__init__() missing 4 required positional arguments: 'street', 'city', 'state', and 'zip_code'\nPASS: from_dict() accepts nested input\nPASS: All 18 tests pass\n\nScore: 10/12\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_migration_chain_q40umh4l"
+}

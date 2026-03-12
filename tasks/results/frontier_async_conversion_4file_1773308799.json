@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_async_conversion_4file",
+  "category": "diagnostic",
+  "title": "Convert synchronous data pipeline to async/await across 4 files",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 159.93621611595154,
+  "exit_code": 0,
+  "result": {
+    "score": 0.75,
+    "details": "=== Async Conversion Evaluation ===\n\n--- Coroutine Function Checks + Return Value Checks (24 tests) ---\nPASS: Database.connect is async\nPASS: Database.query is async\nPASS: Database.insert is async\nPASS: Database.close is async\nPASS: Cache.get is async\nPASS: Cache.set is async\nPASS: Cache.invalidate is async\nPASS: Cache.flush is async\nPASS: ApiClient.fetch is async\nPASS: ApiClient.post is async\nPASS: ApiClient.download is async\nFAIL: Could not import service: 'await' outside async function (service.py, line 75)\n\n--- Return Value Checks (7 tests) ---\nPASS: Database.connect() returns self\nPASS: Database.insert() returns correct row\nPASS: Database.query() returns correct rows\nPASS: Cache.set() returns True\nPASS: Cache.get() returns correct value\nPASS: ApiClient.fetch() returns correct data\nPASS: ApiClient.download() returns chunks list\n\nCoroutine + return checks: 18\nPYSCORE:18\n\n--- Pattern Checks: async def usage in each file (4 tests) ---\nPASS: database.py uses async def for all methods\nPASS: cache.py uses async def for all methods\nPASS: api_client.py uses async def for all methods\nFAIL: service.py missing async def on some methods\n16:    async def initialize(self):\n22:    async def get_user(self, user_id):\n46:    async def create_user(self, user_data):\n54:    async def sync_from_api(self, endpoint, table):\n65:    async def bulk_download(self, path):\n73:    def shutdown(self):\n\nCoroutine + return value checks: 18 / 24\nPattern checks: 3 / 4\nScore: 21/28\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_async_conversion_4file_2748zn5v"
+}

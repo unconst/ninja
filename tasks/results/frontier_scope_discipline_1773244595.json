@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_scope_discipline",
+  "category": "diagnostic",
+  "title": "Replace the caching backend without changing any other behavior",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 216.814435005188,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: All tests pass\nPASS: app.py unchanged\nPASS: Test files unchanged\nPASS: cache.py uses file-based storage\nPASS: File-based storage creates files\n\nScore: 5/5\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_scope_discipline_h7uxtpgg"
+}

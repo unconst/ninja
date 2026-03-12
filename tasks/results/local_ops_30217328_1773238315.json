@@ -1,0 +1,22 @@
+{
+  "task_id": "local_ops_30217328",
+  "category": "local_ops",
+  "title": "Fix broken deployment shell script",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 70.34329295158386,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "All checks passed (log file verified)\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_local_ops_30217328_kn7d2awp"
+}

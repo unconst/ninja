@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_80",
+  "category": "diagnostic",
+  "title": "Rename ForgeError and create_forge across 10 files (80 locations)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 92.09411454200745,
+  "exit_code": 0,
+  "result": {
+    "score": 0.6,
+    "details": "FAIL: All tests pass\n    return _bootstrap._gcd_import(name[level:], package, level)\ntests/test_taskforge.py:26: in <module>\n    from taskforge.monitoring import Monitor\ntaskforge/monitoring.py:2: in <module>\n    from taskforge.core import ForgeError, create_forge\nE   ImportError: cannot import name 'ForgeError' from 'taskforge.core' (/tmp/task_frontier_propagation_80_kj0f8fbd/taskforge/core.py)\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\nResults (0.15s):\n         1 error\nFAIL: No ForgeError references remain\n  Found:\ntaskforge/serialization.py:3:from taskforge.core import ForgeError, create_forge\ntaskforge/serialization.py:8:    if not isinstance(error, ForgeError):\ntaskforge/serialization.py:9:        raise TypeError(f\"Expected ForgeError, got {type(error).__name__}\")\ntaskforge/serialization.py:15:    return ForgeError(message=data.get(\"message\", \"\"), code=data.get(\"code\"))\ntaskforge/serialization.py:23:        raise ForgeError(f\"Invalid JSON: {e}\")\nFAIL: No create_forge references remain\n  Found:\ntaskforge/serialization.py:3:from taskforge.core import ForgeError, create_forge\ntaskforge/serialization.py:19:    \"\"\"Parse JSON config and build a forge via create_forge.\"\"\"\ntaskforge/serialization.py:24:    return create_forge(name=name, config=config, strict=True)\ntaskforge/monitoring.py:2:from taskforge.core import ForgeError, create_forge\ntaskforge/monitoring.py:11:        self._forge = create_forge(\"monitor\", {\"max_workers\": 1})\nPASS: core.py has ScheduleError class\nPASS: core.py has create_scheduler function\nPASS: __init__.py imports new names\nPASS: registry.py uses new names\nPASS: dispatcher.py uses new names\nPASS: worker.py uses new names\nFAIL: middleware.py uses new names\n\nScore: 6/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_propagation_80_kj0f8fbd"
+}

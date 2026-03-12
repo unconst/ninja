@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_protocol_refactor",
+  "category": "diagnostic",
+  "title": "Refactor plugin system from inheritance to composition",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 231.69502782821655,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_protocol_refactor_qixudgm0"
+}

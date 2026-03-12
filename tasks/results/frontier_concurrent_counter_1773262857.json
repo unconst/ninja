@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_concurrent_counter",
+  "category": "diagnostic",
+  "title": "Fix intermittent failures in concurrent task queue system",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 377.3166584968567,
+  "exit_code": 0,
+  "result": {
+    "score": 0.6,
+    "details": "PASS: test_queue.py is unchanged\n\n=== Test run 1/2 ===\n\n--- Source inspection tests ---\nPASS: test_queue_get_lock_discipline\nPASS: test_dispatcher_lock_discipline\n\n============================================================\nFAILURES (1):\n  FAIL test_monitor_lock_discipline: task_completed() has 2 separate lock acquisitions (split-lock pattern causes inconsistent state between _completed and _completed_count)\nRun 1 FAILED (exit code 1)\n\n=== Test run 2/2 ===\n\n--- Source inspection tests ---\nPASS: test_queue_get_lock_discipline\nPASS: test_dispatcher_lock_discipline\n\n============================================================\nFAILURES (1):\n  FAIL test_monitor_lock_discipline: task_completed() has 2 separate lock acquisitions (split-lock pattern causes inconsistent state between _completed and _completed_count)\nRun 2 FAILED (exit code 1)\n\nFAIL: All source inspection tests pass\nPASS: All concurrent tests pass\nFAIL: All 5 runs passed (no intermittent failures)\nPASS: End-to-end stress test passes\n\nScore: 3/5\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_concurrent_counter_nch_3uyu"
+}

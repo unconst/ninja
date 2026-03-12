@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_config_cascade",
+  "category": "diagnostic",
+  "title": "Fix config file cascade merge that loses nested keys during override",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 70.24343395233154,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: all tests pass\nPASS: config/base.yaml unchanged\nPASS: config/production.yaml unchanged\nPASS: config/local.yaml unchanged\nPASS: test files unchanged\nPASS: app.py unchanged\nPASS: config_loader.py modified and still uses update\n\nScore: 7/7\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_config_cascade_zs86gocn"
+}

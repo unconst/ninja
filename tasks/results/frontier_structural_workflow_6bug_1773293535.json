@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_structural_workflow_6bug",
+  "category": "diagnostic",
+  "title": "Fix 6 structural bugs in 8-file document processing workflow",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 149.08213877677917,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (31/31)\n  PASS: Classifier _stopwords initialized in __init__\n  PASS: Extractor preserves party when case_number exists\n  PASS: Normalizer produces 1 record per input\n  PASS: Normalizer counter accurate\n  PASS: Validator checks required before format\n  PASS: Indexer instances independent\n  PASS: Reporter section order canonical\n  PASS: Source: _stopwords assigned in __init__\n  PASS: Source: entries is instance variable\n  PASS: Pipeline stage counts preserved\n  PASS: Pipeline isolation correct\n\nScore: 12/12\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_structural_workflow_6bug_l_84d6ja"
+}

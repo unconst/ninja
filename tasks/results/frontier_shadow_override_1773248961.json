@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_shadow_override",
+  "category": "diagnostic",
+  "title": "Fix failing normalize_whitespace tests in textprocessor module",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 80.54079294204712,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: test_capitalize_words_apostrophe\n  PASS: test_capitalize_words_basic\n  PASS: test_normalize_whitespace_basic\n  PASS: test_normalize_whitespace_leading_trailing\n  PASS: test_normalize_whitespace_tabs_newlines\n  PASS: test_pipeline_chain\n  PASS: test_pipeline_history\n  PASS: test_slugify_basic\n  PASS: test_slugify_special_chars\n  PASS: test_strip_html_tags\n\n10 passed, 0 failed\nALL TESTS PASSED\n\nModule-level normalize_whitespace definitions: 1\nAll checks passed\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_shadow_override_cwfett9f"
+}

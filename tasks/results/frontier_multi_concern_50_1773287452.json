@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_50",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation: ~50 locations, 12 files, with trap variables",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 92.61373496055603,
+  "exit_code": 0,
+  "result": {
+    "score": 0.5555555555555556,
+    "details": "  FAIL: 0/0 tests pass\n  PASS: No 'class DataBus' remains\n  FAIL: 7 'def process' methods remain\n  FAIL: 11 .process() calls remain\n  PASS: core.py has class StreamBus\n  PASS: core.py has transform(self, item)\n  FAIL: __init__.py missing StreamBus\n  PASS: No transform methods use 'record' parameter\n  PASS: record_type preserved (16 occurrences)\n  PASS: _record_count preserved\n  PASS: RECORD_PREFIX preserved\n  PASS: process_async preserved\n  PASS: DataBusError class preserved\n  FAIL: factory.py missing StreamBus\n  FAIL: router.py missing StreamBus or transform\n  FAIL: chain_bus.py missing StreamBus\n  PASS: bidi_bus.py process_reverse preserved\n  FAIL: 6 'import DataBus' remaining\n\nScore: 10/18\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_50_61x7simd"
+}

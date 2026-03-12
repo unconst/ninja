@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_build_detective",
+  "category": "diagnostic",
+  "title": "Fix broken build system with 3 interacting config issues",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 104.00177097320557,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: setup.cfg package_dir points to src\nPASS: setup.cfg entry_points uses colon\nPASS: Source code compiles\nOK\nPASS: All imports work\n/root/Arbos/.venv/lib/python3.10/site-packages/pytest_asyncio/plugin.py:247: PytestDeprecationWarning: The configuration option \"asyncio_default_fixture_loop_scope\" is unset.\nThe event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function ",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_build_detective_fdz4k1fg"
+}

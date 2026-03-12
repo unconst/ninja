@@ -1,0 +1,22 @@
+{
+  "task_id": "local_ops_eb40dfad",
+  "category": "local_ops",
+  "title": "Fix broken deployment shell script",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 74.71224641799927,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_local_ops_eb40dfad_uguujjzm"
+}

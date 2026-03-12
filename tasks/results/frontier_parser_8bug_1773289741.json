@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_parser_8bug",
+  "category": "diagnostic",
+  "title": "Fix 8 bugs across a 4-file expression language parser",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 168.81852674484253,
+  "exit_code": 1,
+  "result": {
+    "score": 0.075,
+    "details": "============================= test session starts ==============================\nplatform linux -- Python 3.10.20, pytest-9.0.2, pluggy-1.6.0 -- /root/Arbos/.venv/bin/python3\ncachedir: .pytest_cache\nbenchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)\nhypothesis profile 'default'\nPyQt5 5.15.11 -- Qt runtime 5.15.18 -- Qt compiled 5.15.14\nrootdir: /tmp/task_frontier_parser_8bug_aub5g_mk\nplugins: github-actions-annotate-failures-0.4.0, benchmark-5.2.3, Faker-40.8.0, xdist-3.8.0, instafail-0.5.0, timeout-2.4.0, mock-3.15.1, cov-7.0.0, django-4.11.1, bdd-8.1.0, asyncio-1.3.0, rerunfailures-16.1, pretty-1.3.0, hypothesis-6.151.9, qt-4.5.0, anyio-4.12.1, xvfb-3.1.1\nasyncio: mode=strict, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollecting ... collected 40 items\n\ntests/test_expr.py::test_basic_addition FAILED                           [  2%] [  2%]\ntests/test_expr.py:24 test_basic_addition - expr_lang.parser.ParseEr\u2026\ntests/test_expr.py::test_basic_multiplication FAILED                     [  5%] [  5%]\ntests/test_expr.py:29 test_basic_multiplication - expr_lang.parser.P\u2026\ntests/test_expr.py::test_variable_assignment_and_read FAILED             [  7%] [  7%]\ntests/test_expr.py:34 test_variable_assignment_and_read - expr_lang.\u2026\ntests/test_expr.py::test_string_literal_no_escapes FAILED                [ 10%] [ 10%]\ntests/test_expr.py:39 test_string_literal_no_escapes - expr_lang.par\u2026\ntests/test_expr.py::test_simple_function_call FAILED                     [ 12%] [ 12%]\ntests/test_expr.py:44 test_simple_function_call - expr_lang.parser.P\u2026\ntests/test_expr.py::test_basic_equality_same_type FAILED                 [ 15%] [ 15%]\ntests/test_expr.py:50 test_basic_equality_same_type - expr_lang.pars\u2026\ntests/test_expr.py::test_basic_string_concat FAILED                      [ 17%] [ 17%]\ntests/test_expr.py:55 test_",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_parser_8bug_aub5g_mk"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_schema_migration",
+  "category": "diagnostic",
+  "title": "Migrate schema field names across 6 files consistently",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 271.9619131088257,
+  "exit_code": 1,
+  "result": {
+    "score": 0.125,
+    "details": "FAIL: No old field names in Python files\n  Found remnants:\n./tests/test_api.py:44:            \"is_active\": 1,\n./tests/test_api.py:51:        assert data[\"is_active\"] == 1\n./tests/test_api.py:53:        assert \"created_date\" in data\n./validators.py:22:    # Extra check: is_active must be 0 or 1\n./validators.py:23:    if \"is_active\" in data and data[\"is_active\"] not in (0, 1):\n./validators.py:24:        errors.append(\"is_active must be 0 or 1\")\n./validators.py:48:    # Extra check: item_price must be non-negative\n./validators.py:49:    if \"item_price\" in data and data[\"item_price\"] < 0:\n./validators.py:50:        errors.append(\"item_price cannot be negative\")\n./reports.py:20:    lines.append(f\"Active: {'Yes' if user['is_active'] else 'No'}\")\n  Missing new field name: created_at\n  Missing new field name: product_name\n  Missing new field name: unit_price\n  Missing new field name: total_price\nFAIL: All new field names present\nFAIL: models.py updated\nFAIL: active field is bool\nFAIL: db.py SQL updated\nFAIL: api.py updated\nFAIL: total_price computed field in db.py\nPASS: All tests pass\n\nScore: 1/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_schema_migration_bd1877vf"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_30_highambig",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation 30 locs / 12 files: HIGH-ambiguity trap variables (event_type, event_data, event_handler, emit_log)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 170.61709785461426,
+  "exit_code": 0,
+  "result": {
+    "score": 0.7777777777777778,
+    "details": "  FAIL: 0/2 tests pass\n==================================== ERRORS ====================================\n___________________ ERROR collecting tests/test_eventbus.py ____________________\n  PASS: No 'class EventBus' remains\n  FAIL: 1 'def emit(' methods remain\neventbus/filter.py:    def emit(self, event):\n  FAIL: 3 '.emit(' call sites remain\neventbus/monitor.py:        self._bus.emit(event)\neventbus/scheduler.py:            bus.emit(event)\neventbus/filter.py:            super().emit(event)\n  PASS: core.py has class SignalBus\n  PASS: core.py has def send(self, signal)\n  PASS: __init__.py exports SignalBus\n  PASS: No 'import EventBus' remaining\n  PASS: event_type preserved (16 occurrences)\n  PASS: event_data preserved (6 occurrences)\n  PASS: event_id preserved (7 occurrences)\n  PASS: event_name preserved (9 occurrences)\n  PASS: event_count preserved (9 occurrences)\n  PASS: event_handler preserved (10 occurrences)\n  PASS: emit_log preserved (2 occurrences in logger.py)\n  PASS: EVENT_PREFIX preserved (4 occurrences)\n  PASS: EventError class preserved in errors.py\n  FAIL: monitor.py missing tracked_send method\n\nScore: 14/18\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_30_highambig_zbcwlxqs"
+}

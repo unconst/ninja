@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_dependency_update_3file",
+  "category": "diagnostic",
+  "title": "Update 3 consumer files after database.py API breaking changes",
+  "difficulty": "medium",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 125.39859557151794,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "============================= test session starts ==============================\nplatform linux -- Python 3.10.20, pytest-9.0.2, pluggy-1.6.0 -- /root/Arbos/.venv/bin/python3\ncachedir: .pytest_cache\nbenchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)\nhypothesis profile 'default'\nPyQt5 5.15.11 -- Qt runtime 5.15.18 -- Qt compiled 5.15.14\nrootdir: /tmp/task_frontier_dependency_update_3file_h5fqkx1t\nplugins: github-actions-annotate-failures-0.4.0, benchmark-5.2.3, Faker-40.8.0, xdist-3.8.0, instafail-0.5.0, timeout-2.4.0, mock-3.15.1, cov-7.0.0, django-4.11.1, bdd-8.1.0, asyncio-1.3.0, rerunfailures-16.1, pretty-1.3.0, hypothesis-6.151.9, qt-4.5.0, anyio-4.12.1, xvfb-3.1.1\nasyncio: mode=strict, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollecting ... collected 15 items\n\ntests/test_all.py::TestUsers::test_get_user_store PASSED                 [  6%]\ntests/test_all.py::TestUsers::test_find_user PASSED                      [ 13%]\ntests/test_all.py::TestUsers::test_find_user_not_found PASSED            [ 20%]\ntests/test_all.py::TestUsers::test_create_user PASSED                    [ 26%]\ntests/test_all.py::TestUsers::test_create_duplicate_user PASSED          [ 33%]\ntests/test_all.py::TestOrders::test_get_order_db PASSED                  [ 40%]\ntests/test_all.py::TestOrders::test_find_orders PASSED                   [ 46%]\ntests/test_all.py::TestOrders::test_place_order PASSED                   [ 53%]\ntests/test_all.py::TestOrders::test_update_order_status PASSED           [ 60%]\ntests/test_all.py::TestOrders::test_update_order_status_not_found PASSED [ 66%]\ntests/test_all.py::TestAdmin::test_purge_inactive_users PASSED           [ 73%]\ntests/test_all.py::TestAdmin::test_reset_order_status PASSED             [ 80%]\ntests/test_all.py::TestAdmin::test_archive_old_orders PASSED             [ 86%]\ntest",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_dependency_update_3file_h5fqkx1t"
+}

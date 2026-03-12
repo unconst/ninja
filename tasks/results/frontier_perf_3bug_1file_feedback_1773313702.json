@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_perf_3bug_1file_feedback",
+  "category": "diagnostic",
+  "title": "Optimize 3 performance bottlenecks with test feedback guiding fixes",
+  "difficulty": "medium",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 108.01043510437012,
+  "exit_code": 0,
+  "result": {
+    "score": 0.9166666666666666,
+    "details": "=== Part 1: Functional + Structural Feedback Tests (9 points) ===\n=== Functional Correctness Tests ===\nPASS generate_records\nPASS processor_fields\nPASS processor_tier_logic\nPASS processor_summary_lines\nPASS processor_filter\n\n=== Structural Feedback Tests ===\nPASS test_hoisting\nPASS test_no_recompute\nPASS test_join\nPASS test_no_json\n\n=== RESULTS: 9 passed, 0 failed ===\n\nTest suite: 9 / 9\n\n=== Part 2: AST / Pattern Checks (2 points) ===\nFAIL struct_no_per_record_avg: category averages still recomputed per record\nPASS struct_no_json_copy: No json serialization for copying\n\n=== Part 3: Performance / Timing Check (1 point) ===\nPASS timing_5k_pipeline: 5000 records in 0.010s (limit 2.0s)\n\n=== Summary ===\nScore: 11/12\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_perf_3bug_1file_feedback_fq5tjbzn"
+}

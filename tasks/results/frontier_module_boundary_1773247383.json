@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_module_boundary",
+  "category": "diagnostic",
+  "title": "Remove analytics feature entirely from multi-module package",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 142.05840849876404,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: Remaining tests pass\nPASS: No analytics references in .py files\nPASS: engines/search.py preserved\nPASS: engines/export.py preserved\nPASS: analytics.py deleted or empty\nPASS: REGISTRY has exactly 2 entries\nPASS: CLI choices exclude analytics\nPASS: Type alias clean of AnalyticsEngine\n\nScore: 8/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_module_boundary_fdqgafr7"
+}

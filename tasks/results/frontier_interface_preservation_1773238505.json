@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_interface_preservation",
+  "category": "diagnostic",
+  "title": "Optimize data serializer while preserving public API exactly",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 254.04069709777832,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_interface_preservation_8uz65mtf"
+}

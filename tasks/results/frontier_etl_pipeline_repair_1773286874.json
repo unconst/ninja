@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_etl_pipeline_repair",
+  "category": "diagnostic",
+  "title": "Repair 6 data-corruption bugs in a 4-stage ETL pipeline",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 132.81234431266785,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "============================= test session starts ==============================\nplatform linux -- Python 3.10.20, pytest-9.0.2, pluggy-1.6.0 -- /root/Arbos/.venv/bin/python3\ncachedir: .pytest_cache\nbenchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)\nhypothesis profile 'default'\nPyQt5 5.15.11 -- Qt runtime 5.15.18 -- Qt compiled 5.15.14\nrootdir: /tmp/task_frontier_etl_pipeline_repair_77u7mki0\nplugins: github-actions-annotate-failures-0.4.0, benchmark-5.2.3, Faker-40.8.0, xdist-3.8.0, instafail-0.5.0, timeout-2.4.0, mock-3.15.1, cov-7.0.0, django-4.11.1, bdd-8.1.0, asyncio-1.3.0, rerunfailures-16.1, pretty-1.3.0, hypothesis-6.151.9, qt-4.5.0, anyio-4.12.1, xvfb-3.1.1\nasyncio: mode=strict, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollecting ... collected 30 items\n\ntests/test_extractor.py::test_read_csv_basic PASSED                      [  3%]\ntests/test_extractor.py::test_validate_record_pass PASSED                [  6%]\ntests/test_extractor.py::test_parse_date_z_returns_aware PASSED          [ 10%]\ntests/test_extractor.py::test_parse_date_z_utc_offset PASSED             [ 13%]\ntests/test_extractor.py::test_parse_date_z_time_values_preserved PASSED  [ 16%]\ntests/test_extractor.py::test_extracted_z_date_comparable_to_utc_reference PASSED [ 20%]\ntests/test_loader.py::test_write_exact_multiple_of_batch_size PASSED     [ 23%]\ntests/test_loader.py::test_partial_batch_not_dropped PASSED              [ 26%]\ntests/test_loader.py::test_single_record_with_large_batch_size PASSED    [ 30%]\ntests/test_loader.py::test_partial_batch_ids_sequential PASSED           [ 33%]\ntests/test_loader.py::test_two_records_smaller_than_batch_written PASSED [ 36%]\ntests/test_loader.py::test_ids_no_duplicate_across_two_calls PASSED      [ 40%]\ntests/test_loader.py::test_ids_sequential_across_two_calls PASSED        [ 43%]",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_etl_pipeline_repair_77u7mki0"
+}

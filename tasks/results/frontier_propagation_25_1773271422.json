@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_25",
+  "category": "diagnostic",
+  "title": "Rename class and method across 25 ripple locations (hard propagation)",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 180.1756932735443,
+  "exit_code": 0,
+  "result": {
+    "score": 0.7,
+    "details": "  FAIL: 4/19 tests pass\ntests/test_webapp.py::TestRouter::test_add_and_resolve FAILED            [ 21%] [ 21%]\ntests/test_webapp.py::TestRouter::test_dispatch_calls_process FAILED     [ 26%] [ 26%]\ntests/test_webapp.py::TestRouter::test_type_check FAILED                 [ 31%] [ 31%]\ntests/test_webapp.py::TestMiddleware::test_wraps_handler FAILED          [ 36%] [ 36%]\ntests/test_webapp.py::TestHandlers::test_user_list FAILED                [ 47%] [ 47%]\ntests/test_webapp.py::TestHandlers::test_user_create FAILED              [ 52%] [ 52%]\ntests/test_webapp.py::TestHandlers::test_health_check FAILED             [ 57%] [ 57%]\ntests/test_webapp.py::TestHandlers::test_auth_login FAILED               [ 63%] [ 63%]\ntests/test_webapp.py::TestHandlers::test_websocket FAILED                [ 68%] [ 68%]\ntests/test_webapp.py::TestHandlers::test_static_missing FAILED           [ 73%] [ 73%]\ntests/test_webapp.py::TestUtils::test_validate_handler FAILED            [ 78%] [ 78%]\ntests/test_webapp.py::TestUtils::test_validate_rejects_non_handler FAILED [ 84%] [ 84%]\ntests/test_webapp.py::TestUtils::test_validate_rejects_unimplemented FAILED [ 89%] [ 89%]\ntests/test_webapp.py::TestUtils::test_handler_info FAILED                [ 94%] [ 94%]\ntests/test_webapp.py::TestApp::test_route_decorator FAILED               [100%] [100%]\n  FAIL: 8 BaseHandler references remain\n  FAIL: 11 handle_request references remain\n  PASS: base.py has class RequestHandler\n  PASS: base.py has process method\n  PASS: No process methods use 'request' parameter name\n  PASS: router.py uses RequestHandler\n  PASS: No handlers import BaseHandler\n  PASS: utils.py uses RequestHandler\n  PASS: testing.py uses RequestHandler\n\nScore: 7/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_propagation_25_ciaw45xs"
+}

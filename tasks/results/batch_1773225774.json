@@ -1,0 +1,56 @@
+[
+  {
+    "task_id": "frontier_edge_case_trap",
+    "category": "diagnostic",
+    "title": "Build duration parser with 13 edge-case tests",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 47.59527063369751,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_event_bus_bugs",
+    "category": "diagnostic",
+    "title": "Fix 3 interacting bugs in event bus system",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 64.47190380096436,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_large_codebase",
+    "category": "diagnostic",
+    "title": "Fix config type coercion in 20-file TaskFlow project",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 55.98290157318115,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_incomplete_spec",
+    "category": "diagnostic",
+    "title": "Build markdown table formatter with hidden edge cases",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 138.13602662086487,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_adversarial_review",
+    "category": "diagnostic",
+    "title": "Security review: find ALL 5 bugs in auth module",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 190.64050269126892,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_legacy_archaeology",
+    "category": "diagnostic",
+    "title": "Fix regressions in legacy pricing engine",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 201.2650182247162,
+    "exit_code": 1
+  }
+]

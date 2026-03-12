@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_safe_refactor",
+  "category": "diagnostic",
+  "title": "Refactor messy registry module without breaking tests",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 223.95978021621704,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_safe_refactor_zebfl6i7"
+}

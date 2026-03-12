@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_type_annotation_4file",
+  "category": "diagnostic",
+  "title": "Add complete PEP 484 type annotations to 4-file e-commerce system",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 180.64134550094604,
+  "exit_code": 0,
+  "result": {
+    "score": 0.6785714285714286,
+    "details": "=== Part 1: Specific Annotation Checks (16 points) ===\nPASS: Product.__init__ params annotated\nPASS: Customer.get_primary_address -> Optional\nPASS: CartItem.subtotal -> float\nTraceback (most recent call last):\n  File \"<string>\", line 5, in <module>\nAssertionError: expected bool, got <class 'NoneType'>\nFAIL: Order.cancel return type not bool\nTraceback (most recent call last):\n  File \"<string>\", line 3, in <module>\n  File \"/root/.local/share/uv/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/typing.py\", line 1871, in get_type_hints\n    value = _eval_type(value, globalns, localns)\n  File \"/root/.local/share/uv/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/typing.py\", line 329, in _eval_type\n    ev_args = tuple(_eval_type(a, globalns, localns, recursive_guard) for a in t.__args__)\n  File \"/root/.local/share/uv/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/typing.py\", line 329, in <genexpr>\n    ev_args = tuple(_eval_type(a, globalns, localns, recursive_guard) for a in t.__args__)\n  File \"/root/.local/share/uv/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/typing.py\", line 327, in _eval_type\n    return t._evaluate(globalns, localns, recursive_guard)\n  File \"/root/.local/share/uv/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/typing.py\", line 694, in _evaluate\n    eval(self.__forward_code__, globalns, localns),\n  File \"<string>\", line 1, in <module>\nNameError: name 'Product' is not defined\nFAIL: ProductRepo.find_by_id return type not Optional[Product]\nTraceback (most recent call last):\n  File \"<string>\", line 3, in <module>\n  File \"/root/.local/share/uv/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/typing.py\", line 1871, in get_type_hints\n    value = _eval_type(value, globalns, localns)\n  File \"/root/.local/share/uv/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/typing.py\", line 329, in _eval_type\n    ev_args = tuple(_eval_type(a, globalns, localns, recursive_guard) for a in t.__args__)\n  File \"/root/.local/share/uv/python/cpython-3.10-",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_type_annotation_4file_qna8k3qn"
+}

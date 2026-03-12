@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_decomposition_test",
+  "category": "diagnostic",
+  "title": "Rename TaskStatus enum to JobState across 8 files (with spawn_agent)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 477.7502963542938,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: core/status.py: TaskStatus renamed to JobState\nPASS: core/status.py: enum values renamed\nPASS: core/status.py: old enum values removed\nPASS: core/job.py: uses JobState\nPASS: services/scheduler.py: uses JobState\nPASS: services/executor.py: uses JobState\nPASS: services/monitor.py: uses JobState\nPASS: api/endpoints.py: uses JobState\nPASS: persistence/store.py: uses JobState\nPASS: No TaskStatus references remain in any .py file\nPASS: JobState enum has correct string values\nPASS: All tests pass\n\nScore: 12/12\nRename complete - all checks passed\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_decomposition_test_rpf8wrhu"
+}

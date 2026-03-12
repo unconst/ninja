@@ -1,0 +1,32 @@
+{
+  "task_id": "repo_debug_e99a457d",
+  "category": "repo_debug",
+  "title": "Fix off-by-one error in pagination",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 58.707998752593994,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "3/3 output checks passed",
+    "checks": [
+      {
+        "name": "contains:passed",
+        "passed": true,
+        "detail": "found"
+      },
+      {
+        "name": "not_contains:FAILED",
+        "passed": true,
+        "detail": "correctly absent"
+      },
+      {
+        "name": "not_contains:ERROR",
+        "passed": true,
+        "detail": "correctly absent"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_repo_debug_e99a457d_6bq3ee38"
+}

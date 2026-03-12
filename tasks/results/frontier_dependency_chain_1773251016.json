@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_dependency_chain",
+  "category": "diagnostic",
+  "title": "Migrate 4-module data pipeline from positional to dict-based access",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 217.57309079170227,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_dependency_chain_m8dfogos"
+}

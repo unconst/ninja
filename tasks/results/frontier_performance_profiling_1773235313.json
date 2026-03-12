@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_performance_profiling",
+  "category": "diagnostic",
+  "title": "Profile and fix 4 performance bottlenecks in data pipeline",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 110.56081366539001,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nValueError: could not convert string to float: 'Aggregating by region...'\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_performance_profiling_52n_oo81"
+}

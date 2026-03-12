@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_security_audit",
+  "category": "diagnostic",
+  "title": "Find and fix security vulnerabilities in a web API",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 190.30918383598328,
+  "exit_code": 1,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: security_test.py is unchanged\n--- Password Hashing Tests ---\nPASS register_succeeds\nPASS password_not_plaintext\nPASS password_looks_hashed\nPASS login_with_original_password\nPASS login_wrong_password_fails\n\n--- SQL Injection (Login) Tests ---\nPASS sql_injection_login_blocked\nPASS sql_injection_comment_blocked\n\n--- Data Exposure Tests ---\nTraceback (most recent call last):\n  File \"/tmp/task_frontier_security_audit_foi8hls6/security_test.py\", line 263, in <module>\n    test_data_exposure()\n  File \"/tmp/task_frontier_security_audit_foi8hls6/security_test.py\", line 105, in test_data_exposure\n    status, body = dispatch(\"get_user\", {\"user_id\": user[\"id\"]})\nTypeError: 'NoneType' object is not subscriptable\n\nScore: 7/7\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_security_audit_foi8hls6"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_constraint_migration",
+  "category": "diagnostic",
+  "title": "Migrate database layer from SQLite to JSON \u2014 without modifying models or API",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 213.07544779777527,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "PASS: models.py is unchanged\nPASS: api.py is unchanged\nUser CRUD tests:\n  PASS: Create user returns 201\n  PASS: Created user has id\n  PASS: Created user has correct username\n  PASS: Created user has correct email\n  PASS: Created user has correct bio\n  PASS: Created user has created_at\n  PASS: Created user is_active is True\n  PASS: Create second user\n  PASS: Second user has different id\n  PASS: Get user returns 200\n  PASS: Get user data matches\n  PASS: Get user email matches\n  PASS: Get user bio ",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_constraint_migration_fq5mk5nn"
+}

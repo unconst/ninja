@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_perf_hoisting_1file",
+  "category": "diagnostic",
+  "title": "Hoist expensive computation out of per-item loop in single-file pipeline",
+  "difficulty": "medium",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 78.80818247795105,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "=== Part 1: Structural Checks (4 points) ===\nPASS struct_no_compute_in_classify: compute_stats not called inside classify_record\nPASS struct_compute_in_process_all: compute_stats called inside process_all\nPASS struct_stats_param: classify_record has stats parameter\nPASS struct_no_caching: no caching/memoization used\n\n=== Part 2: Functional Tests (4 points) ===\nPASS process_all_count\nPASS process_all_fields\nPASS tier_correctness\nPASS percentile_correctness\nPASS summarize_total\nPASS summarize_tiers\n\n6 passed, 0 failed\n\nFunctional tests passed: 4 / 4\n\n=== Summary ===\nScore: 8/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_perf_hoisting_1file_1nahf0cj"
+}

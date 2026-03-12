@@ -1,0 +1,56 @@
+[
+  {
+    "task_id": "ambiguous_3cd6d67f",
+    "category": "ambiguous",
+    "title": "Update the configuration (infer from code)",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 30.475281715393066,
+    "exit_code": 0
+  },
+  {
+    "task_id": "ambiguous_49e3237b",
+    "category": "ambiguous",
+    "title": "Fix the bug (underspecified)",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 32.505693197250366,
+    "exit_code": 0
+  },
+  {
+    "task_id": "ambiguous_3eef9e36",
+    "category": "ambiguous",
+    "title": "Finish the half-implemented feature",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 42.88063049316406,
+    "exit_code": 0
+  },
+  {
+    "task_id": "ambiguous_c15e9397",
+    "category": "ambiguous",
+    "title": "Add error handling (infer requirements)",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 40.17421507835388,
+    "exit_code": 0
+  },
+  {
+    "task_id": "ambiguous_4a76a000",
+    "category": "ambiguous",
+    "title": "Make it work (multiple issues)",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 54.26134777069092,
+    "exit_code": 0
+  },
+  {
+    "task_id": "ambiguous_d0886406",
+    "category": "ambiguous",
+    "title": "Clean up this code (hidden bug)",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 49.5407612323761,
+    "exit_code": 0
+  }
+]

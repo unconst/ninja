@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_log_forensics",
+  "category": "diagnostic",
+  "title": "Log forensics: correlate multi-source logs to find connection pool leak",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 97.41417837142944,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_log_forensics_pwwo7xkh"
+}

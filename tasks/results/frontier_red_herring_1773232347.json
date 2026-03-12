@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_red_herring",
+  "category": "diagnostic",
+  "title": "Fix stale cache bug \u2014 obvious fix breaks performance tests",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 102.37887477874756,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: test_basic_user_lookup\n  PASS: test_caching_works\n  PASS: test_different_roles_different_results\n  PASS: test_different_users_different_results\n  PASS: test_no_role_vs_role\n  PASS: test_performance_cache_hit_rate\n  PASS: test_user_count\n  PASS: test_user_not_found\n  PASS: test_user_with_role\n\n9 passed, 0 failed\nALL TESTS PASSED\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_red_herring_96y5afkg"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_constraint_migration",
+  "category": "diagnostic",
+  "title": "Migrate database layer from SQLite to JSON \u2014 without modifying models or API",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 252.68983602523804,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "Traceback (most recent call last):\n  File \"<stdin>\", line 88, in <module>\n  File \"/tmp/task_frontier_constraint_migration_1s1ugrh0/api.py\", line 87, in handle_update_post\n    post = db.update_post(request['post_id'], **fields)\nTypeError: update_post() got an unexpected keyword argument 'is_published'\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_constraint_migration_1s1ugrh0"
+}

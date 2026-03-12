@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_conditional_cleanup",
+  "category": "diagnostic",
+  "title": "Remove analytics feature without breaking caching or rate limiting",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 176.89633917808533,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_conditional_cleanup_s4ob0c35"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_25",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation 25: Rename class + method + parameter across command system (25 locations)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 159.62558150291443,
+  "exit_code": 0,
+  "result": {
+    "score": 0.7,
+    "details": "  FAIL: 0/0 tests pass\n  PASS: No 'class Command' base class\n  PASS: No 'def execute' methods remain\n  FAIL: 1 .execute() calls remain\n  PASS: base.py has class Action\n  PASS: base.py has perform(self, env)\n  PASS: __init__.py imports Action\n  PASS: No perform methods use 'context' parameter\n  PASS: dispatcher.py uses Action\n  FAIL: validator.py missing Action or .perform()\n\nScore: 7/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_25_2b6th_qf"
+}

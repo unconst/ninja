@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_security_audit",
+  "category": "diagnostic",
+  "title": "Find and fix security vulnerabilities in a web API",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 196.55515050888062,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: security_test.py is unchanged\n--- Password Hashing Tests ---\nPASS register_succeeds\nPASS password_not_plaintext\nPASS password_looks_hashed\nPASS login_with_original_password\nPASS login_wrong_password_fails\n\n--- SQL Injection (Login) Tests ---\nPASS sql_injection_login_blocked\nPASS sql_injection_comment_blocked\n\n--- Data Exposure Tests ---\nPASS get_user_succeeds\nPASS no_password_in_response\nPASS no_api_key_in_response\nPASS has_safe_fields\n\n--- Authorization Tests ---\nPASS cannot_update_other_user\nPASS other_user_email_unchanged\nPASS can_update_own_profile\n\n--- Role Escalation Tests ---\nPASS role_not_escalated\n\n--- SQL Injection (Search) Tests ---\nPASS normal_search_works\n\n--- Password Strength Tests ---\nPASS weak_password_rejected\nPASS common_password_rejected\nPASS strong_password_accepted\n\n\n=== RESULTS: 19 passed, 0 failed ===\n\nScore: 19/19\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_security_audit_2alq7r6p"
+}

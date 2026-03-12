@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_mixed_difficulty_debug",
+  "category": "diagnostic",
+  "title": "Fix 3 bugs of mixed difficulty in a data service module",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 98.47158360481262,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "=== Running tests/test_service.py ===\n=== Pagination Tests ===\nPASS paginate_page1\nPASS paginate_page2\nPASS paginate_last_page\nPASS paginate_empty\n\n=== Discount Tests ===\nPASS discount_no_discount\nPASS discount_10pct\nPASS discount_20pct\nPASS discount_30pct\n\n=== Batch Processing Tests ===\nPASS batch_simple\nPASS batch_cross_batch_ref\nPASS batch_intra_batch_ref\nPASS batch_intra_batch_chain\n\n=== RESULTS: 12 passed, 0 failed ===\n\n=== Summary ===\nTests passed: 12 / 12\nScore: 12/12\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_mixed_difficulty_debug_q97pvxbj"
+}

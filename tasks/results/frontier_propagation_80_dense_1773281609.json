@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_80_dense",
+  "category": "diagnostic",
+  "title": "Rename QueueError and create_queue across 8 files (~80 dense locations)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 110.66758441925049,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: All tests pass\nPASS: No QueueError references remain\nPASS: No create_queue references remain\nPASS: core.py has ChannelError class\nPASS: core.py has create_channel function\nPASS: __init__.py imports new names\nPASS: producer.py uses new names\nPASS: consumer.py uses new names\nPASS: router.py uses new names\nPASS: middleware.py uses new names\n\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_propagation_80_dense_f7swnr4j"
+}

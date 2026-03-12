@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_perf_3bug_1file",
+  "category": "diagnostic",
+  "title": "Optimize 3 performance bottlenecks in a single-file data processor",
+  "difficulty": "medium",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 75.86533808708191,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "=== Part 1: Functional Correctness Tests (5 points) ===\n=== Correctness Tests ===\nPASS generate_records\nPASS processor_fields\nPASS processor_tier_logic\nPASS processor_summary_lines\nPASS processor_filter\n\n=== RESULTS: 5 passed, 0 failed ===\n\nFunctional tests: 5 / 5\n\n=== Part 2: Structural / Pattern Checks (4 points) ===\nPASS struct_no_per_record_avg: category averages not recomputed per record\nPASS struct_uses_join: build_summary_text uses join\nPASS struct_no_json_copy: No json serialization for copying\nPASS struct_generate_records: generate_records still works correctly\n\n=== Part 3: Performance / Timing Check (1 point) ===\nPASS timing_5k_pipeline: 5000 records in 0.010s (limit 2.0s)\n\n=== Summary ===\nFunctional: 5 / 5\nStructural: 5 / 4\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_perf_3bug_1file_chl1cyk3"
+}

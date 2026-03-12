@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_subtle_semantics",
+  "category": "diagnostic",
+  "title": "Fix 3 subtle semantic bugs in event processing pipeline",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 69.24811458587646,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: test_pipeline.py is unchanged\nPASS test_parse_events_basic\nPASS test_sort_stability\nPASS test_sort_ordering\nPASS test_filter_boundary_inclusive\nPASS test_filter_none_values\nPASS test_aggregate_empty_values\nPASS test_aggregate_normal\nPASS test_pipeline_end_to_end\n\n============================================================\nALL TESTS PASSED\n\nPASS: parse_events basic functionality\nPASS: Sort stability for equal keys\nPASS: Sort ordering by timestamp then sequence_id\nPASS: Filter inclusive boundaries\nPASS: Filter excludes None values\nPASS: Aggregate empty values returns None\nPASS: End-to-end pipeline\n\nScore: 8/8\nAll checks passed\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_subtle_semantics_xay66hdz"
+}

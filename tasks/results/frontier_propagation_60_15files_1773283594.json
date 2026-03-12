@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_60_15files",
+  "category": "diagnostic",
+  "title": "Propagation 60 at 15 files: Rename PipeError and create_pipe across eventpipe package",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 124.73683595657349,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: All tests pass\nPASS: No PipeError references remain\nPASS: No create_pipe references remain\nPASS: core.py has ChainError class\nPASS: core.py has create_chain function\nPASS: __init__.py imports new names\nPASS: source.py uses new names\nPASS: router.py uses new names\nPASS: monitor.py uses ChainError\nPASS: config.py uses new names\nPASS: validator.py uses new names\nPASS: logger.py uses ChainError\n\nScore: 12/12\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_propagation_60_15files_j62052ku"
+}

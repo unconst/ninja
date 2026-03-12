@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_validator_suite",
+  "category": "diagnostic",
+  "title": "Add missing validation rules to a data validation library",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 197.8391351699829,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "PASS: test_validator.py is unchanged\n--- Type Checking ---\nPASS type_valid_user\nFAIL type_bad_age: should reject string age\nFAIL type_bad_age_code: codes: []\nFAIL type_bad_name: should reject int name\n\n--- Required Fields ---\nPASS required_missing_name\nPASS required_code\nPASS required_missing_age\nPASS required_optional_ok\n\n--- Numeric Range ---\nFAIL range_age_too_low: age=-1 below min=0\nFAIL range_code: codes: []\nFAIL range_age_too_high: age=200 above max=150\nPASS range_boundary_zero\nFAIL range_score_too_high: score=101 above max=100\n\n--- String Length ---\nFAIL length_empty_name: name min_length=1\nFAIL length_code: codes: []\nFAIL length_long_name: name max_length=50\nPASS length_exact_max_ok\n\n--- Pattern Matching ---\nFAIL pattern_bad_email: should reject invalid email\nFAIL pattern_code: codes: []\nPASS pattern_ok_email\n\n--- Enum Validation ---\nPASS enum_bad_role\nFAIL enum_code: codes: ['enum']\nPASS enum_ok_guest\n\n--- Date Format ---\nPASS date_bad_format\nFAIL date_code: codes: ['date_format']\nPASS date_ok\nPASS date_invalid\n\n--- Nested Schema ---\nPASS nested_missing_city\nFAIL nested_bad_zip: zip must match pattern\nPASS nested_minimal_ok\n\n--- List Validation ---\nFAIL list_too_many: max_items=5, got 6\nFAIL list_code: codes: []\nFAIL list_bad_item: empty string fails min_length=1\nPASS list_empty_ok\n\n--- Custom Validators ---\nPASS custom_even_ok\nFAIL custom_odd_fail: 3 is odd\nFAIL custom_code: codes: []\n\n--- Cross-Field Validation ---\nTraceback (most recent call last):\n  File \"/tmp/task_frontier_validator_suite_k5yvwsm9/test_validator.py\", line 377, in <module>\n    test_cross_field()\n  File \"/tmp/task_frontier_validator_suite_k5yvwsm9/test_validator.py\", line 283, in test_cross_field\n    v.register_cross_validator(check_start_before_end)\nTypeError: Validator.register_cross_validator() missing 1 required positional argument: 'validator_func'\n\nFAIL: Test suite crashed (exit code 1)\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_validator_suite_k5yvwsm9"
+}

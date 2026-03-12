@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_validator_suite",
+  "category": "diagnostic",
+  "title": "Add missing validation rules to a data validation library",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 251.23334789276123,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: test_validator.py is unchanged\n--- Type Checking ---\nPASS type_valid_user\nPASS type_bad_age\nPASS type_bad_age_code\nPASS type_bad_name\n\n--- Required Fields ---\nPASS required_missing_name\nPASS required_code\nPASS required_missing_age\nPASS required_optional_ok\n\n--- Numeric Range ---\nPASS range_age_too_low\nPASS range_code\nPASS range_age_too_high\nPASS range_boundary_zero\nPASS range_score_too_high\n\n--- String Length ---\nPASS length_empty_name\nPASS length_code\nPASS length_long_name\nPASS length_exact_max_ok\n\n--- Pattern Matching ---\nPASS pattern_bad_email\nPASS pattern_code\nPASS pattern_ok_email\n\n--- Enum Validation ---\nPASS enum_bad_role\nPASS enum_code\nPASS enum_ok_guest\n\n--- Date Format ---\nPASS date_bad_format\nPASS date_code\nPASS date_ok\nPASS date_invalid\n\n--- Nested Schema ---\nPASS nested_missing_city\nPASS nested_bad_zip\nPASS nested_minimal_ok\n\n--- List Validation ---\nPASS list_too_many\nPASS list_code\nPASS list_bad_item\nPASS list_empty_ok\n\n--- Custom Validators ---\nPASS custom_even_ok\nPASS custom_odd_fail\nPASS custom_code\n\n--- Cross-Field Validation ---\nPASS cross_field_ok\nPASS cross_field_fail\nPASS cross_field_code\n\n--- Batch Uniqueness ---\nPASS batch_unique_ok\nPASS batch_duplicate_fail\nPASS batch_dup_error_exists\nPASS batch_dup_on_second\n\n--- Error Aggregation ---\nPASS agg_multiple_errors\nPASS agg_at_least_3\nPASS agg_name_error\nPASS agg_age_error\n\n\n=== RESULTS: 48 passed, 0 failed ===\n\nScore: 48/48\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_validator_suite_eteh1gw2"
+}

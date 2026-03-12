@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_visitor_extension",
+  "category": "diagnostic",
+  "title": "Add 2 new node types to visitor-pattern AST interpreter",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 121.485830783844,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_visitor_extension_0i5qm0ae"
+}

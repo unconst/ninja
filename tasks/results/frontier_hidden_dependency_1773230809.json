@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_hidden_dependency",
+  "category": "diagnostic",
+  "title": "Fix pipeline bug \u2014 root cause is 4 layers deep",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 43.66160178184509,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: test_basic_pipeline\n  PASS: test_integer_accepts_valid\n  PASS: test_integer_from_float_string\n  PASS: test_integer_validation_strict\n  PASS: test_leading_zeros\n  PASS: test_negative_integer\n  PASS: test_pipeline_json_output\n  PASS: test_pipeline_missing_required\n  PASS: test_pipeline_optional_fields\n  PASS: test_pipeline_with_transforms\n  PASS: test_validator_boolean\n\n11 passed, 0 failed\nALL TESTS PASSED\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_hidden_dependency_7f_es_1f"
+}

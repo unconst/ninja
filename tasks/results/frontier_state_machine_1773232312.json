@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_state_machine",
+  "category": "diagnostic",
+  "title": "Implement order processor with state machine + business rules",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 67.32857036590576,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: test_available_events\n  PASS: test_cancel_from_processing_sets_refund_pending\n  PASS: test_cancel_from_validated\n  PASS: test_cannot_submit_twice\n  PASS: test_happy_path\n  PASS: test_history_tracking\n  PASS: test_invalid_transition_raises\n  PASS: test_refund_after_30_days\n  PASS: test_refund_within_30_days\n  PASS: test_reject_returns_to_draft\n  PASS: test_reopen_after_cancel\n  PASS: test_validate_empty_order\n  PASS: test_validate_zero_total\n\n13 passed, 0 failed\nALL TESTS PASSED\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_state_machine_zrn79wmh"
+}

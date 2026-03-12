@@ -1,0 +1,22 @@
+{
+  "task_id": "multi_step_07046a28",
+  "category": "multi_step",
+  "title": "Build REST API server from data model",
+  "difficulty": "medium",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 136.10622549057007,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "Traceback (most recent call last):\n  File \"/tmp/task_multi_step_07046a28_ogrbm1ov/server.py\", line 174, in <module>\n    run_server()\n  File \"/tmp/task_multi_step_07046a28_ogrbm1ov/server.py\", line 157, in run_server\n    httpd = HTTPServer(server_address, BooksAPIHandler)\n  File \"/root/.local/share/uv/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/socketserver.py\", line 452, in __init__\n    self.server_bind()\n  File \"/root/.local/share/uv/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/h",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_multi_step_07046a28_ogrbm1ov"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_entangled_cleanup",
+  "category": "diagnostic",
+  "title": "Consolidate duplicate implementations in notification system",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 213.76432490348816,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_entangled_cleanup_l7r5as81"
+}

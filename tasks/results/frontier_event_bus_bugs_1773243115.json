@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_event_bus_bugs",
+  "category": "diagnostic",
+  "title": "Fix 3 interacting bugs in event bus system",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 114.9402494430542,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: test_basic_subscribe_emit\nPASS: test_emit_many\nPASS: test_event_data_isolation\nPASS: test_event_filter\nPASS: test_multiple_once_handlers\nPASS: test_once_subscription\nPASS: test_priority_order\nPASS: test_replay\nPASS: test_stop_propagation\nPASS: test_unsubscribe\n\nResults: 10/10\n\nTests passed: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_event_bus_bugs_ncx6w5oa"
+}

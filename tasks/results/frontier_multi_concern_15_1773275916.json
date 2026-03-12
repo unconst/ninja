@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_15",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation 15: Rename class + method + parameter across plugin system (15 locations)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 181.17814207077026,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (11)\n  PASS: No 'class Plugin' base class references\n  PASS: No 'def execute' methods remain\n  PASS: No .execute() calls remain\n  PASS: base.py has class Extension\n  PASS: base.py has run(self, payload)\n  PASS: __init__.py imports Extension\n  PASS: No run methods use 'data' parameter\n  PASS: loader.py uses Extension\n  PASS: chain.py uses Extension and .run()\n\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_15_eae1sg3p"
+}

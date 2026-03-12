@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_entangled_cleanup",
+  "category": "diagnostic",
+  "title": "Consolidate duplicate implementations in notification system",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 204.19913125038147,
+  "exit_code": 0,
+  "result": {
+    "score": 0.875,
+    "details": "  Test output:\nTraceback (most recent call last):\n  File \"/tmp/task_frontier_entangled_cleanup_r0_59tvc/tests/test_notifications.py\", line 6, in <module>\n    from backends.email_backend import EmailBackend, send_email, format_message as email_fmt\nImportError: cannot import name 'format_message' from 'backends.email_backend' (/tmp/task_frontier_entangled_cleanup_r0_59tvc/backends/email_backend.py)\nFAIL: All tests pass\nPASS: Test file unchanged (25 test functions)\nPASS: Exactly one send_email definition\nPASS: No if/elif routing chain in router.py\nPASS: format_message exists in utils.py\nPASS: No format_message definitions in backends/\nPASS: slack_backend.py unchanged\nPASS: webhook_backend.py unchanged\n\nScore: 7/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_entangled_cleanup_r0_59tvc"
+}

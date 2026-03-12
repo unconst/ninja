@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_interface_preservation",
+  "category": "diagnostic",
+  "title": "Optimize data serializer while preserving public API exactly",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 294.8509180545807,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "Traceback (most recent call last):\n  File \"<string>\", line 25, in <module>\nAssertionError: Row 11 field region: 'US-West' != 1.1\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_interface_preservation_sj98kbv_"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_surgical_addition",
+  "category": "diagnostic",
+  "title": "Add new methods to complex PluginRegistry without losing existing code",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 137.94040417671204,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: All 18 tests pass\nPASS: All 15 original methods present\nPASS: New methods exist and __all__ updated\nPASS: Decorators and PluginMeta preserved\nPASS: File header preserved (not rewritten from scratch)\n\nScore: 5/5\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_surgical_addition_yuqnnraf"
+}

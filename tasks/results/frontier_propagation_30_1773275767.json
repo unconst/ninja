@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_30",
+  "category": "diagnostic",
+  "title": "Propagation 30: Dual-rename across storage library (30 locations, 12 files)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 126.2427282333374,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (26)\n  PASS: No StorageError references\n  PASS: No open_store references\n  PASS: core.py has DataError class\n  PASS: core.py has open_bucket function\n  PASS: __init__.py imports DataError and open_bucket\n  PASS: backend.py uses DataError\n  PASS: pool.py uses new names\n  PASS: replication.py uses DataError\n  PASS: snapshot.py uses new names\n\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_propagation_30_qu9ztd8n"
+}

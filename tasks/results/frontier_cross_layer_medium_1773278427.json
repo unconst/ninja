@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_cross_layer_medium",
+  "category": "diagnostic",
+  "title": "Fix 5 cross-layer bugs in a task tracker (routes/service/db)",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 99.41240406036377,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "============================= test session starts ==============================\nplatform linux -- Python 3.10.20, pytest-9.0.2, pluggy-1.6.0 -- /root/Arbos/.venv/bin/python3\ncachedir: .pytest_cache\nbenchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)\nhypothesis profile 'default'\nPyQt5 5.15.11 -- Qt runtime 5.15.18 -- Qt compiled 5.15.14\nrootdir: /tmp/task_frontier_cross_layer_medium_jud7rd6n\nplugins: github-actions-annotate-failures-0.4.0, benchmark-5.2.3, Faker-40.8.0, xdist-3.8.0, instafail-0.5.0, timeout-2.4.0, mock-3.15.1, cov-7.0.0, django-4.11.1, bdd-8.1.0, asyncio-1.3.0, rerunfailures-16.1, pretty-1.3.0, hypothesis-6.151.9, qt-4.5.0, anyio-4.12.1, xvfb-3.1.1\nasyncio: mode=strict, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollecting ... collected 25 items\n\ntest_task_tracker.py::test_basic_create_task PASSED                      [  4%]\ntest_task_tracker.py::test_basic_get_task PASSED                         [  8%]\ntest_task_tracker.py::test_basic_list_tasks PASSED                       [ 12%]\ntest_task_tracker.py::test_basic_assign_user PASSED                      [ 16%]\ntest_task_tracker.py::test_basic_unassign_user PASSED                    [ 20%]\ntest_task_tracker.py::test_priority_sort_full_order PASSED               [ 24%]\ntest_task_tracker.py::test_priority_sort_medium_before_low PASSED        [ 28%]\ntest_task_tracker.py::test_priority_sort_medium_in_middle PASSED         [ 32%]\ntest_task_tracker.py::test_priority_sort_with_duplicates PASSED          [ 36%]\ntest_task_tracker.py::test_status_filter_case_insensitive PASSED         [ 40%]\ntest_task_tracker.py::test_status_filter_uppercase PASSED                [ 44%]\ntest_task_tracker.py::test_status_filter_mixed_case_tasks PASSED         [ 48%]\ntest_task_tracker.py::test_status_filter_no_false_matches PASSED         [ 52%]\ntest_task",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_cross_layer_medium_jud7rd6n"
+}

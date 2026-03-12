@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_discriminating_bugs_8file",
+  "category": "diagnostic",
+  "title": "Fix 5 real bugs in 8-file pipeline while preserving 3 correct-but-suspicious patterns",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 75.67632246017456,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (38/38)\n  PASS: Scaler uses addition (+)\n  PASS: Aggregator uses scaled_value\n  PASS: Ranker sorts descending\n  PASS: Formatter preserves sign (no abs)\n  PASS: Validator uses configured max_value\n  PASS: Normalizer correctly preserved (int binning)\n  PASS: Filter correctly preserved (strict >)\n  PASS: Deduplicator correctly preserved (first-wins)\n  PASS: Integration pipeline correct\n\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_discriminating_bugs_8file_osbnhzju"
+}

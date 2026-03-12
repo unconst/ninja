@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_cascading_edits",
+  "category": "diagnostic",
+  "title": "Fix 4 bugs in Matrix class \u2014 edits shift line numbers",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 97.61947894096375,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: test_determinant_1x1\nPASS: test_determinant_2x2\nPASS: test_determinant_3x3\nPASS: test_determinant_singular\nPASS: test_init_basic\nPASS: test_init_rejects_bad_dims\nPASS: test_init_rejects_ragged_rows\nPASS: test_init_zeros\nPASS: test_multiply_dimension_mismatch\nPASS: test_multiply_result_shape\nPASS: test_multiply_result_values\nPASS: test_multiply_returns_new_matrix\nPASS: test_transpose_preserves_diagonal\nPASS: test_transpose_rectangular\nPASS: test_transpose_square\nPASS: test_transpose_symmetr",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_cascading_edits_fgqfe7m1"
+}

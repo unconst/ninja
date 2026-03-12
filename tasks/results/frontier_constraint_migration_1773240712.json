@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_constraint_migration",
+  "category": "diagnostic",
+  "title": "Migrate database layer from SQLite to JSON \u2014 without modifying models or API",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 208.2645661830902,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "Traceback (most recent call last):\n  File \"<stdin>\", line 59, in <module>\n  File \"/tmp/task_frontier_constraint_migration_zt9413i3/api.py\", line 57, in handle_list_users\n    users = db.list_users(active_only=active_only)\nTypeError: list_users() got an unexpected keyword argument 'active_only'\nTraceback (most recent call last):\n  File \"<stdin>\", line 23, in <module>\n  File \"/tmp/task_frontier_constraint_migration_zt9413i3/./db.py\", line 143, in create_post\n    raise ValueError(\"Author does not ex",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_constraint_migration_zt9413i3"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_100_dense",
+  "category": "diagnostic",
+  "title": "Rename CacheError and build_cache across 8 files (~100 dense locations)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 147.15262937545776,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: All tests pass\nPASS: No CacheError references remain\nPASS: No build_cache references remain\nPASS: core.py has StorageError class\nPASS: core.py has build_store function\nPASS: __init__.py imports new names\nPASS: backend.py uses new names\nPASS: eviction.py uses new names\nPASS: replication.py uses new names\nPASS: warmup.py uses new names\n\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_propagation_100_dense_6uu8fo3y"
+}

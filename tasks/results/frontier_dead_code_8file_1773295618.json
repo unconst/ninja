@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_dead_code_8file",
+  "category": "diagnostic",
+  "title": "Remove 16 dead functions from 8-file service while preserving 8 indirectly-used functions",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 316.2977337837219,
+  "exit_code": 1,
+  "result": {
+    "score": 0.84,
+    "details": "  FAIL: 17/18 tests pass\ntests/test_service.py::TestMaintenance::test_maintenance_runs_storage_compaction FAILED [ 50%] [ 50%]\n  PASS: _legacy_hash_password removed from service/auth.py\n  PASS: _purge_expired_tokens_batch removed from service/auth.py\n  PASS: _export_users_csv removed from service/users.py\n  PASS: _fuzzy_search_users removed from service/users.py\n  PASS: _dump_cache_contents removed from service/cache.py\n  PASS: _evict_lru removed from service/cache.py\n  PASS: _filter_events_by_type removed from service/events.py\n  PASS: _replay_events removed from service/events.py\n  PASS: _compute_percentiles removed from service/metrics.py\n  PASS: _format_prometheus_output removed from service/metrics.py\n  FAIL: _migrate_v1_to_v2 still in service/storage.py\n  PASS: _store_dump_all removed from service/storage.py\n  PASS: _parse_cron_expression removed from service/scheduler.py\n  FAIL: _reorder_by_priority still in service/scheduler.py\n  PASS: _build_digest removed from service/notifier.py\n  PASS: _render_notification_template removed from service/notifier.py\n  PASS: _on_token_expired preserved in service/auth.py\n  PASS: _promote_to_admin preserved in service/users.py\n  PASS: _evict_expired_entries preserved in service/cache.py\n  PASS: _flush_old_events preserved in service/events.py\n  FAIL: _collect_system_gauges wrongly removed from service/metrics.py\n  PASS: _compact_collection preserved in service/storage.py\n  PASS: _cleanup_finished_tasks preserved in service/scheduler.py\n  PASS: _setup_scheduler_maintenance preserved in service/notifier.py\n\nScore: 21/25\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_dead_code_8file_6edf4g60"
+}

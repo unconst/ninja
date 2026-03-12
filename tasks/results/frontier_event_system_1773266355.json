@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_event_system",
+  "category": "diagnostic",
+  "title": "Add missing features to an event emitter library",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 132.7102553844452,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: test_emitter.py is unchanged\n--- Basic on/emit ---\nPASS basic_emit\nPASS basic_received\nPASS basic_no_listeners\n\n--- Once ---\nPASS once_fires_once\n\n--- Off ---\nPASS off_removed\n\n--- Off All ---\nPASS off_all_specific\nPASS off_all_b_intact\nPASS off_all_everything\n\n--- Listeners Info ---\nPASS listeners_list\nPASS listener_count\nPASS listener_count_empty\n\n--- Event Names ---\nPASS event_names\n\n--- Emit with Result ---\nPASS emit_result\nPASS emit_result_empty\n\n--- Prepend ---\nPASS prepend_order\n\n--- Max Listeners ---\nPASS max_listeners_warn\n\n--- Error Handling ---\nPASS error_caught\nPASS error_no_handler_raises\n\n--- Wildcard ---\nPASS wildcard_count\nPASS wildcard_foo\nPASS wildcard_bar\n\n--- Namespace ---\nPASS ns_emit\nPASS ns_removed\nPASS ns_kept\nPASS ns_result\n\n--- Middleware ---\nPASS middleware_transform\n\n--- History & Replay ---\nPASS history_count\nPASS history_first\nPASS replay\n\n--- Pause / Resume ---\nPASS pause_no_emit\nPASS resume_replay\n\n--- Async ---\nPASS async_emit\n\n--- Pipe ---\nPASS pipe_forward\n\n--- Alias ---\nPASS alias_emit\n\n\n=== RESULTS: 34 passed, 0 failed ===\n\nScore: 34/34\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_event_system_huzgxcrr"
+}

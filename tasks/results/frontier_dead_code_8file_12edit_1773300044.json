@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_dead_code_8file_12edit",
+  "category": "diagnostic",
+  "title": "Remove 12 dead functions from 8-file service while preserving 8 indirectly-used functions",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 164.47117352485657,
+  "exit_code": 0,
+  "result": {
+    "score": 0.7142857142857143,
+    "details": "  FAIL: 0/0 tests pass\n  PASS: _legacy_hash_password removed from service/auth.py\n  FAIL: _purge_expired_tokens_batch still in service/auth.py\n  PASS: _export_users_csv removed from service/users.py\n  PASS: _fuzzy_search_users removed from service/users.py\n  PASS: _dump_cache_contents removed from service/cache.py\n  PASS: _evict_lru removed from service/cache.py\n  FAIL: _filter_events_by_type still in service/events.py\n  PASS: _replay_events removed from service/events.py\n  PASS: _compute_percentiles removed from service/metrics.py\n  PASS: _migrate_v1_to_v2 removed from service/storage.py\n  PASS: _parse_cron_expression removed from service/scheduler.py\n  PASS: _build_digest removed from service/notifier.py\n  PASS: _on_token_expired preserved in service/auth.py\n  PASS: _promote_to_admin preserved in service/users.py\n  FAIL: _evict_expired_entries wrongly removed from service/cache.py\n  FAIL: _flush_old_events wrongly removed from service/events.py\n  FAIL: _collect_system_gauges wrongly removed from service/metrics.py\n  PASS: _compact_collection preserved in service/storage.py\n  PASS: _cleanup_finished_tasks preserved in service/scheduler.py\n  PASS: _setup_scheduler_maintenance preserved in service/notifier.py\n\nScore: 15/21\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_dead_code_8file_12edit_6g27dttf"
+}

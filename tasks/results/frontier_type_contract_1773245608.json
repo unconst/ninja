@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_type_contract",
+  "category": "diagnostic",
+  "title": "Add LRU caching to the database layer without breaking type contracts",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 190.2955093383789,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_type_contract_a7e_jogc"
+}

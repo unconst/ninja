@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_cross_reference_rename",
+  "category": "diagnostic",
+  "title": "Rename class across 7 files without breaking snake_case variables",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 157.76123595237732,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_cross_reference_rename_lcmwd17m"
+}

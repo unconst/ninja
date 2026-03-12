@@ -1,0 +1,22 @@
+{
+  "task_id": "multi_step_724bae6e",
+  "category": "multi_step",
+  "title": "Build REST API server from data model",
+  "difficulty": "medium",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 105.67236256599426,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "All API tests passed!\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/debug_api"
+}

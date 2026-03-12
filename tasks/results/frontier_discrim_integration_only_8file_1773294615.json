@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_discrim_integration_only_8file",
+  "category": "diagnostic",
+  "title": "Fix 5 real bugs in 8-file pipeline using only integration tests (no per-component feedback)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 144.85776376724243,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All integration tests pass (11/11)\n  PASS: Scaler uses addition\n  PASS: Aggregator uses scaled_value\n  PASS: Ranker sorts descending\n  PASS: Formatter no abs\n  PASS: Validator uses config max\n  PASS: Normalizer binning preserved\n  PASS: Filter strict > preserved\n  PASS: Deduplicator first-wins preserved\n  PASS: Scaler 20+5=25\n  PASS: Aggregator sums scaled\n  PASS: Ranker desc\n  PASS: Formatter sign\n  PASS: Validator config\n  PASS: Filter threshold\n  PASS: Full pipeline\n\nScore: 16/16\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_discrim_integration_only_8file_7d6l1l_v"
+}

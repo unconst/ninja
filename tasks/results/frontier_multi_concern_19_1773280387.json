@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_19",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation 19: Rename class + method + parameter across data adapter system (19 locations)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 170.5679965019226,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (15/15)\n  PASS: No 'class Adapter:' base class definition\n  PASS: No 'def adapt' methods remain\n  PASS: No .adapt() calls remain\n  PASS: base.py has class Converter with convert(self, input)\n  PASS: __init__.py imports Converter\n  PASS: Trap variables preserved correctly\n  PASS: registry.py uses Converter in isinstance check\n  PASS: chain.py uses .convert()\n  PASS: All subclasses inherit from Converter\n\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_19__h5koqk8"
+}

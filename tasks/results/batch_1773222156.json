@@ -1,0 +1,497 @@
+[
+  {
+    "task_id": "ambiguous_3a8a9dd6",
+    "category": "ambiguous",
+    "title": "Add error handling (infer requirements)",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 38.94985914230347,
+    "exit_code": 0
+  },
+  {
+    "task_id": "ambiguous_2d46fd7d",
+    "category": "ambiguous",
+    "title": "Update the configuration (infer from code)",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 39.78823637962341,
+    "exit_code": 0
+  },
+  {
+    "task_id": "ambiguous_96a341ef",
+    "category": "ambiguous",
+    "title": "Clean up this code (hidden bug)",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 50.01294302940369,
+    "exit_code": 0
+  },
+  {
+    "task_id": "ambiguous_716157ff",
+    "category": "ambiguous",
+    "title": "Make it work (multiple issues)",
+    "passed": false,
+    "score": 0.5,
+    "elapsed": 71.98798632621765,
+    "exit_code": 0
+  },
+  {
+    "task_id": "ambiguous_afecef8e",
+    "category": "ambiguous",
+    "title": "Finish the half-implemented feature",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 42.82667851448059,
+    "exit_code": 0
+  },
+  {
+    "task_id": "data_analysis_03e8f658",
+    "category": "data_analysis",
+    "title": "Create pivot table report from sales data",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 49.548606157302856,
+    "exit_code": 0
+  },
+  {
+    "task_id": "ambiguous_ffbe200a",
+    "category": "ambiguous",
+    "title": "Fix the bug (underspecified)",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 70.48060965538025,
+    "exit_code": 0
+  },
+  {
+    "task_id": "data_analysis_6d841de9",
+    "category": "data_analysis",
+    "title": "Join data files and compute sales report",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 57.854204416275024,
+    "exit_code": 0
+  },
+  {
+    "task_id": "data_analysis_4842f69c",
+    "category": "data_analysis",
+    "title": "Clean and normalize user registration data",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 83.65305757522583,
+    "exit_code": 0
+  },
+  {
+    "task_id": "data_analysis_88329ff7",
+    "category": "data_analysis",
+    "title": "Analyze web traffic time series and detect anomaly",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 61.915467739105225,
+    "exit_code": 0
+  },
+  {
+    "task_id": "data_analysis_8f0df5f5",
+    "category": "data_analysis",
+    "title": "Detect and report sensor data outliers",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 78.0234739780426,
+    "exit_code": 0
+  },
+  {
+    "task_id": "docs_reconciliation_1d491729",
+    "category": "docs_reconciliation",
+    "title": "Find and fix config documentation mismatches",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 53.57033395767212,
+    "exit_code": 0
+  },
+  {
+    "task_id": "docs_reconciliation_58642064",
+    "category": "docs_reconciliation",
+    "title": "Fix incorrect API documentation comments",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 48.2756404876709,
+    "exit_code": 0
+  },
+  {
+    "task_id": "docs_reconciliation_a522a0f8",
+    "category": "docs_reconciliation",
+    "title": "Fix outdated README to match current code",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 45.588648557662964,
+    "exit_code": 0
+  },
+  {
+    "task_id": "docs_reconciliation_c4d94878",
+    "category": "docs_reconciliation",
+    "title": "Generate changelog from code diffs",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 41.11138105392456,
+    "exit_code": 0
+  },
+  {
+    "task_id": "env_debug_0a138490",
+    "category": "env_debug",
+    "title": "Fix broken Python import chain",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 46.582746505737305,
+    "exit_code": 0
+  },
+  {
+    "task_id": "docs_reconciliation_20acb35b",
+    "category": "docs_reconciliation",
+    "title": "Add comprehensive docstrings to undocumented code",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 104.51766657829285,
+    "exit_code": 0
+  },
+  {
+    "task_id": "env_debug_51b3c00f",
+    "category": "env_debug",
+    "title": "Fix and recover corrupt JSON data files",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 35.58109664916992,
+    "exit_code": 0
+  },
+  {
+    "task_id": "env_debug_1ff3f75b",
+    "category": "env_debug",
+    "title": "Fix path resolution issues in multi-module project",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 42.39413261413574,
+    "exit_code": 0
+  },
+  {
+    "task_id": "env_debug_b5c51cf2",
+    "category": "env_debug",
+    "title": "Diagnose and fix server startup failure",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 40.08224582672119,
+    "exit_code": 0
+  },
+  {
+    "task_id": "env_debug_6c42c133",
+    "category": "env_debug",
+    "title": "Fix and recover corrupt JSON data files",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 44.56629467010498,
+    "exit_code": 0
+  },
+  {
+    "task_id": "env_debug_c133a700",
+    "category": "env_debug",
+    "title": "Fix application failing due to missing config",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 49.825021743774414,
+    "exit_code": 0
+  },
+  {
+    "task_id": "env_debug_d885ea55",
+    "category": "env_debug",
+    "title": "Diagnose and fix server startup failure",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 49.5534553527832,
+    "exit_code": 0
+  },
+  {
+    "task_id": "env_debug_d9f9d445",
+    "category": "env_debug",
+    "title": "Fix broken Python import chain",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 31.392186403274536,
+    "exit_code": 0
+  },
+  {
+    "task_id": "env_debug_e2bc6a5b",
+    "category": "env_debug",
+    "title": "Fix application failing due to missing config",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 42.12061810493469,
+    "exit_code": 0
+  },
+  {
+    "task_id": "local_ops_1b5a5732",
+    "category": "local_ops",
+    "title": "Audit and split requirements into prod/dev",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 38.65060472488403,
+    "exit_code": 0
+  },
+  {
+    "task_id": "env_debug_e5f7955c",
+    "category": "env_debug",
+    "title": "Fix path resolution issues in multi-module project",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 44.91246581077576,
+    "exit_code": 0
+  },
+  {
+    "task_id": "local_ops_291ac3ad",
+    "category": "local_ops",
+    "title": "Extract and summarize log issues",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 51.801793813705444,
+    "exit_code": 0
+  },
+  {
+    "task_id": "local_ops_30217328",
+    "category": "local_ops",
+    "title": "Fix broken deployment shell script",
+    "passed": false,
+    "score": 0.75,
+    "elapsed": 49.9214973449707,
+    "exit_code": 0
+  },
+  {
+    "task_id": "local_ops_43fd2055",
+    "category": "local_ops",
+    "title": "Convert INI config to YAML and TOML",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 38.358850955963135,
+    "exit_code": 0
+  },
+  {
+    "task_id": "local_ops_8e2a331e",
+    "category": "local_ops",
+    "title": "Extract and summarize log issues",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 45.67692685127258,
+    "exit_code": 0
+  },
+  {
+    "task_id": "local_ops_9fb9d77c",
+    "category": "local_ops",
+    "title": "Audit and split requirements into prod/dev",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 46.46795177459717,
+    "exit_code": 0
+  },
+  {
+    "task_id": "local_ops_7c7917f4",
+    "category": "local_ops",
+    "title": "Reorganize flat project into standard structure",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 79.9532539844513,
+    "exit_code": 1
+  },
+  {
+    "task_id": "local_ops_be017603",
+    "category": "local_ops",
+    "title": "Reorganize flat project into standard structure",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 71.84909534454346,
+    "exit_code": 0
+  },
+  {
+    "task_id": "local_ops_eb40dfad",
+    "category": "local_ops",
+    "title": "Fix broken deployment shell script",
+    "passed": false,
+    "score": 0.75,
+    "elapsed": 43.45235729217529,
+    "exit_code": 0
+  },
+  {
+    "task_id": "local_ops_f57f75d2",
+    "category": "local_ops",
+    "title": "Convert INI config to YAML and TOML",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 39.499489545822144,
+    "exit_code": 0
+  },
+  {
+    "task_id": "multi_step_d7b32dfa",
+    "category": "multi_step",
+    "title": "Migrate SQLite database to JSON API format",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 57.04014825820923,
+    "exit_code": 0
+  },
+  {
+    "task_id": "multi_step_07046a28",
+    "category": "multi_step",
+    "title": "Build REST API server from data model",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 111.06547164916992,
+    "exit_code": 0
+  },
+  {
+    "task_id": "multi_step_59572a87",
+    "category": "multi_step",
+    "title": "Bootstrap Python CLI tool from specification",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 113.03265047073364,
+    "exit_code": 0
+  },
+  {
+    "task_id": "multi_step_d4d28752",
+    "category": "multi_step",
+    "title": "Add test suite to untested project",
+    "passed": false,
+    "score": 0.6666666666666666,
+    "elapsed": 157.3932478427887,
+    "exit_code": 1
+  },
+  {
+    "task_id": "repo_debug_25bdb23e",
+    "category": "repo_debug",
+    "title": "Fix edge case crashes in URL parser",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 51.696242809295654,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_2bfe825a",
+    "category": "repo_debug",
+    "title": "Fix broken imports after module rename",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 27.145846366882324,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_06e89772",
+    "category": "repo_debug",
+    "title": "Fix LRU cache eviction bug",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 109.07452821731567,
+    "exit_code": 0
+  },
+  {
+    "task_id": "multi_step_f8151568",
+    "category": "multi_step",
+    "title": "Refactor monolithic script into modules",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 129.3258764743805,
+    "exit_code": 1
+  },
+  {
+    "task_id": "repo_debug_3c70bbf2",
+    "category": "repo_debug",
+    "title": "Find and fix bug using git history",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 43.83082413673401,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_dba2e3bb",
+    "category": "repo_debug",
+    "title": "Fix test regression after feature addition",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 32.55487513542175,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_86c2921b",
+    "category": "repo_debug",
+    "title": "Fix off-by-one error in pagination",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 46.335153579711914,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_a8359a72",
+    "category": "repo_debug",
+    "title": "Fix shared mutable state causing flaky tests",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 42.25681257247925,
+    "exit_code": 0
+  },
+  {
+    "task_id": "web_search_39d6e2ac",
+    "category": "web_search",
+    "title": "Fix vulnerability based on security advisory",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 40.08010768890381,
+    "exit_code": 0
+  },
+  {
+    "task_id": "web_search_209d178b",
+    "category": "web_search",
+    "title": "Set up build system from documentation",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 45.038498401641846,
+    "exit_code": 0
+  },
+  {
+    "task_id": "repo_debug_ef5c2002",
+    "category": "repo_debug",
+    "title": "Fix broken code after incomplete refactoring",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 65.22934770584106,
+    "exit_code": 0
+  },
+  {
+    "task_id": "web_search_568860eb",
+    "category": "web_search",
+    "title": "Configure system from documentation",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 50.38233542442322,
+    "exit_code": 0
+  },
+  {
+    "task_id": "web_search_8735b0b0",
+    "category": "web_search",
+    "title": "Fix error using FAQ documentation",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 44.678561210632324,
+    "exit_code": 0
+  },
+  {
+    "task_id": "web_search_62580635",
+    "category": "web_search",
+    "title": "Migrate API client using migration guide",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 53.020532846450806,
+    "exit_code": 0
+  },
+  {
+    "task_id": "web_search_695e2233",
+    "category": "web_search",
+    "title": "Update code based on changelog breaking changes",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 60.260657787323,
+    "exit_code": 0
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_conflicting_constraints",
+  "category": "diagnostic",
+  "title": "Conflicting Constraints: Fix form validator bugs without breaking short-circuit logic",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 61.53123188018799,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: test_email_domain\nPASS: test_email_dots\nPASS: test_email_missing_at\nPASS: test_email_valid_basic\nPASS: test_form_all_email_errors\nPASS: test_form_missing_field\nPASS: test_form_shortcircuit\nPASS: test_form_valid\nPASS: test_password_length\nPASS: test_password_no_username\nPASS: test_password_special\nPASS: test_password_valid\n\nResults: 12/12 passed\n\nCHECK 1 PASS: All 12 tests pass\nCHECK 2 PASS: Test file unchanged\nCHECK 3 PASS: Bug 1 fixed (case-insensitive username check)\nCHECK 4 PASS: Bug 2 ",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_conflicting_constraints_sir7pag_"
+}

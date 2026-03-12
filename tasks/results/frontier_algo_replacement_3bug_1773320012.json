@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_algo_replacement_3bug",
+  "category": "diagnostic",
+  "title": "Optimize 3 performance bottlenecks in a sorting/filtering module",
+  "difficulty": "medium",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 105.60323143005371,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "=== Part 1: Functional Correctness Tests (6 points) ===\n=== Correctness Tests ===\nPASS generate_data\nPASS sort_ascending\nPASS sort_descending\nPASS sort_stability\nPASS filter_records\nPASS format_output\n\n=== RESULTS: 6 passed, 0 failed ===\n\nFunctional tests: 6 / 6\n\n=== Part 2: Structural / Pattern Checks (3 points) ===\nPASS struct_no_json_copy: No json serialization for copying\nPASS struct_uses_join: format_output uses join\nPASS struct_no_bubble_sort: No bubble sort pattern in sort_records\n\n=== Part 3: Performance / Timing Check (1 point) ===\nPASS timing_sort_10k: 10000 records sorted in 0.002s (limit 0.5s)\n\n=== Summary ===\nFunctional: 6 / 6\nStructural: 4 / 3\nStructural: 3 / 3\nTiming: 1 / 1\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_algo_replacement_3bug_wmm0oaeu"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_25",
+  "category": "diagnostic",
+  "title": "Rename class and method across 25 ripple locations (hard propagation)",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 245.58558750152588,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (19)\n  PASS: No BaseHandler references remain\n  PASS: No handle_request references remain\n  PASS: base.py has class RequestHandler\n  PASS: base.py has process method\n  PASS: No process methods use 'request' parameter name\n  PASS: router.py uses RequestHandler\n  PASS: No handlers import BaseHandler\n  PASS: utils.py uses RequestHandler\n  PASS: testing.py uses RequestHandler\n\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_propagation_25_ri5m9jso"
+}

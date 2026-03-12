@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_api_from_spec",
+  "category": "diagnostic",
+  "title": "Implement a REST API from scratch given only a spec and test suite",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 234.29395461082458,
+  "exit_code": 0,
+  "result": {
+    "score": 0.625,
+    "details": "=== Check 1: models.py with required classes ===\nPASS: models.py has Product, CartItem, Cart\n\n=== Check 2: store.py with ProductStore ===\nPASS: store.py has ProductStore\n\n=== Check 3: cart.py with CartManager ===\nFAIL: cart.py missing or missing CartManager\n\n=== Check 4: api.py is a Flask app ===\nPASS: api.py exports a Flask app\n\n=== Check 5: validators.py exists ===\nPASS: validators.py exists\n\n=== Check 6: At least 10/15 tests pass ===\nPASS: 10/15 tests pass (>= 10 threshold)\n\n=== Check 7: All 15 tests pass ===\nFAIL: 10 passed, 5 failed, 0 errors\n\n=== Check 8: No hardcoded/preloaded product data ===\nFAIL: ProductStore has preloaded data\n\nResults: 5 passed, 3 failed out of 8 checks\nScore: 5/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_api_from_spec_7ufl5ybv"
+}

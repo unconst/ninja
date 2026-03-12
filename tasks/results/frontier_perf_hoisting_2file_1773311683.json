@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_perf_hoisting_2file",
+  "category": "diagnostic",
+  "title": "Optimize processor.py performance in 2-file data processing system (data_loader already optimal)",
+  "difficulty": "medium",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 151.34630346298218,
+  "exit_code": 0,
+  "result": {
+    "score": 0.9333333333333333,
+    "details": "=== Part 1: Functional Correctness Tests (10 points) ===\n=== data_loader.py tests ===\nPASS loader_basic\nPASS loader_dedup\nPASS loader_field_values\nPASS loader_consistency\nPASS loader_empty\n\n=== processor.py tests ===\nPASS processor_fields\nPASS processor_tier_logic\nPASS processor_summary_lines\nPASS processor_filter\nPASS processor_normalized\n\n=== RESULTS: 10 passed, 0 failed ===\n\nFunctional tests: 10 / 10\n\n=== Part 2: Structural / Pattern Checks (4 points) ===\nFAIL struct_no_per_record_avg: category averages still recomputed per record\nPASS struct_uses_join: build_summary_text uses join\nPASS struct_no_json_copy: No json serialization for copying\nPASS struct_hoisted_to_process_all: category averages computed once in process_all\n\n=== Part 3: Performance / Timing Check (1 point) ===\nPASS timing_5k_pipeline: 5000 records in 0.041s (limit 3.0s)\n\n=== Summary ===\nFunctional: 10 / 10\nScore: 14/15\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_perf_hoisting_2file_oml5nt9j"
+}

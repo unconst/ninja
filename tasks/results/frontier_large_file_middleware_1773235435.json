@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_large_file_middleware",
+  "category": "diagnostic",
+  "title": "Add middleware plugin type to large plugin registry system",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 187.1656939983368,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "Plugin validation failed: None: ['Missing required field: name', 'Missing required field: transform_fn']\n  PASS: test_config_defaults\n  PASS: test_config_overrides\n  PASS: test_config_validate\n  PASS: test_dependency_resolution\n  PASS: test_event_dispatch\n  PASS: test_full_integration\n  PASS: test_loader_basic\n  PASS: test_loader_validation_errors\n  PASS: test_middleware_base_class\n  PASS: test_middleware_chain_basic\n  PASS: test_middleware_chain_empty\n  PASS: test_middleware_chain_modifies_requ",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_large_file_middleware_2uyo2n7p"
+}

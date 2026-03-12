@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_surgical_removal",
+  "category": "diagnostic",
+  "title": "Remove deprecated API endpoints without breaking active ones",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 85.77928471565247,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: All tests pass (15 passed)\nPASS: All deprecated functions removed\nPASS: All shared functions preserved\nPASS: All active endpoints preserved\nPASS: test_server.py unchanged\nPASS: utils.py unchanged\n\nScore: 6/6\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_surgical_removal_zb87ylbj"
+}

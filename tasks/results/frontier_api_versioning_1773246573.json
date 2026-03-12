@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_api_versioning",
+  "category": "diagnostic",
+  "title": "Add v2 API with wrapped responses alongside existing v1 without breaking middleware",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 152.88133549690247,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: all tests pass (v1 and v2)\nPASS: handlers_v1.py unchanged\nPASS: tests/test_v1.py unchanged\nPASS: models.py unchanged\nPASS: handlers_v2.py file exists\nPASS: router.py has v2 routes\nPASS: middleware handles both v1 and v2\nPASS: v2 error response format correct\n\nScore: 8/8\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_api_versioning_3x0aowy0"
+}

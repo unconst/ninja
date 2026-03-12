@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_perf_bottleneck",
+  "category": "diagnostic",
+  "title": "Optimize slow data processing pipeline to meet performance requirements",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 161.37258219718933,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: bench.py is unchanged\n--- Correctness tests (small) ---\nPASS small_total_records\nPASS small_has_categories\nPASS small_has_tiers\nPASS small_total_amount_positive\nPASS small_duplicates_zero\nPASS small_category_books_count\nPASS small_category_clothing_count\nPASS small_category_electronics_count\nPASS small_category_food_count\nPASS small_category_toys_count\n\n--- Correctness tests (medium) ---\nPASS medium_total_records\nPASS medium_category_balance\nPASS medium_output_has_summary\nPASS medium_output_has_categories\nPASS medium_global_median_consistent\n\n--- Enrichment value tests ---\nPASS enrichment_has_tier\nPASS enrichment_has_day\nPASS enrichment_has_fingerprint\nPASS enrichment_has_normalized\nPASS enrichment_has_category_avg\nPASS enrichment_tier_low\nPASS enrichment_norm_avg_electronics\nPASS enrichment_norm_avg_clothing\nPASS enrichment_norm_avg_food\nPASS enrichment_norm_avg_books\nPASS enrichment_norm_avg_toys\n\n--- Performance tests ---\nPASS perf_1k_time\nPASS perf_1k_correct\nPASS perf_10k_time\nPASS perf_10k_correct\n\n--- Memory test ---\nPASS memory_under_100mb\n\n\n=== RESULTS: 31 passed, 0 failed ===\n\nScore: 31/31\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_perf_bottleneck_waht1_aj"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_60_sparse",
+  "category": "diagnostic",
+  "title": "Propagation 60 Sparse: Dual-rename across data pipeline toolkit (60 locations, 20 files)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 155.5787591934204,
+  "exit_code": 0,
+  "result": {
+    "score": 0.8,
+    "details": "  FAIL: 14/39 tests pass\ntests/test_dataflow.py::TestApiError::test_has_service FAILED            [  2%] [  2%]\ntests/test_dataflow.py::TestApiError::test_has_code FAILED               [  5%] [  5%]\ntests/test_dataflow.py::TestApiError::test_is_exception FAILED           [  7%] [  7%]\ntests/test_dataflow.py::TestCreateApi::test_memory FAILED                [ 10%] [ 10%]\ntests/test_dataflow.py::TestCreateApi::test_unknown_kind FAILED          [ 12%] [ 12%]\n  FAIL: 12 ServiceError references remain\n  PASS: No create_service references\n  PASS: core.py has ApiError class\n  PASS: core.py has create_api function\n  PASS: __init__.py imports ApiError and create_api\n  PASS: source.py uses new names\n  PASS: pipeline.py uses new names\n  PASS: encrypt.py uses new names\n  PASS: monitor.py uses ApiError\n\nScore: 8/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_propagation_60_sparse_r1ix41gj"
+}

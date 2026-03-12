@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_84_12files",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation: ~85 locations, 12 files, traps",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 154.33992075920105,
+  "exit_code": 0,
+  "result": {
+    "score": 0.8125,
+    "details": "  FAIL: 12/22 tests pass\ntests/test_dataflow.py::TestFilterFlow::test_passes FAILED               [ 22%] [ 22%]\ntests/test_dataflow.py::TestFilterFlow::test_blocks FAILED               [ 27%] [ 27%]\ntests/test_dataflow.py::TestLogFlow::test_logs FAILED                    [ 31%] [ 31%]\ntests/test_dataflow.py::TestAsyncFlow::test_queues_then_flushes FAILED   [ 36%] [ 36%]\ntests/test_dataflow.py::TestBatchFlow::test_batch FAILED                 [ 45%] [ 45%]\n  PASS: No 'class DataFlow' remains\n  PASS: No 'def process' methods remain\n  FAIL: 9 .process() calls remain\n  PASS: core.py has class StreamFlow\n  PASS: core.py has transform(self, item)\n  PASS: __init__.py imports StreamFlow\n  PASS: No transform methods use 'record'\n  PASS: record_type preserved (14)\n  PASS: _record_count preserved\n  PASS: RECORD_PREFIX preserved\n  PASS: process_async preserved\n  PASS: DataFlowError preserved\n  PASS: factory.py uses StreamFlow\n  FAIL: router.py missing StreamFlow or transform\n  PASS: process_reverse preserved\n\nScore: 13/16\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_84_12files_k8giznmx"
+}

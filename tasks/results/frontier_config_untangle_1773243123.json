@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_config_untangle",
+  "category": "diagnostic",
+  "title": "Fix interacting configuration bugs across 7 config files",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 120.48881363868713,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "=== Check 1: Running pytest ===\n/root/Arbos/.venv/lib/python3.10/site-packages/pytest_asyncio/plugin.py:247: PytestDeprecationWarning: The configuration option \"asyncio_default_fixture_loop_scope\" is unset.\nThe event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the futur",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_config_untangle_8ksce9ve"
+}

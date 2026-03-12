@@ -1,0 +1,119 @@
+[
+  {
+    "task_id": "diagnostic_4504585d",
+    "category": "diagnostic",
+    "title": "Fix crash \u2014 root cause 3 files away from symptom",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 37.457119941711426,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_5f3b4150",
+    "category": "diagnostic",
+    "title": "Find bug in large project with misleading module structure",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 41.83045148849487,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_38161640",
+    "category": "diagnostic",
+    "title": "Fix cascading bugs \u2014 each fix reveals the next",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 76.99889516830444,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_5f4d2eca",
+    "category": "diagnostic",
+    "title": "Add new user role requiring changes across 5 files",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 49.63029098510742,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_746f4af8",
+    "category": "diagnostic",
+    "title": "Implement feature and fix the broken test",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 52.39232683181763,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_990549f4",
+    "category": "diagnostic",
+    "title": "Fix circular import without restructuring everything",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 39.70374131202698,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_bbea32f6",
+    "category": "diagnostic",
+    "title": "Fix state-dependent bug that only triggers on third call",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 53.08737230300903,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_758032fb",
+    "category": "diagnostic",
+    "title": "Fix code to satisfy two conflicting test suites",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 73.44766974449158,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_bbf29f2a",
+    "category": "diagnostic",
+    "title": "Fix deployment spanning Python, shell, and config",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 48.34109830856323,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_d869e785",
+    "category": "diagnostic",
+    "title": "Fix subtle bug in 300+ line validation library",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 55.4265718460083,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_e65032e7",
+    "category": "diagnostic",
+    "title": "Fix statistics library producing wrong results",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 76.66068911552429,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_effc6b91",
+    "category": "diagnostic",
+    "title": "Build CLI calculator from specification only",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 88.24819707870483,
+    "exit_code": 0
+  },
+  {
+    "task_id": "diagnostic_586fafbc",
+    "category": "timeout",
+    "title": "",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 300,
+    "exit_code": -1
+  }
+]

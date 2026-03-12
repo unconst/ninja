@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_type_contract",
+  "category": "diagnostic",
+  "title": "Add LRU caching to the database layer without breaking type contracts",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 112.1734127998352,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: All tests pass\nPASS: Test files present\nPASS: views.py unchanged\nPASS: serializers.py unchanged\nPASS: models.py unchanged\nPASS: db.py was modified\nPASS: db.py contains caching code\n\nScore: 7/7\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_type_contract_61yeffdp"
+}

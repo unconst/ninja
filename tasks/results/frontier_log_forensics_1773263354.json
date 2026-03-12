@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_log_forensics",
+  "category": "diagnostic",
+  "title": "Log forensics: correlate multi-source logs to find connection pool leak",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 96.0876202583313,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: investigate.md exists and mentions connection issue\nPASS: investigate.md identifies the reports endpoint\nPASS: routes.py generate_report now handles connection cleanup\nPASS: routes.py is syntactically valid Python\n\nResults: 4 passed, 0 failed out of 4 checks\nScore: 4/4\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_log_forensics_nnk070dg"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_test_generation",
+  "category": "diagnostic",
+  "title": "Write comprehensive pytest tests for a library management module",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 307.797568321228,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "=== Phase 1: Check test file exists ===\nPASS: tests/test_library.py exists\n\n=== Phase 2: Run tests against original library.py ===\n============================= test session starts ==============================\nplatform linux -- Python 3.10.20, pytest-9.0.2, pluggy-1.6.0 -- /root/Arbos/.venv/bin/python3\ncachedir: .pytest_cache\nrootdir: /tmp/task_frontier_test_generation_l7187lq4\ncollecting ... collected 47 items\n\ntests/test_library.py::TestBook::test_book_creation_valid PASSED         [  2%]\ntests/test_library.py::TestBook::test_book_creation_with_copies PASSED   [  4%]\ntests/test_library.py::TestBook::test_checkout_normal PASSED             [  6%]\ntests/test_library.py::TestBook::test_checkout_no_copies_available PASSED [  8%]\ntests/test_library.py::TestBook::test_book_return_normal PASSED          [ 10%]\ntests/test_library.py::TestBook::test_return_book_all_copies_available PASSED [ 12%]\ntests/test_library.py::TestBook::test_is_available_property PASSED       [ 14%]\ntests/test_library.py::TestBook::test_repr PASSED                        [ 17%]\ntests/test_library.py::TestLibrary::test_library_creation PASSED         [ 19%]\ntests/test_library.py::TestLibrary::test_add_book_single PASSED          [ 21%]\ntests/test_library.py::TestLibrary::test_add_book_multiple PASSED        [ 23%]\ntests/test_library.py::TestLibrary::test_add_book_duplicate_isbn PASSED  [ 25%]\ntests/test_library.py::TestLibrary::test_remove_book_existing PASSED     [ 27%]\ntests/test_library.py::TestLibrary::test_remove_book_nonexistent PASSED  [ 29%]\ntests/test_library.py::TestLibrary::test_get_book_existing PASSED        [ 31%]\ntests/test_library.py::TestLibrary::test_get_book_nonexistent PASSED     [ 34%]\ntests/test_library.py::TestLibrary::test_search_empty_library PASSED     [ 36%]\ntests/test_library.py::TestLibrary::test_search_by_title_case_insensitive PASSED [ 38%]\ntests/test_library.py::TestLibrary::test_search_by_author_case_insensitive PASSED [ 40%]\ntests/test_library.py::TestLibrary::tes",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_test_generation_l7187lq4"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_30",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation 30 locs / 12 files: Rename class + method + param with trap variables",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 180.52938318252563,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (15/15)\n  PASS: No 'class TaskRunner' remains\n  PASS: No 'def run_task(' methods remain\n  PASS: No '.run_task(' call sites remain\n  PASS: core.py has class JobExecutor\n  PASS: core.py has def execute_job(self, environment)\n  PASS: __init__.py exports JobExecutor\n  PASS: No 'import TaskRunner' remaining\n  PASS: run_task_async preserved in core.py\n  PASS: context_id preserved (7 occurrences)\n  PASS: context_type preserved (7 occurrences)\n  PASS: context_data preserved (6 occurrences)\n  PASS: CONTEXT_KEY preserved (4 occurrences)\n  PASS: runner_id preserved (4 occurrences)\n  PASS: task_context preserved (4 occurrences)\n  PASS: TaskFlowError class preserved\n\nScore: 16/16\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_30_mufc4e4u"
+}

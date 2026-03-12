@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_type_annotation_4file",
+  "category": "diagnostic",
+  "title": "Add complete PEP 484 type annotations to 4-file e-commerce system",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 165.67295026779175,
+  "exit_code": 0,
+  "result": {
+    "score": 0.8214285714285714,
+    "details": "=== Part 1: Specific Annotation Checks (16 points) ===\nPASS: Product.__init__ params annotated\nPASS: Customer.get_primary_address -> Optional\nPASS: CartItem.subtotal -> float\nPASS: Order.cancel -> bool\nPASS: ProductRepo.find_by_id -> Optional[Product]\nPASS: ProductRepo.find_all -> List[Product]\nTraceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nAttributeError: type object 'ProductRepo' has no attribute 'delete'\nFAIL: ProductRepo.delete return type not bool\nTraceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nAttributeError: type object 'OrderRepo' has no attribute 'total_revenue'\nFAIL: OrderRepo.total_revenue return type not float\nPASS: CartService.get_total -> float\nTraceback (most recent call last):\n  File \"<string>\", line 7, in <module>\nAssertionError: return <class 'bool'> not Optional\nFAIL: CartService.remove_item return type not Optional[CartItem]\nPASS: OrderService.create_order -> Optional[Order]\nPASS: OrderService.cancel_order -> bool\nPASS: format_currency -> str\nPASS: calculate_discount -> float\nPASS: validate_email -> bool\nPASS: generate_id -> str\n\n=== Part 2: Structural Annotation Completeness (8 points) ===\nPASS: models.py \u2014 all 16 functions have return annotations\nPASS: models.py \u2014 all parameters annotated\nPASS: repository.py \u2014 all 12 functions have return annotations\nPASS: repository.py \u2014 all parameters annotated\nPASS: services.py \u2014 all 12 functions have return annotations\nPASS: services.py \u2014 all parameters annotated\nPASS: utils.py \u2014 all 6 functions have return annotations\nPASS: utils.py \u2014 all parameters annotated\n\n=== Part 3: Behavioral Tests (4 points) ===\nPASS: All imports successful\nPASS: Product behavior intact\nTraceback (most recent call last):\n  File \"<string>\", line 12, in <module>\nTypeError: CartService.__init__() missing 1 required positional argument: 'product_repo'\nFAIL: Service workflow broken\nTraceback (most recent call last):\n  File \"<string>\", line 6, in <module>\nAssertionError: paginate wrong",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_type_annotation_4file_1epxgmu4"
+}

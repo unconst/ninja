@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_100",
+  "category": "diagnostic",
+  "title": "Propagation 100: Dual-rename across graph library (100 locations, 22 files)",
+  "difficulty": "very_hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 222.88278079032898,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (76)\n  PASS: No NodeError references\n  PASS: No create_node references\n  PASS: core.py has GraphError class\n  PASS: core.py has create_vertex function\n  PASS: __init__.py imports GraphError and create_vertex\n  PASS: builder.py uses new names\n  PASS: serialize.py uses new names\n  PASS: import_mod.py uses new names\n  PASS: optimize.py uses GraphError\n\nScore: 10/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_propagation_100_n_p5u444"
+}

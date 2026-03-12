@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_perf_3bug_1file_strict",
+  "category": "diagnostic",
+  "title": "Optimize 3 performance bottlenecks \u2014 strict structural tests enforce hoisting",
+  "difficulty": "medium",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 123.11462783813477,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "=== Part 1: Functional + Strict Structural Tests (11 points) ===\n=== Functional Correctness Tests ===\nPASS generate_records\nPASS processor_fields\nPASS processor_tier_logic\nPASS processor_summary_lines\nPASS processor_filter\n\n=== Strict Structural Tests ===\nPASS test_process_record_no_all_records\nPASS test_process_record_requires_stats\nPASS test_process_all_calls_compute_once\nPASS test_no_compute_in_process_record\nPASS test_join\nPASS test_no_json\n\n=== RESULTS: 11 passed, 0 failed ===\n\nTest suite: 11 / 11\n\n=== Part 2: AST / Pattern Checks (2 points) ===\nPASS struct_no_per_record_avg: category averages not recomputed per record\nPASS struct_no_json_copy: No json serialization for copying\n\n=== Part 3: Performance / Timing Check (1 point) ===\nPASS timing_5k_pipeline: 5000 records in 0.009s (limit 2.0s)\n\n=== Summary ===\nScore: 14/14\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_perf_3bug_1file_strict_igavu8xv"
+}

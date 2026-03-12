@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_propagation_60_20files",
+  "category": "diagnostic",
+  "title": "Propagation 60 (20 files): Dual-rename across streaming data library (60 locations, 20 files)",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 161.7988679409027,
+  "exit_code": 0,
+  "result": {
+    "score": 0.5,
+    "details": "  FAIL: 0/0 tests pass\n  FAIL: 18 StreamError references remain\nstreamhub/errors.py:2:from .core import StreamError\nstreamhub/errors.py:5:class TimeoutError(StreamError):\nstreamhub/errors.py:14:class ConnectionError(StreamError):\nstreamhub/config.py:2:from .core import StreamError, create_stream\nstreamhub/config.py:20:            raise StreamError(f\"Missing required config: {key}\", code=\"CONFIG\")\n  FAIL: 5 create_stream references remain\nstreamhub/config.py:2:from .core import StreamError, create_stream\nstreamhub/config.py:10:        self._store = create_stream(\"config-store\")\nstreamhub/serializer.py:3:from .core import StreamError, create_stream\nstreamhub/serializer.py:11:        self._store = create_stream(\"serializer-buf\")\nstreamhub/router.py:10:        self._dead_letter = create_stream(\"dead-letter\")\n  PASS: core.py has FlowError class\n  PASS: core.py has create_flow function\n  PASS: __init__.py imports FlowError and create_flow\n  PASS: producer.py uses new names\n  PASS: router.py uses new names\n  FAIL: errors.py missing FlowError\n  FAIL: monitor.py missing FlowError\n\nScore: 5/10\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_propagation_60_20files_zyat9pm9"
+}

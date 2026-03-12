@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_async_pipeline",
+  "category": "diagnostic",
+  "title": "Implement missing features in an async data processing pipeline",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 413.96379804611206,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "============================= test session starts ==============================\nplatform linux -- Python 3.10.20, pytest-9.0.2, pluggy-1.6.0 -- /root/Arbos/.venv/bin/python3\ncachedir: .pytest_cache\nbenchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)\nhypothesis profile 'default'\nPyQt5 5.15.11 -- Qt runtime 5.15.18 -- Qt compiled 5.15.14\nrootdir: /tmp/task_frontier_async_pipeline_7ko5u1go\nplugins: github-actions-annotate-failures-0.4.0, benchmark-5.2.3, Faker-40.8.0, xdist-3.8.0, instafail-0.5.0, mock-3.15.1, cov-7.0.0, django-4.11.1, bdd-8.1.0, asyncio-1.3.0, rerunfailures-16.1, pretty-1.3.0, hypothesis-6.151.9, qt-4.5.0, anyio-4.12.1, xvfb-3.1.1\nasyncio: mode=strict, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollecting ... collected 50 items\n\ntest_async_pipeline.py::TestSeedBasics::test_empty_pipeline PASSED       [  2%]\ntest_async_pipeline.py::TestSeedBasics::test_single_stage PASSED         [  4%]\ntest_async_pipeline.py::TestSeedBasics::test_multi_stage_chain PASSED    [  6%]\ntest_async_pipeline.py::TestSeedBasics::test_add_stage_returns_self PASSED [  8%]\ntest_async_pipeline.py::TestSeedBasics::test_process_one_basic PASSED    [ 10%]\ntest_async_pipeline.py::TestConcurrentBatch::test_batch_basic PASSED     [ 12%]\ntest_async_pipeline.py::TestConcurrentBatch::test_batch_max_concurrency PASSED [ 14%]\ntest_async_pipeline.py::TestConcurrentBatch::test_batch_preserves_order PASSED [ 16%]\ntest_async_pipeline.py::TestConcurrentBatch::test_batch_empty_list PASSED [ 18%]\ntest_async_pipeline.py::TestConcurrentBatch::test_batch_single_item PASSED [ 20%]\ntest_async_pipeline.py::TestStageTimeout::test_timeout_triggers PASSED   [ 22%]\ntest_async_pipeline.py::TestStageTimeout::test_timeout_per_stage PASSED  [ 24%]\ntest_async_pipeline.py::TestStageTimeout::test_no_timeout_normal PASSED  [ 26%]\ntest_async_",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_async_pipeline_7ko5u1go"
+}

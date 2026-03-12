@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_20_15files",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation 20 locs / 15 files: Rename class + method + param with trap variables",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 166.75657629966736,
+  "exit_code": 0,
+  "result": {
+    "score": 0.8461538461538461,
+    "details": "  FAIL: 0/2 tests pass\n==================================== ERRORS ====================================\n___________________ ERROR collecting tests/test_notifier.py ____________________\n  PASS: No 'class Notifier' remains\n  PASS: No 'def notify(' methods remain\n  PASS: core.py has class Alerter\n  PASS: core.py has def alert(self, payload)\n  PASS: __init__.py exports Alerter\n  PASS: message_id preserved (9 occurrences)\n  PASS: message_type preserved (5 occurrences)\n  PASS: notify_on_error preserved (10 occurrences)\n  PASS: MESSAGE_PREFIX preserved (3 occurrences)\n  PASS: message_format preserved (7 occurrences)\n  FAIL: 1 'import Notifier' references remain\n  PASS: NotificationError class preserved\n\nScore: 11/13\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_20_15files_k5ilqkmx"
+}

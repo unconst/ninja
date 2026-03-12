@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_async_conversion_4file",
+  "category": "diagnostic",
+  "title": "Convert synchronous data pipeline to async/await across 4 files",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 129.83572840690613,
+  "exit_code": 0,
+  "result": {
+    "score": 0.7857142857142857,
+    "details": "=== Async Conversion Evaluation ===\n\n--- Coroutine Function Checks + Return Value Checks (24 tests) ---\nPASS: Database.connect is async\nPASS: Database.query is async\nPASS: Database.insert is async\nPASS: Database.close is async\nPASS: Cache.get is async\nPASS: Cache.set is async\nPASS: Cache.invalidate is async\nPASS: Cache.flush is async\nPASS: ApiClient.fetch is async\nPASS: ApiClient.post is async\nPASS: ApiClient.download is async\nPASS: DataService.initialize is async\nPASS: DataService.get_user is async\nPASS: DataService.create_user is async\nPASS: DataService.sync_from_api is async\nPASS: DataService.bulk_download is async\nFAIL: DataService.shutdown not found\n\n--- Return Value Checks (7 tests) ---\nPASS: Database.connect() returns self\nPASS: Database.insert() returns correct row\nPASS: Database.query() returns correct rows\nFAIL: Cache return value test error: Cache.__init__() got an unexpected keyword argument 'prefix'\nFAIL: ApiClient.fetch() returned {'message': 'Mock response for /test'}\nFAIL: ApiClient.download() returned b'Mock file content for /test'\n\nCoroutine + return checks: 19\nPYSCORE:19\n\n--- Pattern Checks: async def usage in each file (4 tests) ---\nPASS: database.py uses async def for all methods\nPASS: cache.py uses async def for all methods\nPASS: api_client.py uses async def for all methods\nFAIL: service.py missing async def on some methods\n16:    async def initialize(self):\n22:    async def get_user(self, user_id):\n40:    async def create_user(self, name, email):\n57:    async def sync_from_api(self, endpoint=\"/users\"):\n73:    async def bulk_download(self, urls):\n\nCoroutine + return value checks: 19 / 24\nPattern checks: 3 / 4\nScore: 22/28\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_async_conversion_4file_i6op4n6x"
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_selective_migration",
+  "category": "diagnostic",
+  "title": "Migrate only legacy API functions, leave modern functions untouched",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 106.08074951171875,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: All 12 tests pass\nPASS: models.py unchanged\nPASS: tests/test_converters.py unchanged\nPASS: All 4 legacy functions return Result objects\nPASS: All 4 modern functions unchanged\nPASS: All 4 legacy functions produce correct results at runtime\nPASS: No new Python files created\n\nScore: 7/7\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_selective_migration_fsc2jmja"
+}

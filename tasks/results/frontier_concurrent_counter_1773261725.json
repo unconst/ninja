@@ -1,0 +1,16 @@
+{
+  "task_id": "frontier_concurrent_counter",
+  "category": "diagnostic",
+  "title": "Fix intermittent failures in concurrent task queue system",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 262.48035287857056,
+  "exit_code": 0,
+  "result": {
+    "score": 0.0,
+    "details": "Script timed out",
+    "checks": [],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_concurrent_counter_85ov9ben"
+}

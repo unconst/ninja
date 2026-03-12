@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_rename_ripple",
+  "category": "diagnostic",
+  "title": "Rename function and update ALL 7 files",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 79.1498954296112,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS: core.py: calculate_average -> compute_mean\nPASS: __init__.py: export updated\nPASS: formatters.py: import+usage updated\nPASS: cli.py: usage updated\nPASS: test_core.py: updated\nPASS: test_formatters.py: still passes\nPASS: README.md: documentation updated\n\nScore: 7/7\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_rename_ripple_djd7blwh"
+}

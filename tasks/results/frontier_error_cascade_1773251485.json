@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_error_cascade",
+  "category": "diagnostic",
+  "title": "Fix cascading scheduler bugs that mask each other",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 78.79587745666504,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "PASS [1/4]: All 8 tests pass\nPASS [2/4]: Priority sort is descending\nPASS [3/4]: Dependency attribute correct (.dependencies)\nPASS [4/4]: Completed tasks removed from pending (queue drains)\n\nScore: 4/4\nRESULT: PASS\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_error_cascade_cc7pn0om"
+}

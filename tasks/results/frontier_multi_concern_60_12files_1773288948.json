@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_multi_concern_60_12files",
+  "category": "diagnostic",
+  "title": "Multi-concern propagation: ~67 locations, 13 files, with trap variables",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 234.96314883232117,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "  PASS: All tests pass (19)\n  PASS: No 'class DataFlow' remains\n  PASS: No 'def process' methods remain\n  PASS: No .process() calls remain\n  PASS: core.py has class StreamFlow\n  PASS: core.py has transform(self, item)\n  PASS: __init__.py imports StreamFlow\n  PASS: No transform methods use 'record'\n  PASS: record_type preserved (15)\n  PASS: _record_count preserved\n  PASS: RECORD_PREFIX preserved\n  PASS: process_async preserved\n  PASS: DataFlowError preserved\n  PASS: factory.py uses StreamFlow\n  PASS: router.py uses StreamFlow and transform\n  PASS: process_reverse preserved\n\nScore: 16/16\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_multi_concern_60_12files_0ptwqxmm"
+}

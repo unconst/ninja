@@ -1,0 +1,245 @@
+[
+  {
+    "task_id": "frontier_cascading_edits",
+    "category": "diagnostic",
+    "title": "Fix 4 bugs in Matrix class \u2014 edits shift line numbers",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 93.57896494865417,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_build_detective",
+    "category": "diagnostic",
+    "title": "Fix broken build system with 3 interacting config issues",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 93.33142971992493,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_edge_case_trap",
+    "category": "diagnostic",
+    "title": "Build duration parser with 13 edge-case tests",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 49.23013925552368,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_adversarial_review",
+    "category": "diagnostic",
+    "title": "Security review: find ALL 5 bugs in auth module",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 151.81182169914246,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_constraint_migration",
+    "category": "diagnostic",
+    "title": "Migrate database layer from SQLite to JSON \u2014 without modifying models or API",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 167.96753549575806,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_dependency_hell",
+    "category": "diagnostic",
+    "title": "Untangle Python dependency conflicts preventing pip install",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 80.08157444000244,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_event_bus_bugs",
+    "category": "diagnostic",
+    "title": "Fix 3 interacting bugs in event bus system",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 59.79949164390564,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_git_archaeology",
+    "category": "diagnostic",
+    "title": "Use git history to find and fix a regression introduced by a refactoring commit",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 44.730005741119385,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_hidden_dependency",
+    "category": "diagnostic",
+    "title": "Fix pipeline bug \u2014 root cause is 4 layers deep",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 72.71265125274658,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_feature_flag_removal",
+    "category": "diagnostic",
+    "title": "Remove feature flag and clean up ALL 8 references",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 102.46531796455383,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_large_codebase",
+    "category": "diagnostic",
+    "title": "Fix config type coercion in 20-file TaskFlow project",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 67.36494326591492,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_interface_preservation",
+    "category": "diagnostic",
+    "title": "Optimize data serializer while preserving public API exactly",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 122.06519722938538,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_incomplete_spec",
+    "category": "diagnostic",
+    "title": "Build markdown table formatter with hidden edge cases",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 152.22612190246582,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_large_file_middleware",
+    "category": "diagnostic",
+    "title": "Add middleware plugin type to large plugin registry system",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 142.23666167259216,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_log_forensics",
+    "category": "diagnostic",
+    "title": "Log forensics: correlate multi-source logs to find connection pool leak",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 91.53952074050903,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_legacy_archaeology",
+    "category": "diagnostic",
+    "title": "Fix regressions in legacy pricing engine",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 114.10777282714844,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_red_herring",
+    "category": "diagnostic",
+    "title": "Fix stale cache bug \u2014 obvious fix breaks performance tests",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 65.67365884780884,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_performance_profiling",
+    "category": "diagnostic",
+    "title": "Profile and fix 4 performance bottlenecks in data pipeline",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 126.29722738265991,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_rename_ripple",
+    "category": "diagnostic",
+    "title": "Rename function and update ALL 7 files",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 94.21363234519958,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_shadow_override",
+    "category": "diagnostic",
+    "title": "Fix failing normalize_whitespace tests in textprocessor module",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 47.95074486732483,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_residue_hunt",
+    "category": "diagnostic",
+    "title": "Remove hot_reload feature and ALL 15 residual references",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 104.33774304389954,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_schema_migration",
+    "category": "diagnostic",
+    "title": "Migrate schema field names across 6 files consistently",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 108.29873371124268,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_symptom_debug",
+    "category": "diagnostic",
+    "title": "Debug config system: nested overrides silently dropped",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 54.48624563217163,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_state_machine",
+    "category": "diagnostic",
+    "title": "Implement order processor with state machine + business rules",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 117.47449088096619,
+    "exit_code": 0
+  },
+  {
+    "task_id": "frontier_type_propagation",
+    "category": "diagnostic",
+    "title": "Refactor tags from str to list[str] across 10 files",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 95.56038880348206,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_visitor_extension",
+    "category": "diagnostic",
+    "title": "Add 2 new node types to visitor-pattern AST interpreter",
+    "passed": false,
+    "score": 0.0,
+    "elapsed": 99.45403409004211,
+    "exit_code": 1
+  },
+  {
+    "task_id": "frontier_test_generation",
+    "category": "diagnostic",
+    "title": "Write comprehensive tests for an untested calculator module",
+    "passed": true,
+    "score": 1.0,
+    "elapsed": 173.72731637954712,
+    "exit_code": 0
+  }
+]

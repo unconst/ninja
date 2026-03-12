@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_build_detective",
+  "category": "diagnostic",
+  "title": "Fix broken build system with 3 interacting config issues",
+  "difficulty": "hard",
+  "agent": "/root/ninja/target/release/ninja",
+  "elapsed_seconds": 210.9626066684723,
+  "exit_code": 1,
+  "result": {
+    "score": 0.0,
+    "details": "",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 1"
+      }
+    ],
+    "passed": false
+  },
+  "workdir": "/tmp/task_frontier_build_detective_pqmx5icp"
+}

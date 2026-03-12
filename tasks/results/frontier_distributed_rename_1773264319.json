@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_distributed_rename",
+  "category": "diagnostic",
+  "title": "Semantic rename DataProcessor \u2192 StreamProcessor across 12 files with exceptions",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 159.77426314353943,
+  "exit_code": 1,
+  "result": {
+    "score": 0.9333333333333333,
+    "details": "PASS: core.py: class definition renamed\nPASS: core.py: __all__ updated\nPASS: core.py: __repr__ updated\nPASS: core.py: log message updated\nPASS: core.py: docstring references updated\nPASS: core.py: return type hint updated\nPASS: core.py: error log message updated\nPASS: factory.py: factory function renamed\nPASS: factory.py: import updated\nPASS: factory.py: docstring type references updated\nPASS: factory.py: second factory function renamed\nFAIL: factory.py: config import updated\nPASS: config.py: PROCESSOR_CLASS_NAME updated\nPASS: config.py: config dict variable renamed\nPASS: config.py: class_name value updated\nPASS: config.py: getter function renamed\nPASS: config.py: validate function renamed\nPASS: pipeline.py: import updated\nFAIL: pipeline.py: factory import updated\nPASS: pipeline.py: type hints updated\nPASS: pipeline.py: log messages updated\nPASS: pipeline.py: running log message updated\nPASS: batch.py: subclass renamed\nPASS: batch.py: inheritance updated\nPASS: batch.py: import updated\nPASS: batch.py: __repr__ updated\nPASS: streaming.py: import updated, alias DP preserved\nPASS: streaming.py: factory import updated\nPASS: streaming.py: docstring references updated\nPASS: monitoring.py: import updated\nPASS: monitoring.py: type hints updated\nPASS: monitoring.py: all DataProcessor references removed\nPASS: utils.py: format function renamed\nPASS: utils.py: health check function renamed\nPASS: utils.py: merge function renamed\nPASS: tests/test_core.py: test class renamed\nPASS: tests/test_core.py: import updated\nPASS: tests/test_core.py: all tests pass\nPASS: tests/test_pipeline.py: test class renamed\nPASS: tests/test_pipeline.py: imports updated\nFAIL: tests/test_pipeline.py: all tests pass\n  Output: Traceback (most recent call last):\n  File \"/tmp/task_frontier_distributed_rename_8xp9j991/tests/test_pipeline.py\", line 8, in <module>\n    from pipeline import build_pipeline, run_pipeline\n  File \"/tmp/task_frontier_distributed_rename_8xp9j991/pipeline.py\", line 7, in <module>\n    fr",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": false,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_distributed_rename_8xp9j991"
+}
