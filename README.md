@@ -217,7 +217,7 @@ Claude 4.5 Sonnet raw: 23.7%
      Mar 11  Mar 12
 ```
 
-*Goal: close the gap to Claude 4.5 Sonnet raw (23.7%) through general-purpose improvements, not benchmark-specific hacks. Next run will use Chutes (Kimi-K2.5-TEE) instead of OpenRouter.*
+*Goal: close the gap to Claude 4.5 Sonnet raw (23.7%) through general-purpose improvements, not benchmark-specific hacks. Kimi-K2.5-TEE pilot showed 6.7% at 27x cost — sticking with Claude. Next run will test compilation check + propagation directive improvements.*
 
 ### Frontier Tasks (175 custom diagnostic tasks)
 
