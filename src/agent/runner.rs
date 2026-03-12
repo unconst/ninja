@@ -378,7 +378,13 @@ impl AgentRunner {
                         if let Ok(test_output) = tools::execute_tool("run_tests", &test_input, &self.config.workdir) {
                             let has_failures = test_output.contains("Test Status: FAILED")
                                 || test_output.contains("FAILURES")
-                                || test_output.contains("panic:");
+                                || test_output.contains("panic:")
+                                || test_output.contains("--- FAIL:")
+                                || test_output.contains("FAIL\t")
+                                || test_output.contains("AssertionError")
+                                || test_output.contains("Error: expect(")
+                                || test_output.contains("✕")
+                                || test_output.contains("✗");
                             if has_failures {
                                 pre_completion_test_attempts += 1;
                                 self.conversation.push(Message {
@@ -399,6 +405,40 @@ impl AgentRunner {
                                     )),
                                 });
                                 continue;
+                            }
+                        }
+                        // For Go projects, also do a full-module build check
+                        if self.config.workdir.join("go.mod").exists() {
+                            if let Ok(output) = std::process::Command::new("go")
+                                .args(&["build", "./..."])
+                                .current_dir(&self.config.workdir)
+                                .output()
+                            {
+                                if !output.status.success() {
+                                    let stderr = String::from_utf8_lossy(&output.stderr);
+                                    if !stderr.trim().is_empty() {
+                                        pre_completion_test_attempts += 1;
+                                        if pre_completion_test_attempts <= 3 {
+                                            self.conversation.push(Message {
+                                                role: "assistant".to_string(),
+                                                content: MessageContent::Text(response.text.clone()),
+                                            });
+                                            let errors: String = stderr.lines().take(20).collect::<Vec<_>>().join("\n");
+                                            self.conversation.push(Message {
+                                                role: "user".to_string(),
+                                                content: MessageContent::Text(format!(
+                                                    "[SYSTEM] PRE-COMPLETION GO BUILD CHECK (attempt {}/3) — \
+                                                     `go build ./...` FAILED. Your patch has compilation errors \
+                                                     that will prevent tests from running.\n\
+                                                     Errors:\n```\n{}\n```\n\
+                                                     Fix ALL compilation errors before finishing.",
+                                                    pre_completion_test_attempts, errors
+                                                )),
+                                            });
+                                            continue;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -819,7 +859,13 @@ impl AgentRunner {
                         if let Ok(test_output) = tools::execute_tool("run_tests", &test_input, &self.config.workdir) {
                             let has_failures = test_output.contains("Test Status: FAILED")
                                 || test_output.contains("FAILURES")
-                                || test_output.contains("panic:");
+                                || test_output.contains("panic:")
+                                || test_output.contains("--- FAIL:")
+                                || test_output.contains("FAIL\t")
+                                || test_output.contains("AssertionError")
+                                || test_output.contains("Error: expect(")
+                                || test_output.contains("✕")
+                                || test_output.contains("✗");
                             if has_failures {
                                 pre_completion_test_attempts += 1;
                                 messages.push(Message {
@@ -840,6 +886,40 @@ impl AgentRunner {
                                     )),
                                 });
                                 continue;
+                            }
+                        }
+                        // For Go projects, also do a full-module build check
+                        if self.config.workdir.join("go.mod").exists() {
+                            if let Ok(output) = std::process::Command::new("go")
+                                .args(&["build", "./..."])
+                                .current_dir(&self.config.workdir)
+                                .output()
+                            {
+                                if !output.status.success() {
+                                    let stderr = String::from_utf8_lossy(&output.stderr);
+                                    if !stderr.trim().is_empty() {
+                                        pre_completion_test_attempts += 1;
+                                        if pre_completion_test_attempts <= 3 {
+                                            messages.push(Message {
+                                                role: "assistant".to_string(),
+                                                content: MessageContent::Text(response.text.clone()),
+                                            });
+                                            let errors: String = stderr.lines().take(20).collect::<Vec<_>>().join("\n");
+                                            messages.push(Message {
+                                                role: "user".to_string(),
+                                                content: MessageContent::Text(format!(
+                                                    "[SYSTEM] PRE-COMPLETION GO BUILD CHECK (attempt {}/3) — \
+                                                     `go build ./...` FAILED. Your patch has compilation errors \
+                                                     that will prevent tests from running.\n\
+                                                     Errors:\n```\n{}\n```\n\
+                                                     Fix ALL compilation errors before finishing.",
+                                                    pre_completion_test_attempts, errors
+                                                )),
+                                            });
+                                            continue;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -1342,6 +1422,12 @@ impl AgentRunner {
                 This tells you WHERE to make the fix (which module/function the test imports from) \
                 and WHAT the fix should do (what the assertions check). Don't guess at the fix — \
                 let the tests guide your localization.\n\
+             1c. **Trace imports from tests.** After reading the test file, follow its import statements \
+                to find the EXACT source file and function being tested. If the test does \
+                `from foo.bar import baz`, your fix goes in foo/bar.py's baz function — NOT in a \
+                different module. For Go, if the test calls `pkg.NewFoo()`, your fix must ensure \
+                pkg exports NewFoo. For JS/TS, follow require/import paths. Wrong file = wasted \
+                iterations. The test's imports are the #1 localization signal.\n\
              2. **Plan and externalize (1-2 iterations).** Use think to form a concrete plan: \
                 root cause, which files to change, what each change is. Write the plan to \
                 /tmp/.ninja_plan.md — this survives context compaction. Include a COMPLETE numbered \
@@ -1449,6 +1535,14 @@ impl AgentRunner {
              - **Use oracle when stuck on reasoning.** If you've read the relevant code but can't \
                determine the correct fix, call oracle with a focused question about the specific \
                code change needed. Don't spin reading the same files repeatedly.\n\
+             - **Go: ensure ALL exported symbols compile.** In Go projects, when you add or modify \
+               structs, interfaces, or functions, ensure ALL references to new types/fields/methods \
+               are satisfied across the entire module. Run `go build ./...` (not just the edited \
+               package) to catch cross-package compilation errors. Common mistakes: adding a struct \
+               field but not initializing it in constructors, adding an interface method but not \
+               implementing it in all types, adding an exported function but not importing its \
+               package. In typed languages, an incomplete patch = zero test pass (compilation \
+               fails before any tests run).\n\
              - **Watch for dead code and duplicate definitions.** In Python, if a function/class is \
                defined twice in the same file, the LAST definition wins — earlier ones are dead code. \
                This applies both to code YOU write and to code that ALREADY EXISTS in the file. \
