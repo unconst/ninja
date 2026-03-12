@@ -1816,7 +1816,30 @@ impl AgentRunner {
                copy — DELETE the duplicate entirely so only one canonical definition remains. \
                When your edit doesn't change test results, check: (1) is your code actually being \
                called? (2) grep the file for duplicate definitions of the same name. (3) add a \
-               print() to verify execution reaches your code.",
+               print() to verify execution reaches your code.\n\
+             - **Never commit compiled artifacts or lock files.** Never use `git add -A` or `git add .` \
+               — always stage specific source files by name. After running `go build`, `npm run build`, \
+               `cargo build`, etc., verify with `git status` that no compiled binaries (e.g., `tsh`, \
+               `flipt`, `*.test`), lock files (`yarn.lock`, `package-lock.json`, `go.work.sum`), or \
+               build output directories are staged. If you accidentally staged them, unstage with \
+               `git reset HEAD <file>` before committing.\n\
+             - **Do NOT modify existing test expectations.** If a test expects a specific value and \
+               your implementation returns something different, your implementation is wrong — NOT the \
+               test. Never change test fixtures, expected values, or test assertions to match your \
+               output. If you find yourself editing a test file to make it pass, STOP and re-examine \
+               your production code instead. The only exception is when the task explicitly requires \
+               test changes.\n\
+             - **Verify methods exist before calling them.** Before calling `obj.someMethod()` in \
+               TypeScript/JavaScript, grep for its definition in the codebase. APIs change across \
+               versions — never assume a method exists from training data. If you can't find the \
+               definition, check the current version's API surface. Using a deprecated or removed \
+               method = type error = zero tests pass.\n\
+             - **Create new files when the solution requires them.** After reading the problem, \
+               explicitly consider whether the fix requires CREATING new files (not just modifying \
+               existing ones). Feature implementations often need new packages, hooks, or utility \
+               modules. If the task says 'add a new X', that usually means creating `x.go`, `x.ts`, \
+               or `x.py`. Check test imports for paths that don't resolve — those are files YOU must \
+               create.",
             self.config.workdir.display(),
             env_info
         );
