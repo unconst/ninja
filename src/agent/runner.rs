@@ -1288,6 +1288,11 @@ impl AgentRunner {
                there — what you tried, why it failed, and what to try next.\n\
              - **Use tests.** If tests exist, run them to verify. If a test patch is provided, \
                apply it first, then implement to pass the tests.\n\
+             - **Complete ALL requirements.** When a task lists multiple changes (e.g., fix 3 bugs, \
+               optimize 3 patterns, update 6 files), verify EACH ONE is done before stopping. \
+               Don't stop after easy fixes just because tests pass — re-read the goal and check \
+               off each requirement. Structural changes like 'hoist computation out of loop' or \
+               'restructure function signatures' are just as important as simple fixes.\n\
              - **Don't give up.** If stuck on an approach, try alternatives. If an edit keeps \
                failing, try write_file, replace_lines, or break into smaller pieces.\n\
              - **Switch strategies after 3 failures.** If the same approach fails 3 times, stop and \
