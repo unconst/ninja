@@ -11,6 +11,7 @@ mod think;
 mod oracle;
 pub mod memory;
 pub mod mcp;
+pub mod state;
 
 use serde_json::Value;
 use std::path::Path;
@@ -32,6 +33,7 @@ pub fn get_tool_definitions() -> Vec<ToolDef> {
     tools.extend(oracle::definitions());
     tools.extend(memory::definitions());
     tools.extend(git::definitions());
+    tools.extend(state::definitions());
     tools
 }
 
@@ -51,6 +53,7 @@ pub fn execute_tool(name: &str, args: &Value, workdir: &Path) -> Result<String, 
         "find_definition" => navigate::find_definition(args, workdir),
         "find_references" => navigate::find_references(args, workdir),
         "run_tests" => testing::run_tests(args, workdir),
+        "spawn_thread" => subagent::spawn_thread(args, workdir),
         "spawn_agent" => subagent::spawn_agent(args, workdir),
         "todo_write" => todo::todo_write(args, workdir),
         "think" => think::think(args, workdir),
@@ -60,6 +63,8 @@ pub fn execute_tool(name: &str, args: &Value, workdir: &Path) -> Result<String, 
         "git_diff" => git::git_diff(args, workdir),
         "git_log" => git::git_log(args, workdir),
         "git_commit" => git::git_commit(args, workdir),
+        "state_read" => state::state_read(args, workdir),
+        "state_write" => state::state_write(args, workdir),
         _ => Err(format!("Unknown tool: {}", name)),
     }
 }

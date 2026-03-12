@@ -263,17 +263,23 @@ impl AgentRunner {
                     }
                     _ => String::new(),
                 };
+                // Include RLM state summary if available
+                let state_summary = crate::tools::state::summarize_state()
+                    .map(|s| format!("\n\nRLM State:\n{}", s))
+                    .unwrap_or_default();
                 self.conversation.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
-                        "[SYSTEM] PROGRESS — Iteration {}. Check your todo list and assess:\n\
-                         1. What have you completed so far?\n\
+                        "[SYSTEM] PROGRESS — Iteration {}. Check your state and assess:\n\
+                         1. What have you completed so far? (use state_read if using RLM)\n\
                          2. What remains? Are you stuck on anything?\n\
                          3. What's your plan for the remaining {} iterations?\n\
                          4. Have you identified ALL files that need changes? Don't forget: \
                          docs, changelog, config files (pyproject.toml, setup.cfg), \
-                         CI workflows, type stubs, __init__.py exports, test output files.\n\n\
-                         Current changes:\n```\n{}\n```{}", iteration + 1, remaining, diff_preview, plan_recovery
+                         CI workflows, type stubs, __init__.py exports, test output files.\n\
+                         5. If using RLM: re-evaluate your plan based on thread results. \
+                         Update state_write with revised strategy if needed.\n\n\
+                         Current changes:\n```\n{}\n```{}{}", iteration + 1, remaining, diff_preview, plan_recovery, state_summary
                     )),
                 });
             } else if remaining == 5 {
@@ -764,17 +770,23 @@ impl AgentRunner {
                 } else {
                     String::new()
                 };
+                // Include RLM state summary if available
+                let state_summary = crate::tools::state::summarize_state()
+                    .map(|s| format!("\n\nRLM State:\n{}", s))
+                    .unwrap_or_default();
                 messages.push(Message {
                     role: "user".to_string(),
                     content: MessageContent::Text(format!(
-                        "[SYSTEM] PROGRESS — Iteration {}. Check your todo list and assess:\n\
-                         1. What have you completed so far?\n\
+                        "[SYSTEM] PROGRESS — Iteration {}. Check your state and assess:\n\
+                         1. What have you completed so far? (use state_read if using RLM)\n\
                          2. What remains? Are you stuck on anything?\n\
                          3. What's your plan for the remaining {} iterations?\n\
                          4. Have you identified ALL files that need changes? Don't forget: \
                          docs, changelog, config files (pyproject.toml, setup.cfg), \
-                         CI workflows, type stubs, __init__.py exports, test output files.\n\n\
-                         Current changes:\n```\n{}\n```{}{}", iteration + 1, remaining, diff_preview, plan_recovery, edit_stats
+                         CI workflows, type stubs, __init__.py exports, test output files.\n\
+                         5. If using RLM: re-evaluate your plan based on thread results. \
+                         Update state_write with revised strategy if needed.\n\n\
+                         Current changes:\n```\n{}\n```{}{}{}", iteration + 1, remaining, diff_preview, plan_recovery, edit_stats, state_summary
                     )),
                 });
             } else if remaining == 5 {
@@ -1575,7 +1587,11 @@ impl AgentRunner {
              - find_definition: Find where a symbol is defined\n\
              - find_references: Find all references to a symbol\n\
              - run_tests: Run project tests (auto-detects framework, or custom command)\n\
-             - spawn_agent: Launch a sub-agent for independent parallel tasks\n\
+             - spawn_thread: Launch a thread (sub-agent) with structured output and context inheritance. \
+               Use for RLM pattern: decompose, dispatch, collect, re-evaluate.\n\
+             - spawn_agent: Launch a sub-agent for independent parallel tasks (legacy, prefer spawn_thread)\n\
+             - state_read: Read the RLM state object (plan, subtasks, observations, test results)\n\
+             - state_write: Update the RLM state object (merge by default, or full replace)\n\
              - todo_write: Track progress on multi-step tasks\n\
              - think: Reason step-by-step before acting (no side effects)\n\
              - memory_write: Save discoveries or project notes to persistent memory\n\
@@ -1706,9 +1722,10 @@ impl AgentRunner {
              ## Principles\n\
              - **Speed over perfection.** Act decisively. Don't over-explore or over-analyze.\n\
              - **Parallelize aggressively.** Call multiple tools per response — they execute concurrently. \
-               For tasks touching 5+ files, use spawn_agent to edit different files in parallel. \
-               Give each sub-agent a specific file path, the exact change needed, and enough context. \
-               This multiplies your effective iteration budget.\n\
+               For tasks touching 5+ files, use spawn_thread to edit different files in parallel. \
+               Give each thread a specific file scope, the exact change needed, and context from your \
+               state. Collect structured results and update your plan. This multiplies your effective \
+               iteration budget.\n\
              - **Be precise.** Minimal changes. Don't over-engineer or add unnecessary code.\n\
              - **Read fully.** Don't use offset/limit unless a file is >2000 lines. \
                Config files are small — always read completely.\n\
@@ -1843,6 +1860,41 @@ impl AgentRunner {
             self.config.workdir.display(),
             env_info
         );
+
+        // Add RLM (Recursive Language Model) orchestration section for multi-file tasks
+        prompt.push_str("\n\n\
+             ## RLM Orchestration (for complex multi-file tasks)\n\
+             For tasks touching 4+ files or requiring coordinated changes, use the RLM pattern:\n\n\
+             **The Loop**: READ state → EVALUATE → REWRITE plan → DISPATCH threads → COLLECT → VERIFY → repeat\n\n\
+             1. **Initialize state.** Use state_write to create your world model:\n\
+                ```\n\
+                state_write({\"state\": {\n\
+                  \"plan\": \"High-level strategy\",\n\
+                  \"subtasks\": [{\"id\": 1, \"desc\": \"Fix X in file.py\", \"files\": [\"file.py\"], \"status\": \"pending\"}],\n\
+                  \"observations\": [],\n\
+                  \"iteration\": 1\n\
+                }})\n\
+                ```\n\
+             2. **Dispatch threads.** Use spawn_thread to delegate subtasks:\n\
+                - Pass relevant context from your state\n\
+                - Constrain each thread to specific files\n\
+                - Launch multiple threads in parallel for independent subtasks\n\
+             3. **Collect and evaluate.** After threads complete:\n\
+                - Parse their structured results (files_changed, findings, errors)\n\
+                - Update state: mark subtasks done/failed, add observations\n\
+                - Run tests to verify progress\n\
+             4. **Rewrite plan.** Based on thread results and test signals:\n\
+                - If a thread failed, dispatch with more context or split into smaller subtasks\n\
+                - If tests reveal new issues, add subtasks\n\
+                - If strategy isn't working, record why and switch approaches\n\
+             5. **Verify.** Run the full test suite. Check that ALL planned subtasks are done.\n\
+                If gaps remain, loop back to step 2.\n\n\
+             **Key principle**: Your plan is a LIVING DOCUMENT. Thread results are SIGNALS you reason \
+             over to update your state. Don't plan once and execute — iterate. Each loop gives you \
+             new information to refine your approach.\n\n\
+             **When NOT to use RLM**: For simple 1-3 file tasks, just edit directly. RLM adds overhead \
+             that isn't worth it for small tasks. Use it when the task has enough complexity that \
+             tracking state explicitly will prevent you from missing things.");
 
         // Append NINJA.md project config if present
         for config_name in &["NINJA.md", ".ninja.md", "CLAUDE.md"] {
