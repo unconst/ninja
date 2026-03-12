@@ -414,7 +414,7 @@ impl AgentRunner {
                                     content: MessageContent::Text(response.text.clone()),
                                 });
                                 let tail: String = test_output.lines()
-                                    .rev().take(30).collect::<Vec<_>>()
+                                    .rev().take(60).collect::<Vec<_>>()
                                     .into_iter().rev().collect::<Vec<_>>().join("\n");
                                 // Check for missing method/attribute errors specifically
                                 let missing_api_hints: Vec<&str> = test_output.lines()
@@ -426,14 +426,19 @@ impl AgentRunner {
                                         || l.contains("has no member")
                                         || l.contains("is not a member")
                                         || l.contains("Cannot read propert")
-                                        || l.contains("TypeError:"))
-                                    .take(5)
+                                        || l.contains("TypeError:")
+                                        || l.contains("ImportError")
+                                        || l.contains("ModuleNotFoundError")
+                                        || l.contains("No such file")
+                                        || l.contains("no non-test Go files"))
+                                    .take(8)
                                     .collect();
                                 let api_hint = if !missing_api_hints.is_empty() {
-                                    format!("\n\n⚠️ MISSING API/METHOD ERRORS detected:\n{}\n\
-                                        These mean your code is missing methods or using wrong names. \
-                                        Check the test file to see what method/class names it expects, \
-                                        then add or rename them in your code.",
+                                    format!("\n\n⚠️ MISSING API/METHOD/IMPORT ERRORS detected:\n{}\n\
+                                        These mean your code is missing methods, files, or using wrong names. \
+                                        Check: (1) Did you create ALL new files your code imports? \
+                                        (2) Did you remove an import that's still used by other functions in the file? \
+                                        (3) Are method/class names spelled exactly as tests expect?",
                                         missing_api_hints.join("\n"))
                                 } else {
                                     String::new()
@@ -444,7 +449,7 @@ impl AgentRunner {
                                         "[SYSTEM] PRE-COMPLETION TEST CHECK (attempt {}/3) — Tests are FAILING. \
                                          Your changes may have introduced a regression. Fix the \
                                          failing tests before finishing.\n\
-                                         Test output (last 30 lines):\n```\n{}\n```{}",
+                                         Test output (last 60 lines):\n```\n{}\n```{}",
                                         pre_completion_test_attempts, tail, api_hint
                                     )),
                                 });
@@ -939,7 +944,7 @@ impl AgentRunner {
                                     content: MessageContent::Text(response.text.clone()),
                                 });
                                 let tail: String = test_output.lines()
-                                    .rev().take(30).collect::<Vec<_>>()
+                                    .rev().take(60).collect::<Vec<_>>()
                                     .into_iter().rev().collect::<Vec<_>>().join("\n");
                                 // Check for missing method/attribute errors specifically
                                 let missing_api_hints2: Vec<&str> = test_output.lines()
@@ -951,14 +956,19 @@ impl AgentRunner {
                                         || l.contains("has no member")
                                         || l.contains("is not a member")
                                         || l.contains("Cannot read propert")
-                                        || l.contains("TypeError:"))
-                                    .take(5)
+                                        || l.contains("TypeError:")
+                                        || l.contains("ImportError")
+                                        || l.contains("ModuleNotFoundError")
+                                        || l.contains("No such file")
+                                        || l.contains("no non-test Go files"))
+                                    .take(8)
                                     .collect();
                                 let api_hint2 = if !missing_api_hints2.is_empty() {
-                                    format!("\n\n⚠️ MISSING API/METHOD ERRORS detected:\n{}\n\
-                                        These mean your code is missing methods or using wrong names. \
-                                        Check the test file to see what method/class names it expects, \
-                                        then add or rename them in your code.",
+                                    format!("\n\n⚠️ MISSING API/METHOD/IMPORT ERRORS detected:\n{}\n\
+                                        These mean your code is missing methods, files, or using wrong names. \
+                                        Check: (1) Did you create ALL new files your code imports? \
+                                        (2) Did you remove an import that's still used by other functions in the file? \
+                                        (3) Are method/class names spelled exactly as tests expect?",
                                         missing_api_hints2.join("\n"))
                                 } else {
                                     String::new()
@@ -969,7 +979,7 @@ impl AgentRunner {
                                         "[SYSTEM] PRE-COMPLETION TEST CHECK (attempt {}/3) — Tests are FAILING. \
                                          Your changes may have introduced a regression. Fix the \
                                          failing tests before finishing.\n\
-                                         Test output (last 30 lines):\n```\n{}\n```{}",
+                                         Test output (last 60 lines):\n```\n{}\n```{}",
                                         pre_completion_test_attempts, tail, api_hint2
                                     )),
                                 });
@@ -1654,6 +1664,20 @@ impl AgentRunner {
              - **Use oracle when stuck on reasoning.** If you've read the relevant code but can't \
                determine the correct fix, call oracle with a focused question about the specific \
                code change needed. Don't spin reading the same files repeatedly.\n\
+             - **Minimal scope of changes.** ONLY modify what the task requires. Do NOT:\n\
+               (a) 'Improve' or refactor code adjacent to your fix.\n\
+               (b) Move/relocate more code than necessary (e.g., if task says 'move X to Y', \
+               move ONLY X — not X plus other related functions).\n\
+               (c) Change data handling semantics (e.g., bytes→str conversion, unit interpretation) \
+               unless the task explicitly requires it.\n\
+               (d) Remove imports that are still used by OTHER functions in the same file. Before \
+               removing any import, grep the ENTIRE file for all usages of that import.\n\
+               When in doubt, make the SMALLEST change that fixes the issue.\n\
+             - **Verify new file creation.** When your code references a new package, module, or \
+               file that doesn't exist yet (e.g., `import webhook` or `from mypackage import NewClass`), \
+               you MUST create that file. After editing, grep your changes for import statements and \
+               verify every imported module/package exists. A missing source file = build failure = \
+               zero tests pass.\n\
              - **Go: ensure ALL exported symbols compile.** In Go projects, when you add or modify \
                structs, interfaces, or functions, ensure ALL references to new types/fields/methods \
                are satisfied across the entire module. Run `go build ./...` (not just the edited \

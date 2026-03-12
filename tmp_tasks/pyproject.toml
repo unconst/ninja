@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68.0", "numpy>=1.24"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mylib"
+version = "0.1.0"
+description = "A small library with a C extension for fast math operations"
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.24",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

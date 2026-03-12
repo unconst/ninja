@@ -1,0 +1,22 @@
+{
+  "task_id": "frontier_constraint_satisfaction_4file",
+  "category": "diagnostic",
+  "title": "Fix layered interacting constraints across 4 config files",
+  "difficulty": "hard",
+  "agent": "./target/release/ninja",
+  "elapsed_seconds": 88.8219666481018,
+  "exit_code": 0,
+  "result": {
+    "score": 1.0,
+    "details": "dev: PASS\nprod: PASS\nstaging: PASS\ndev_debug=True\ndev_workers=1\ndev_echo=True\ndev_overflow=5\nprod_debug=False\nprod_echo=False\nprod_timeout=10\nprod_maxconn=16\nprod_workers=8\nstaging_debug=False\nstaging_echo=False\nstaging_pool=25\nstaging_cache_size=10000\nPASS: dev workers=1\nPASS: dev overflow<=5\nPASS: dev still debug\nPASS: prod echo=False\nPASS: prod still non-debug\nPASS: prod timeout>=10\nPASS: prod maxconn>=workers*2\nPASS: staging echo=False\nPASS: staging pool<=25\nPASS: staging cache<=10000\nPASS: dev validates\nPASS: prod validates\nPASS: staging validates\n\nScore: 13/13\n",
+    "checks": [
+      {
+        "name": "script_check",
+        "passed": true,
+        "detail": "exit 0"
+      }
+    ],
+    "passed": true
+  },
+  "workdir": "/tmp/task_frontier_constraint_satisfaction_4file_1715et7j"
+}
