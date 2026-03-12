@@ -1478,11 +1478,23 @@ impl AgentRunner {
                 different module. For Go, if the test calls `pkg.NewFoo()`, your fix must ensure \
                 pkg exports NewFoo. For JS/TS, follow require/import paths. Wrong file = wasted \
                 iterations. The test's imports are the #1 localization signal.\n\
+             1c-ii. **Study existing parallel implementations.** When creating a NEW implementation \
+                (e.g., a new pinger, handler, sink, connector, or adapter), find existing similar \
+                implementations in the same codebase first. If you're writing `sqlserver.go`, read \
+                `postgres.go` and `mysql.go` — they show the exact error string patterns, method \
+                signatures, and test structure the codebase uses. If you're adding a `webhook` sink, \
+                read the existing `logfile` sink. The existing code tells you exactly what patterns \
+                the tests expect. Never invent your own conventions when parallel examples exist.\n\
              1d. **Verify API surface before finishing.** Before stopping, check that every method/function \
                 the tests call actually exists in your code with the right name. Quick check: grep for \
                 the method names you noted in 1b. If the test calls `obj.set_queue()` and your code \
                 doesn't have `set_queue`, you're not done. This takes 30 seconds and prevents 80% of \
                 failures.\n\
+             1e. **Check if NEW files/packages are needed.** Look at what the tests import. If they \
+                import from a package that doesn't exist yet (e.g., `internal/server/audit/webhook`), \
+                you need to CREATE it. Don't just modify existing files — the new package may be the \
+                primary deliverable. Check test import paths for any paths that don't resolve to \
+                existing files. Also check if new testdata files or fixture files are referenced.\n\
              2. **Plan and externalize (1-2 iterations).** Use think to form a concrete plan: \
                 root cause, which files to change, what each change is. Write the plan to \
                 /tmp/.ninja_plan.md — this survives context compaction. Include a COMPLETE numbered \
@@ -1498,10 +1510,15 @@ impl AgentRunner {
                 find other files that reference the changed functions/classes/APIs. These files may also \
                 need updating — especially: __init__.py __all__ lists and imports, type stubs (.pyi), \
                 documentation, and downstream consumers. When you REMOVE a function, also grep for its \
-                name in __init__.py files to clean up exports.\n\
-             5. **Verify.** Run tests or linters when available. If the task specifies a verification \
-                command (like a grep to check for remaining references), run it BEFORE declaring done. \
-                If it shows remaining issues, fix them. Never stop while verification fails.\n\
+                name in __init__.py files to clean up exports. Trace data flow END-TO-END: if you \
+                change how data is structured at one layer (e.g., struct fields), check whether \
+                upstream code that GENERATES that data (e.g., CSR generation, request builders, \
+                serializers) also needs updating — not just the consumer.\n\
+             5. **Verify.** Run tests or linters when available. Run the FULL test suite for the \
+                affected modules, not just the new/failing tests. Your changes must not break \
+                previously-passing tests (regressions). If the test command runs both old and new \
+                tests, check that ALL pass — not just the ones you targeted. If it shows remaining \
+                issues, fix them. Never stop while verification fails.\n\
              5b. **Rename verification.** When renaming symbols, classes, or field names: after all \
                 edits, grep for the OLD name across ALL files (including tests, configs, docstrings, \
                 string literals). Any remaining reference is a bug. Fix it before stopping.\n\
