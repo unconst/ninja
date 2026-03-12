@@ -176,6 +176,7 @@ impl AgentRunner {
 
         let mut cumulative_input_tokens: u64 = 0;
         let mut completion_check_done = false;
+        let mut pre_completion_test_done = false;
 
         for iteration in 0..self.config.max_iterations {
             rollout.iteration_count = (iteration + 1) as u64;
@@ -368,6 +369,41 @@ impl AgentRunner {
                     continue;
                 }
 
+                // Pre-completion test check: if the agent made changes, run tests
+                // to catch regressions before accepting the stop.
+                if !pre_completion_test_done {
+                    let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                    if !diff_stat.is_empty() {
+                        let test_input = serde_json::json!({});
+                        if let Ok(test_output) = tools::execute_tool("run_tests", &test_input, &self.config.workdir) {
+                            let has_failures = test_output.contains("Test Status: FAILED")
+                                || test_output.contains("FAILURES")
+                                || test_output.contains("panic:");
+                            if has_failures {
+                                pre_completion_test_done = true;
+                                self.conversation.push(Message {
+                                    role: "assistant".to_string(),
+                                    content: MessageContent::Text(response.text.clone()),
+                                });
+                                let tail: String = test_output.lines()
+                                    .rev().take(30).collect::<Vec<_>>()
+                                    .into_iter().rev().collect::<Vec<_>>().join("\n");
+                                self.conversation.push(Message {
+                                    role: "user".to_string(),
+                                    content: MessageContent::Text(format!(
+                                        "[SYSTEM] PRE-COMPLETION TEST CHECK — Tests are FAILING. \
+                                         Your changes may have introduced a regression. Fix the \
+                                         failing tests before finishing.\n\
+                                         Test output (last 30 lines):\n```\n{}\n```",
+                                        tail
+                                    )),
+                                });
+                                continue;
+                            }
+                        }
+                    }
+                }
+
                 // Append assistant's final response to conversation history
                 self.conversation.push(Message {
                     role: "assistant".to_string(),
@@ -530,6 +566,7 @@ impl AgentRunner {
 
         let mut cumulative_input_tokens: u64 = 0;
         let mut completion_check_done = false;
+        let mut pre_completion_test_done = false;
         let mut last_write_iteration: usize = 0; // Track last iteration with a write/edit tool
         let mut last_idle_nudge: usize = 0;
         let mut edit_successes: usize = 0;
@@ -772,6 +809,42 @@ impl AgentRunner {
                     });
                     continue;
                 }
+
+                // Pre-completion test check: if the agent made changes, run tests
+                // to catch regressions before accepting the stop.
+                if !pre_completion_test_done {
+                    let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                    if !diff_stat.is_empty() {
+                        let test_input = serde_json::json!({});
+                        if let Ok(test_output) = tools::execute_tool("run_tests", &test_input, &self.config.workdir) {
+                            let has_failures = test_output.contains("Test Status: FAILED")
+                                || test_output.contains("FAILURES")
+                                || test_output.contains("panic:");
+                            if has_failures {
+                                pre_completion_test_done = true;
+                                messages.push(Message {
+                                    role: "assistant".to_string(),
+                                    content: MessageContent::Text(response.text.clone()),
+                                });
+                                let tail: String = test_output.lines()
+                                    .rev().take(30).collect::<Vec<_>>()
+                                    .into_iter().rev().collect::<Vec<_>>().join("\n");
+                                messages.push(Message {
+                                    role: "user".to_string(),
+                                    content: MessageContent::Text(format!(
+                                        "[SYSTEM] PRE-COMPLETION TEST CHECK — Tests are FAILING. \
+                                         Your changes may have introduced a regression. Fix the \
+                                         failing tests before finishing.\n\
+                                         Test output (last 30 lines):\n```\n{}\n```",
+                                        tail
+                                    )),
+                                });
+                                continue;
+                            }
+                        }
+                    }
+                }
+
                 rollout.final_result = Some(response.text.clone());
                 rollout.success = true;
                 break;
