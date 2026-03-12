@@ -67,9 +67,45 @@ pub fn run_tests(args: &Value, workdir: &Path) -> Result<String, String> {
 
     if !stdout.is_empty() {
         result.push_str("--- stdout ---\n");
-        // Keep last N lines to focus on results
         let lines: Vec<&str> = stdout.lines().collect();
-        if lines.len() > 200 {
+
+        // For Go tests with large output, extract failures first for visibility
+        let is_go_test = command.contains("go test");
+        if is_go_test && lines.len() > 200 && !output.status.success() {
+            // Extract FAIL lines and --- FAIL: blocks for visibility
+            let mut fail_summary: Vec<String> = Vec::new();
+            let mut in_fail_block = false;
+            let mut fail_block_lines = 0;
+            for line in &lines {
+                if line.starts_with("--- FAIL:") || line.starts_with("FAIL\t") || line.starts_with("FAIL ") {
+                    fail_summary.push(line.to_string());
+                    in_fail_block = line.starts_with("--- FAIL:");
+                    fail_block_lines = 0;
+                } else if in_fail_block && fail_block_lines < 15 {
+                    fail_summary.push(line.to_string());
+                    fail_block_lines += 1;
+                    if line.trim().is_empty() || line.starts_with("---") {
+                        in_fail_block = false;
+                    }
+                } else {
+                    in_fail_block = false;
+                }
+            }
+            if !fail_summary.is_empty() {
+                result.push_str("=== FAILURE SUMMARY ===\n");
+                for line in &fail_summary {
+                    result.push_str(line);
+                    result.push('\n');
+                }
+                result.push_str("=== END FAILURE SUMMARY ===\n\n");
+            }
+            // Still show last 100 lines for context
+            result.push_str(&format!("... ({} lines total, showing last 100) ...\n", lines.len()));
+            for line in &lines[lines.len().saturating_sub(100)..] {
+                result.push_str(line);
+                result.push('\n');
+            }
+        } else if lines.len() > 200 {
             result.push_str(&format!("... ({} lines total, showing last 200) ...\n", lines.len()));
             for line in &lines[lines.len() - 200..] {
                 result.push_str(line);

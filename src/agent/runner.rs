@@ -176,7 +176,7 @@ impl AgentRunner {
 
         let mut cumulative_input_tokens: u64 = 0;
         let mut completion_check_done = false;
-        let mut pre_completion_test_done = false;
+        let mut pre_completion_test_attempts: u32 = 0;
 
         for iteration in 0..self.config.max_iterations {
             rollout.iteration_count = (iteration + 1) as u64;
@@ -371,7 +371,7 @@ impl AgentRunner {
 
                 // Pre-completion test check: if the agent made changes, run tests
                 // to catch regressions before accepting the stop.
-                if !pre_completion_test_done {
+                if pre_completion_test_attempts < 3 {
                     let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                     if !diff_stat.is_empty() {
                         let test_input = serde_json::json!({});
@@ -380,7 +380,7 @@ impl AgentRunner {
                                 || test_output.contains("FAILURES")
                                 || test_output.contains("panic:");
                             if has_failures {
-                                pre_completion_test_done = true;
+                                pre_completion_test_attempts += 1;
                                 self.conversation.push(Message {
                                     role: "assistant".to_string(),
                                     content: MessageContent::Text(response.text.clone()),
@@ -391,11 +391,11 @@ impl AgentRunner {
                                 self.conversation.push(Message {
                                     role: "user".to_string(),
                                     content: MessageContent::Text(format!(
-                                        "[SYSTEM] PRE-COMPLETION TEST CHECK — Tests are FAILING. \
+                                        "[SYSTEM] PRE-COMPLETION TEST CHECK (attempt {}/3) — Tests are FAILING. \
                                          Your changes may have introduced a regression. Fix the \
                                          failing tests before finishing.\n\
                                          Test output (last 30 lines):\n```\n{}\n```",
-                                        tail
+                                        pre_completion_test_attempts, tail
                                     )),
                                 });
                                 continue;
@@ -566,7 +566,7 @@ impl AgentRunner {
 
         let mut cumulative_input_tokens: u64 = 0;
         let mut completion_check_done = false;
-        let mut pre_completion_test_done = false;
+        let mut pre_completion_test_attempts: u32 = 0;
         let mut last_write_iteration: usize = 0; // Track last iteration with a write/edit tool
         let mut last_idle_nudge: usize = 0;
         let mut edit_successes: usize = 0;
@@ -812,7 +812,7 @@ impl AgentRunner {
 
                 // Pre-completion test check: if the agent made changes, run tests
                 // to catch regressions before accepting the stop.
-                if !pre_completion_test_done {
+                if pre_completion_test_attempts < 3 {
                     let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                     if !diff_stat.is_empty() {
                         let test_input = serde_json::json!({});
@@ -821,7 +821,7 @@ impl AgentRunner {
                                 || test_output.contains("FAILURES")
                                 || test_output.contains("panic:");
                             if has_failures {
-                                pre_completion_test_done = true;
+                                pre_completion_test_attempts += 1;
                                 messages.push(Message {
                                     role: "assistant".to_string(),
                                     content: MessageContent::Text(response.text.clone()),
@@ -832,11 +832,11 @@ impl AgentRunner {
                                 messages.push(Message {
                                     role: "user".to_string(),
                                     content: MessageContent::Text(format!(
-                                        "[SYSTEM] PRE-COMPLETION TEST CHECK — Tests are FAILING. \
+                                        "[SYSTEM] PRE-COMPLETION TEST CHECK (attempt {}/3) — Tests are FAILING. \
                                          Your changes may have introduced a regression. Fix the \
                                          failing tests before finishing.\n\
                                          Test output (last 30 lines):\n```\n{}\n```",
-                                        tail
+                                        pre_completion_test_attempts, tail
                                     )),
                                 });
                                 continue;
@@ -968,7 +968,16 @@ impl AgentRunner {
                                             self.config.workdir.join(path_str)
                                         };
                                         let go_lint = self.lint_go_file(&resolved);
-                                        if !go_lint.is_empty() {
+                                        if !go_lint.is_empty() && pre_edit_contents[i].is_some() {
+                                            let original = pre_edit_contents[i].as_ref().unwrap();
+                                            let _ = std::fs::write(&resolved, original);
+                                            (format!(
+                                                "EDIT REVERTED — your edit introduced Go compilation errors.\n{}\n\n\
+                                                 The file has been restored to its previous state. \
+                                                 Please fix the errors and try again.",
+                                                go_lint
+                                            ), false)
+                                        } else if !go_lint.is_empty() {
                                             (format!("{}{}", validated, go_lint), false)
                                         } else {
                                             (validated, false)
@@ -986,7 +995,16 @@ impl AgentRunner {
                                             self.config.workdir.join(path_str)
                                         };
                                         let go_lint = self.lint_go_file(&resolved);
-                                        if !go_lint.is_empty() {
+                                        if !go_lint.is_empty() && pre_edit_contents[i].is_some() {
+                                            let original = pre_edit_contents[i].as_ref().unwrap();
+                                            let _ = std::fs::write(&resolved, original);
+                                            (format!(
+                                                "EDIT REVERTED — your edit introduced Go compilation errors.\n{}\n\n\
+                                                 The file has been restored to its previous state. \
+                                                 Please fix the errors and try again.",
+                                                go_lint
+                                            ), false)
+                                        } else if !go_lint.is_empty() {
                                             (format!("{}{}", output, go_lint), false)
                                         } else {
                                             (output, false)
@@ -1047,7 +1065,19 @@ impl AgentRunner {
                                     };
                                     let lint_msg = self.lint_go_file(&resolved);
                                     if !lint_msg.is_empty() {
-                                        (format!("{}{}", output, lint_msg), false)
+                                        // Auto-revert Go build errors if we have original content
+                                        if pre_edit_contents[i].is_some() {
+                                            let original = pre_edit_contents[i].as_ref().unwrap();
+                                            let _ = std::fs::write(&resolved, original);
+                                            (format!(
+                                                "EDIT REVERTED — your {} introduced Go compilation errors.\n{}\n\n\
+                                                 The file has been restored to its previous state. \
+                                                 Please fix the errors and try again.",
+                                                tc.name, lint_msg
+                                            ), false)
+                                        } else {
+                                            (format!("{}{}", output, lint_msg), false)
+                                        }
                                     } else {
                                         (output, false)
                                     }
@@ -1306,6 +1336,12 @@ impl AgentRunner {
              1. **Understand quickly (1-3 iterations).** Read the task. Explore just enough to \
                 identify which files need changes — use grep_search, glob_search, find_definition. \
                 Don't read every file. Target the specific code you need to change.\n\
+             1b. **Read tests BEFORE changing code.** Find the relevant test file(s) — grep for test \
+                function names mentioned in the issue, or find test files matching the module name. \
+                Read the failing test assertions to understand EXACTLY what behavior is expected. \
+                This tells you WHERE to make the fix (which module/function the test imports from) \
+                and WHAT the fix should do (what the assertions check). Don't guess at the fix — \
+                let the tests guide your localization.\n\
              2. **Plan and externalize (1-2 iterations).** Use think to form a concrete plan: \
                 root cause, which files to change, what each change is. Write the plan to \
                 /tmp/.ninja_plan.md — this survives context compaction. Include a COMPLETE numbered \
@@ -1817,10 +1853,10 @@ print(json.dumps(result))
         }
 
         // First attempt to execute the tool
-        // Save pre-edit content for replace_lines/write_file auto-revert on syntax errors
-        let pre_edit_content = if (tool_name == "replace_lines" || tool_name == "write_file") {
+        // Save pre-edit content for replace_lines/write_file/edit_file auto-revert on lint errors
+        let pre_edit_content = if tool_name == "replace_lines" || tool_name == "write_file" || tool_name == "edit_file" {
             if let Some(path_str) = input.get("path").and_then(|v| v.as_str()) {
-                if path_str.ends_with(".py") {
+                if path_str.ends_with(".py") || path_str.ends_with(".go") {
                     let resolved = if Path::new(path_str).is_absolute() {
                         PathBuf::from(path_str)
                     } else {
@@ -1847,7 +1883,16 @@ print(json.dumps(result))
                                 self.config.workdir.join(path_str)
                             };
                             let go_lint = self.lint_go_file(&resolved);
-                            if !go_lint.is_empty() {
+                            if !go_lint.is_empty() && pre_edit_content.is_some() {
+                                let original = pre_edit_content.as_ref().unwrap();
+                                let _ = std::fs::write(&resolved, original);
+                                Ok(format!(
+                                    "EDIT REVERTED — your edit introduced Go compilation errors.\n{}\n\n\
+                                     The file has been restored to its previous state. \
+                                     Please fix the errors and try again.",
+                                    go_lint
+                                ))
+                            } else if !go_lint.is_empty() {
                                 Ok(format!("{}{}", validation_result, go_lint))
                             } else {
                                 Ok(validation_result)
@@ -1862,7 +1907,16 @@ print(json.dumps(result))
                             self.config.workdir.join(path_str)
                         };
                         let go_lint = self.lint_go_file(&resolved);
-                        if !go_lint.is_empty() {
+                        if !go_lint.is_empty() && pre_edit_content.is_some() {
+                            let original = pre_edit_content.as_ref().unwrap();
+                            let _ = std::fs::write(&resolved, original);
+                            Ok(format!(
+                                "EDIT REVERTED — your edit introduced Go compilation errors.\n{}\n\n\
+                                 The file has been restored to its previous state. \
+                                 Please fix the errors and try again.",
+                                go_lint
+                            ))
+                        } else if !go_lint.is_empty() {
                             Ok(format!("{}{}", output, go_lint))
                         } else {
                             Ok(output)
@@ -1921,7 +1975,18 @@ print(json.dumps(result))
                         };
                         let lint_msg = self.lint_go_file(&resolved);
                         if !lint_msg.is_empty() {
-                            Ok(format!("{}{}", output, lint_msg))
+                            if pre_edit_content.is_some() {
+                                let original = pre_edit_content.as_ref().unwrap();
+                                let _ = std::fs::write(&resolved, original);
+                                Ok(format!(
+                                    "EDIT REVERTED — your {} introduced Go compilation errors.\n{}\n\n\
+                                     The file has been restored to its previous state. \
+                                     Please fix the errors and try again.",
+                                    tool_name, lint_msg
+                                ))
+                            } else {
+                                Ok(format!("{}{}", output, lint_msg))
+                            }
                         } else {
                             Ok(output)
                         }
@@ -2235,7 +2300,7 @@ print(json.dumps(result))
 
         // Run `go build` on just the package containing this file (fast, catches most errors)
         if let Ok(output) = std::process::Command::new("go")
-            .args(&["build", &pkg_path])
+            .args(&["build", "-o", "/dev/null", &pkg_path])
             .current_dir(&self.config.workdir)
             .output()
         {
