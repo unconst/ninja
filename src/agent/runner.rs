@@ -1166,11 +1166,32 @@ impl AgentRunner {
                                         } else {
                                             (validated, false)
                                         }
+                                    } else if path_str.ends_with(".ts") || path_str.ends_with(".tsx") {
+                                        let resolved = if Path::new(path_str).is_absolute() {
+                                            PathBuf::from(path_str)
+                                        } else {
+                                            self.config.workdir.join(path_str)
+                                        };
+                                        let ts_lint = self.lint_typescript_file(&resolved);
+                                        if !ts_lint.is_empty() && pre_edit_contents[i].is_some() {
+                                            let original = pre_edit_contents[i].as_ref().unwrap();
+                                            let _ = std::fs::write(&resolved, original);
+                                            (format!(
+                                                "EDIT REVERTED — your edit introduced TypeScript errors.\n{}\n\n\
+                                                 The file has been restored to its previous state. \
+                                                 Please fix the errors and try again.",
+                                                ts_lint
+                                            ), false)
+                                        } else if !ts_lint.is_empty() {
+                                            (format!("{}{}", validated, ts_lint), false)
+                                        } else {
+                                            (validated, false)
+                                        }
                                     } else {
                                         (validated, false)
                                     }
                                 } else {
-                                    // No Python validation — check Go lint
+                                    // No Python validation — check Go/TS lint
                                     let path_str = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
                                     if path_str.ends_with(".go") {
                                         let resolved = if Path::new(path_str).is_absolute() {
@@ -1190,6 +1211,27 @@ impl AgentRunner {
                                             ), false)
                                         } else if !go_lint.is_empty() {
                                             (format!("{}{}", output, go_lint), false)
+                                        } else {
+                                            (output, false)
+                                        }
+                                    } else if path_str.ends_with(".ts") || path_str.ends_with(".tsx") {
+                                        let resolved = if Path::new(path_str).is_absolute() {
+                                            PathBuf::from(path_str)
+                                        } else {
+                                            self.config.workdir.join(path_str)
+                                        };
+                                        let ts_lint = self.lint_typescript_file(&resolved);
+                                        if !ts_lint.is_empty() && pre_edit_contents[i].is_some() {
+                                            let original = pre_edit_contents[i].as_ref().unwrap();
+                                            let _ = std::fs::write(&resolved, original);
+                                            (format!(
+                                                "EDIT REVERTED — your edit introduced TypeScript errors.\n{}\n\n\
+                                                 The file has been restored to its previous state. \
+                                                 Please fix the errors and try again.",
+                                                ts_lint
+                                            ), false)
+                                        } else if !ts_lint.is_empty() {
+                                            (format!("{}{}", output, ts_lint), false)
                                         } else {
                                             (output, false)
                                         }
@@ -1255,6 +1297,29 @@ impl AgentRunner {
                                             let _ = std::fs::write(&resolved, original);
                                             (format!(
                                                 "EDIT REVERTED — your {} introduced Go compilation errors.\n{}\n\n\
+                                                 The file has been restored to its previous state. \
+                                                 Please fix the errors and try again.",
+                                                tc.name, lint_msg
+                                            ), false)
+                                        } else {
+                                            (format!("{}{}", output, lint_msg), false)
+                                        }
+                                    } else {
+                                        (output, false)
+                                    }
+                                } else if path_str.ends_with(".ts") || path_str.ends_with(".tsx") {
+                                    let resolved = if Path::new(path_str).is_absolute() {
+                                        PathBuf::from(path_str)
+                                    } else {
+                                        self.config.workdir.join(path_str)
+                                    };
+                                    let lint_msg = self.lint_typescript_file(&resolved);
+                                    if !lint_msg.is_empty() {
+                                        if pre_edit_contents[i].is_some() {
+                                            let original = pre_edit_contents[i].as_ref().unwrap();
+                                            let _ = std::fs::write(&resolved, original);
+                                            (format!(
+                                                "EDIT REVERTED — your {} introduced TypeScript errors.\n{}\n\n\
                                                  The file has been restored to its previous state. \
                                                  Please fix the errors and try again.",
                                                 tc.name, lint_msg
@@ -1710,6 +1775,25 @@ impl AgentRunner {
                implementing it in all types, adding an exported function but not importing its \
                package. In typed languages, an incomplete patch = zero test pass (compilation \
                fails before any tests run).\n\
+             - **Go: prefer unexported names for internal types.** When adding new struct types, \
+               helper functions, or constants that are implementation details (not part of the \
+               public API), use lowercase names (unexported). Only use uppercase (exported) names \
+               when the type genuinely needs to be used by other packages. Example: use \
+               `wal2jsonColumn` not `Wal2JsonColumn` for a parser-internal struct.\n\
+             - **Read test files before implementing.** When test files are provided or checked \
+               out (e.g., from a gold commit), READ THEM FIRST before writing any code. Tests \
+               reveal the expected API surface: function names, method signatures, import paths, \
+               struct fields, and component props. If a test calls `jest.spyOn(obj, \"methodName\")`, \
+               that method MUST exist on that object. If a test imports from \
+               `\"../utils/selection\"`, the file MUST be at that path. Implementing without \
+               reading tests leads to correct-but-incompatible code that fails at compile time.\n\
+             - **Verify imports resolve.** After adding a new import statement (Go, Python, TS), \
+               verify the imported symbol actually exists. For Go: does the function/type exist in \
+               that package? For TS: does the module path resolve? For Python: does the module \
+               export that name? A single wrong import = build failure = zero tests pass. \
+               When adding a top-level import for a version-specific feature (e.g., Qt 6.7, \
+               Node 18+), use a try/except or runtime guard — don't add unconditional imports \
+               that may not exist in all environments.\n\
              - **Watch for dead code and duplicate definitions.** In Python, if a function/class is \
                defined twice in the same file, the LAST definition wins — earlier ones are dead code. \
                This applies both to code YOU write and to code that ALREADY EXISTS in the file. \
@@ -2668,6 +2752,59 @@ print(json.dumps(result))
                         msg.push_str(&format!("\n... and {} more", total - 10));
                     }
                     msg.push_str("\nFix these compilation errors before proceeding.");
+                    return msg;
+                }
+            }
+        }
+
+        String::new()
+    }
+
+    fn lint_typescript_file(&self, path: &Path) -> String {
+        // Only run if the project has a tsconfig.json (it's a TypeScript project)
+        if !self.config.workdir.join("tsconfig.json").exists()
+            && !self.config.workdir.join("tsconfig.base.json").exists()
+        {
+            return String::new();
+        }
+
+        // Run `npx tsc --noEmit` with a short timeout (per-file checks should be fast)
+        // We check the whole project but filter to errors in the edited file only
+        if let Ok(output) = std::process::Command::new("timeout")
+            .args(&["30", "npx", "tsc", "--noEmit"])
+            .current_dir(&self.config.workdir)
+            .output()
+        {
+            let exit_code = output.status.code().unwrap_or(-1);
+            // Skip on timeout (exit 124) — tsc can be slow on large monorepos
+            if !output.status.success() && exit_code != 124 {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let combined = format!("{}\n{}", stdout, stderr);
+
+                // Only show errors in the file we just edited
+                let file_name = path.file_name()
+                    .map(|f| f.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                let rel_path = path.strip_prefix(&self.config.workdir)
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_else(|_| file_name.clone());
+
+                let relevant_errors: Vec<&str> = combined.lines()
+                    .filter(|line| line.contains(&rel_path) || line.contains(&file_name))
+                    .collect();
+
+                if !relevant_errors.is_empty() {
+                    let errors: Vec<&str> = relevant_errors.iter().take(10).cloned().collect();
+                    let total = relevant_errors.len();
+                    let mut msg = format!(
+                        "\n\nTYPESCRIPT BUILD ERRORS after edit ({} issues):\n{}",
+                        total, errors.join("\n")
+                    );
+                    if total > 10 {
+                        msg.push_str(&format!("\n... and {} more", total - 10));
+                    }
+                    msg.push_str("\nFix these TypeScript errors before proceeding.");
                     return msg;
                 }
             }
