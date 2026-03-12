@@ -369,6 +369,28 @@ impl AgentRunner {
                     continue;
                 }
 
+                // Pre-completion compilation check: verify code compiles before running tests
+                {
+                    let compile_errors = Self::check_compilation(&self.config.workdir);
+                    if !compile_errors.is_empty() && pre_completion_test_attempts < 3 {
+                        pre_completion_test_attempts += 1;
+                        self.conversation.push(Message {
+                            role: "assistant".to_string(),
+                            content: MessageContent::Text(response.text.clone()),
+                        });
+                        self.conversation.push(Message {
+                            role: "user".to_string(),
+                            content: MessageContent::Text(format!(
+                                "[SYSTEM] COMPILATION CHECK FAILED (attempt {}/3) — Your code does not compile. \
+                                 A patch that doesn't compile passes ZERO tests. Fix these errors before finishing:\n\
+                                 ```\n{}\n```",
+                                pre_completion_test_attempts, compile_errors
+                            )),
+                        });
+                        continue;
+                    }
+                }
+
                 // Pre-completion test check: if the agent made changes, run tests
                 // to catch regressions before accepting the stop.
                 if pre_completion_test_attempts < 3 {
@@ -870,6 +892,28 @@ impl AgentRunner {
                         )),
                     });
                     continue;
+                }
+
+                // Pre-completion compilation check (run_turn)
+                {
+                    let compile_errors = Self::check_compilation(&self.config.workdir);
+                    if !compile_errors.is_empty() && pre_completion_test_attempts < 3 {
+                        pre_completion_test_attempts += 1;
+                        messages.push(Message {
+                            role: "assistant".to_string(),
+                            content: MessageContent::Text(response.text.clone()),
+                        });
+                        messages.push(Message {
+                            role: "user".to_string(),
+                            content: MessageContent::Text(format!(
+                                "[SYSTEM] COMPILATION CHECK FAILED (attempt {}/3) — Your code does not compile. \
+                                 A patch that doesn't compile passes ZERO tests. Fix these errors before finishing:\n\
+                                 ```\n{}\n```",
+                                pre_completion_test_attempts, compile_errors
+                            )),
+                        });
+                        continue;
+                    }
                 }
 
                 // Pre-completion test check: if the agent made changes, run tests
@@ -1902,6 +1946,78 @@ print(json.dumps(result))
                 }
             }
         }
+        String::new()
+    }
+
+    /// Run a language-appropriate compilation check before accepting completion.
+    /// Returns error output if compilation fails, or empty string if it succeeds.
+    fn check_compilation(workdir: &Path) -> String {
+        // Detect language from modified files
+        let diff_stat = Self::get_git_diff_stat(workdir);
+        let has_go = diff_stat.contains(".go ");
+        let has_ts = diff_stat.contains(".ts ") || diff_stat.contains(".tsx ");
+        let has_py = diff_stat.contains(".py ");
+
+        if has_go {
+            // Check if go.mod exists (it's a Go module)
+            if workdir.join("go.mod").exists() {
+                if let Ok(output) = std::process::Command::new("go")
+                    .args(&["build", "./..."])
+                    .current_dir(workdir)
+                    .output()
+                {
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        let trimmed: String = stderr.lines().take(30)
+                            .collect::<Vec<_>>().join("\n");
+                        return format!("[Go build failed]\n{}", trimmed);
+                    }
+                }
+            }
+        }
+
+        if has_ts {
+            // Check for tsconfig.json
+            if workdir.join("tsconfig.json").exists() {
+                // Try npx tsc --noEmit (fastest TS type check)
+                if let Ok(output) = std::process::Command::new("npx")
+                    .args(&["tsc", "--noEmit"])
+                    .current_dir(workdir)
+                    .output()
+                {
+                    if !output.status.success() {
+                        let stdout = String::from_utf8_lossy(&output.stdout);
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        let combined = format!("{}\n{}", stdout, stderr);
+                        let trimmed: String = combined.lines().take(30)
+                            .collect::<Vec<_>>().join("\n");
+                        return format!("[TypeScript compilation failed]\n{}", trimmed);
+                    }
+                }
+            }
+        }
+
+        if has_py {
+            // For Python, check syntax with py_compile on modified files
+            let modified_py: Vec<&str> = diff_stat.lines()
+                .filter(|l| l.contains(".py ") && l.contains('|'))
+                .filter_map(|l| l.split('|').next().map(|s| s.trim()))
+                .collect();
+            for py_file in modified_py.iter().take(10) {
+                let cmd = format!("import py_compile; py_compile.compile('{}', doraise=True)", py_file);
+                if let Ok(output) = std::process::Command::new("python3")
+                    .args(&["-c", &cmd])
+                    .current_dir(workdir)
+                    .output()
+                {
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        return format!("[Python syntax error in {}]\n{}", py_file, stderr.lines().take(10).collect::<Vec<_>>().join("\n"));
+                    }
+                }
+            }
+        }
+
         String::new()
     }
 
