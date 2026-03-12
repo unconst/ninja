@@ -394,14 +394,36 @@ impl AgentRunner {
                                 let tail: String = test_output.lines()
                                     .rev().take(30).collect::<Vec<_>>()
                                     .into_iter().rev().collect::<Vec<_>>().join("\n");
+                                // Check for missing method/attribute errors specifically
+                                let missing_api_hints: Vec<&str> = test_output.lines()
+                                    .filter(|l| l.contains("AttributeError")
+                                        || l.contains("has no attribute")
+                                        || l.contains("is not defined")
+                                        || l.contains("is not a function")
+                                        || l.contains("undefined:")
+                                        || l.contains("has no member")
+                                        || l.contains("is not a member")
+                                        || l.contains("Cannot read propert")
+                                        || l.contains("TypeError:"))
+                                    .take(5)
+                                    .collect();
+                                let api_hint = if !missing_api_hints.is_empty() {
+                                    format!("\n\n⚠️ MISSING API/METHOD ERRORS detected:\n{}\n\
+                                        These mean your code is missing methods or using wrong names. \
+                                        Check the test file to see what method/class names it expects, \
+                                        then add or rename them in your code.",
+                                        missing_api_hints.join("\n"))
+                                } else {
+                                    String::new()
+                                };
                                 self.conversation.push(Message {
                                     role: "user".to_string(),
                                     content: MessageContent::Text(format!(
                                         "[SYSTEM] PRE-COMPLETION TEST CHECK (attempt {}/3) — Tests are FAILING. \
                                          Your changes may have introduced a regression. Fix the \
                                          failing tests before finishing.\n\
-                                         Test output (last 30 lines):\n```\n{}\n```",
-                                        pre_completion_test_attempts, tail
+                                         Test output (last 30 lines):\n```\n{}\n```{}",
+                                        pre_completion_test_attempts, tail, api_hint
                                     )),
                                 });
                                 continue;
@@ -875,14 +897,36 @@ impl AgentRunner {
                                 let tail: String = test_output.lines()
                                     .rev().take(30).collect::<Vec<_>>()
                                     .into_iter().rev().collect::<Vec<_>>().join("\n");
+                                // Check for missing method/attribute errors specifically
+                                let missing_api_hints2: Vec<&str> = test_output.lines()
+                                    .filter(|l| l.contains("AttributeError")
+                                        || l.contains("has no attribute")
+                                        || l.contains("is not defined")
+                                        || l.contains("is not a function")
+                                        || l.contains("undefined:")
+                                        || l.contains("has no member")
+                                        || l.contains("is not a member")
+                                        || l.contains("Cannot read propert")
+                                        || l.contains("TypeError:"))
+                                    .take(5)
+                                    .collect();
+                                let api_hint2 = if !missing_api_hints2.is_empty() {
+                                    format!("\n\n⚠️ MISSING API/METHOD ERRORS detected:\n{}\n\
+                                        These mean your code is missing methods or using wrong names. \
+                                        Check the test file to see what method/class names it expects, \
+                                        then add or rename them in your code.",
+                                        missing_api_hints2.join("\n"))
+                                } else {
+                                    String::new()
+                                };
                                 messages.push(Message {
                                     role: "user".to_string(),
                                     content: MessageContent::Text(format!(
                                         "[SYSTEM] PRE-COMPLETION TEST CHECK (attempt {}/3) — Tests are FAILING. \
                                          Your changes may have introduced a regression. Fix the \
                                          failing tests before finishing.\n\
-                                         Test output (last 30 lines):\n```\n{}\n```",
-                                        pre_completion_test_attempts, tail
+                                         Test output (last 30 lines):\n```\n{}\n```{}",
+                                        pre_completion_test_attempts, tail, api_hint2
                                     )),
                                 });
                                 continue;
@@ -1416,18 +1460,29 @@ impl AgentRunner {
              1. **Understand quickly (1-3 iterations).** Read the task. Explore just enough to \
                 identify which files need changes — use grep_search, glob_search, find_definition. \
                 Don't read every file. Target the specific code you need to change.\n\
-             1b. **Read tests BEFORE changing code.** Find the relevant test file(s) — grep for test \
-                function names mentioned in the issue, or find test files matching the module name. \
-                Read the failing test assertions to understand EXACTLY what behavior is expected. \
-                This tells you WHERE to make the fix (which module/function the test imports from) \
-                and WHAT the fix should do (what the assertions check). Don't guess at the fix — \
-                let the tests guide your localization.\n\
+             1b. **Read tests BEFORE changing code — extract the exact API surface.** Find the relevant \
+                test file(s) — grep for test function names mentioned in the issue, or find test files \
+                matching the module name. Read the failing test assertions and extract:\n\
+                - **Exact method/function names** the tests call (e.g., `obj.host_label()` not `obj._format_host_label()`)\n\
+                - **Which class/module** the method should live on (e.g., `CallbackBase.host_label` not `CallbackModule.host_label`)\n\
+                - **Return value format** (e.g., returns tuple `(shebang, path)` not just `path`)\n\
+                - **String literals** the tests compare against (exact wording, capitalization, None vs '')\n\
+                Write these down in your plan file. Your implementation MUST match these names and formats \
+                exactly — tests are the contract. If the test calls `resources.preload()`, you implement \
+                `preload()` on the resources module. If the test expects category name 'Special', you use \
+                'Special', not 'Keywords'. The #1 failure mode is implementing the right logic with wrong \
+                names/signatures.\n\
              1c. **Trace imports from tests.** After reading the test file, follow its import statements \
                 to find the EXACT source file and function being tested. If the test does \
                 `from foo.bar import baz`, your fix goes in foo/bar.py's baz function — NOT in a \
                 different module. For Go, if the test calls `pkg.NewFoo()`, your fix must ensure \
                 pkg exports NewFoo. For JS/TS, follow require/import paths. Wrong file = wasted \
                 iterations. The test's imports are the #1 localization signal.\n\
+             1d. **Verify API surface before finishing.** Before stopping, check that every method/function \
+                the tests call actually exists in your code with the right name. Quick check: grep for \
+                the method names you noted in 1b. If the test calls `obj.set_queue()` and your code \
+                doesn't have `set_queue`, you're not done. This takes 30 seconds and prevents 80% of \
+                failures.\n\
              2. **Plan and externalize (1-2 iterations).** Use think to form a concrete plan: \
                 root cause, which files to change, what each change is. Write the plan to \
                 /tmp/.ninja_plan.md — this survives context compaction. Include a COMPLETE numbered \
