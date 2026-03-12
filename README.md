@@ -173,16 +173,19 @@ ninja --prompt "Implement feature X" --max-iterations 75 --thinking-budget 10000
 | Max iterations | 75 |
 
 **By repository:**
-| Repo | Pass Rate | Tasks |
-|------|-----------|-------|
-| ansible/ansible | 15/90 (17%) | 96 |
-| NodeBB/NodeBB | 7/43 (16%) | 44 |
-| future-architect/vuls | 9/58 (16%) | 62 |
-| qutebrowser/qutebrowser | 11/73 (15%) | 79 |
-| flipt-io/flipt | 9/82 (11%) | 85 |
-| gravitational/teleport | 5/69 (7%) | 76 |
-| navidrome/navidrome | 4/56 (7%) | 57 |
-| protonmail/webclients | 5/61 (8%) | 65 |
+| Repo | Pass Rate | Near-miss | Tasks |
+|------|-----------|-----------|-------|
+| NodeBB/NodeBB | 7/44 (15.9%) | 10 | 44 |
+| ansible/ansible | 15/96 (15.6%) | 10 | 96 |
+| future-architect/vuls | 9/62 (14.5%) | 4 | 62 |
+| qutebrowser/qutebrowser | 11/79 (13.9%) | 16 | 79 |
+| flipt-io/flipt | 9/85 (10.6%) | 7 | 85 |
+| internetarchive/openlibrary | 1/11 (9.1%) | 3 | 11 |
+| protonmail/webclients | 5/65 (7.7%) | 1 | 65 |
+| navidrome/navidrome | 4/57 (7.0%) | 2 | 57 |
+| gravitational/teleport | 5/76 (6.6%) | 2 | 76 |
+| tutao/tutanota | 1/20 (5.0%) | 0 | 20 |
+| element-hq/element-web | 2/56 (3.6%) | 3 | 56 |
 
 **Near-miss analysis** (58 tasks with partial test passes):
 - 6 P2P regressions (solved target tests but broke existing) — most addressable
