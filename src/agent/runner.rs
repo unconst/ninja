@@ -1794,6 +1794,21 @@ impl AgentRunner {
                When adding a top-level import for a version-specific feature (e.g., Qt 6.7, \
                Node 18+), use a try/except or runtime guard — don't add unconditional imports \
                that may not exist in all environments.\n\
+             - **Respect mock paths in tests.** When tests use `mock.patch('module.function')` or \
+               `jest.spyOn(module, 'method')`, your implementation MUST call code through that \
+               EXACT module path. If the test mocks `platform.release()`, your code must call \
+               `platform.release()` — NOT read `/etc/os-release` or use a different API to get \
+               the same info. If you bypass the mocked path, the test's mock has no effect and \
+               your code returns real system values instead of test fixtures. When you see mock \
+               decorators or jest.spyOn calls, trace which function path they intercept and ensure \
+               your implementation uses that same path.\n\
+             - **Return type changes cascade through module imports.** When you change what a method \
+               returns (e.g., from int to a wrapper object), this can break code that runs at \
+               MODULE IMPORT TIME — assertions, class-level attribute assignments, default parameter \
+               values. These failures prevent ALL tests in the file from even being collected. After \
+               changing any return type, grep for callers that execute at import/class-definition \
+               time (not just inside functions). Module-level breakage is catastrophic — it turns a \
+               1-test failure into a 1000-test failure.\n\
              - **Watch for dead code and duplicate definitions.** In Python, if a function/class is \
                defined twice in the same file, the LAST definition wins — earlier ones are dead code. \
                This applies both to code YOU write and to code that ALREADY EXISTS in the file. \
