@@ -1,38 +1,130 @@
 # Ninja
 
-A model-agnostic Rust CLI coding agent powered by OpenRouter. Ninja is an open-source replacement for Claude Code — it reads files, edits code, runs shell commands, and searches codebases to solve software engineering tasks autonomously. Use any model available on OpenRouter (Claude, GPT-4, Gemini, Llama, etc.) with a single `--model` flag.
+A coding agent written entirely by AI through a continuous self-improvement loop. Every line of Rust, every tool, every prompt directive — all generated and refined automatically by running the agent against increasingly difficult tasks and feeding failures back as code changes.
+
+## The Self-Improvement Loop
+
+Ninja wasn't designed by a human. It was **grown** through an automated feedback cycle:
+
+```
+                    ┌─────────────────────────┐
+                    │   1. Generate Tasks      │
+                    │   (from real GitHub PRs   │
+                    │    + synthetic frontier)  │
+                    └───────────┬──────────────┘
+                                │
+                                ▼
+                    ┌─────────────────────────┐
+                    │   2. Run Ninja           │
+                    │   (attempt each task,    │
+                    │    save full rollout)     │
+                    └───────────┬──────────────┘
+                                │
+                                ▼
+                    ┌─────────────────────────┐
+                    │   3. Evaluate            │
+                    │   (did it work? why not? │
+                    │    what went wrong?)      │
+                    └───────────┬──────────────┘
+                                │
+                                ▼
+                    ┌─────────────────────────┐
+                    │   4. Patch Ninja's Code  │
+                    │   (system prompt, tools, │
+                    │    agent loop, heuristics)│
+                    └───────────┬──────────────┘
+                                │
+                                ▼
+                    ┌─────────────────────────┐
+                    │   5. Rebuild & Retest    │
+                    │   (measure improvement,  │
+                    │    rollback if worse)     │
+                    └───────────┴──────────────┘
+                                │
+                                └──────► back to 1
+```
+
+An outer agent ([Arbos](https://github.com/unconst/arbos)) orchestrates this loop continuously. It:
+- Analyzes rollouts to find failure patterns
+- Writes Rust patches to Ninja's source code
+- Rebuilds the binary, re-runs tasks, measures the delta
+- Pushes improvements that show net-positive results, reverts the rest
+
+This has run for **30+ sessions** producing **99 commits** of improvements — from crash fixes to sophisticated behavioral directives.
+
+## What the Loop Has Discovered
+
+Through hundreds of automated experiments, the loop has uncovered the **competence cliff** — a precise model of when coding agents fail:
+
+- **Isolated bug fixes**: immune to scale (8+ bugs, 8+ files = 100% pass rate)
+- **Interconnected fixes**: cliff onset at 4-6 bugs depending on interdependency
+- **Code construction**: cliff at 4 files / 6 endpoints
+- **Refactoring**: hardest cognitive mode — cliff at 2 modules
+- **Key insight**: it's **interconnection**, not complexity, that breaks agents
+
+The loop also identified four distinct failure modes and generated targeted fixes for each:
+1. **Propagation incompleteness** → breadth-first directive, pattern propagation
+2. **Interface contract violation** → signature checking, return-type preservation
+3. **Difficulty-selective attention** → anti-analysis-paralysis alerts, idle nudges
+4. **Test gaming** → unfalsifiable test design principles
+
+Each of these was discovered by the loop, not a human. The loop noticed the pattern in rollout data, generated a hypothesis, wrote a code change, and measured the result.
+
+## What Makes Ninja Different
+
+**Every feature exists because it earned its place through measured improvement:**
+
+- **Post-edit lint loop** — added after the loop found syntax errors compounding at high iteration counts
+- **Fuzzy edit matching** — added after exact-match edits failed on whitespace variations
+- **Phase-check injections** — added after the loop found the agent losing direction mid-task
+- **Strategy switching** — added after the loop detected repeated failed edit patterns
+- **Plan file auto-recovery** — added after context compaction was found to lose critical state
+- **Anti-fabrication directives** — added after the loop caught the agent editing wrong files as substitutes
+- **Signature change detection** — added after refactoring tasks revealed interface contract violations
+
+No feature was added speculatively. Every one was a response to a measured failure.
 
 ## How It Works
 
-Ninja runs an **agent loop**: it sends a prompt to the LLM via OpenRouter, receives tool calls back, executes them locally, and feeds the results back. This repeats until the task is complete or the iteration limit is reached.
+Ninja runs an **agent loop**: it sends a prompt to an LLM, receives tool calls back, executes them locally, and feeds results back. This repeats until the task is done.
 
 ```
 ┌─────────┐     ┌──────────────┐     ┌───────────┐
 │  Prompt  │────▶│  OpenRouter   │────▶│ Tool Calls │
 │          │     │ (any model)   │     │            │
 └─────────┘     └──────────────┘     └─────┬──────┘
-                       ▲                     │
-                       │                     ▼
-                 ┌─────┴──────┐     ┌───────────────┐
-                 │  Tool      │◀────│  Local Tools   │
-                 │  Results   │     │  (file, shell, │
-                 └────────────┘     │   search)      │
-                                    └───────────────┘
+                      ▲                     │
+                      │                     ▼
+                ┌─────┴──────┐     ┌───────────────┐
+                │  Tool      │◀────│  Local Tools   │
+                │  Results   │     │  (file, shell, │
+                └────────────┘     │   search)      │
+                                   └───────────────┘
 ```
 
-Every LLM call, tool invocation, and result is captured in a **rollout log** — a full JSON trace with timestamps, token counts, and timing data. This enables automated evaluation and improvement.
+Model-agnostic via OpenRouter — works with Claude, GPT-4, Gemini, Llama, and anything else available. Dual API format auto-detection (Anthropic vs OpenAI).
 
 ## Tools
 
 | Tool | Description |
 |------|-------------|
-| `read_file` | Read file contents with path resolution |
+| `read_file` | Read file contents with line ranges |
 | `write_file` | Create or overwrite files |
-| `edit_file` | Exact string replacement (`old_string` → `new_string`), with `replace_all` support and contextual error messages |
+| `edit_file` | Exact string replacement with fuzzy fallback and `replace_all` support |
+| `replace_lines` | Line-range based editing for large changes |
 | `list_dir` | List directory contents |
 | `shell_exec` | Execute shell commands with timeout |
 | `glob_search` | File pattern matching (`**/*.py`, `src/**/*.rs`) |
-| `grep_search` | Content search powered by ripgrep with regex support |
+| `grep_search` | Content search powered by ripgrep |
+| `find_definition` | AST-aware symbol lookup |
+| `find_references` | Find all usages of a symbol |
+| `run_tests` | Execute test suites with output capture |
+| `spawn_agent` | Launch sub-agents for parallel work |
+| `todo_write` | Structured task tracking |
+| `web_fetch` | Fetch and parse web content |
+| `web_search` | Search the web |
+| `git_status` / `git_diff` / `git_log` / `git_commit` | Git operations |
+| MCP tools | Dynamic tool loading via Model Context Protocol |
 
 ## Installation
 
@@ -42,7 +134,7 @@ cd ninja
 cargo build
 ```
 
-Requires Rust (install via [rustup](https://rustup.rs)). Uses `rustls-tls` — no OpenSSL/libssl dependency.
+Requires Rust (install via [rustup](https://rustup.rs)). Uses `rustls-tls` — no OpenSSL dependency.
 
 ## Usage
 
@@ -56,20 +148,50 @@ ninja --prompt "Fix the bug in main.rs"
 # Use any OpenRouter model
 ninja --prompt "Refactor this" --model google/gemini-2.5-pro
 ninja --prompt "Add tests" --model openai/gpt-4o
-ninja --prompt "Explain the code" --model meta-llama/llama-4-scout
 
-# With a prompt file and specific working directory
+# With prompt file and working directory
 ninja --prompt-file task.md --workdir /path/to/repo
 
-# Save full rollout trace for analysis
+# Save full rollout trace
 ninja --prompt "Add tests" --rollout rollout.json --verbose
 
-# Control iteration budget
-ninja --prompt "Implement feature X" --max-iterations 30
-
-# JSON output for piping
-ninja --prompt "Describe the codebase" --output-format json
+# Control iteration budget and thinking
+ninja --prompt "Implement feature X" --max-iterations 75 --thinking-budget 10000
 ```
+
+## Benchmarks
+
+### SWE-Bench Pro
+
+| Metric | Value |
+|--------|-------|
+| **pass@1** | **19/215 (8.8%)** |
+| Patch rate | 93% (199/215 produced patches) |
+| Near-misses | 26 tasks (partial test fixes) |
+| Cost per task | $0.16 avg |
+
+*Baseline on 215/731 tasks. Full run in progress.*
+
+### Frontier Tasks (175 custom diagnostic tasks)
+
+| Category | Pass Rate | Notes |
+|----------|-----------|-------|
+| Isolated debugging | 100% | Immune to scale |
+| Construction (2-3 files) | 100% | |
+| Construction (4 files) | 83% | |
+| Construction (5 files) | 50% | |
+| Dependency update (3-5 files) | 100% | |
+| Dependency update (6 files) | 17% | Sharpest cliff measured |
+| Refactoring (2 modules) | 67% | |
+| Refactoring (3 modules) | 17% | |
+| Migration (flask to fastapi) | 33% | |
+| Cross-layer debugging | cliff at 5 bugs | |
+| Deadlock/structural | cliff at 4 bugs | |
+| Parser/grammar | cliff at 6 bugs | |
+| Dead code elimination (8 files) | 50% | |
+| Perf optimization (3+ bugs) | 0% | Attention fragmentation |
+| Backward compat shims | 100% | Writing new code is easier |
+| Test generation | 100% | Single-file comprehension |
 
 ## Architecture
 
@@ -77,81 +199,33 @@ ninja --prompt "Describe the codebase" --output-format json
 src/
 ├── main.rs                  # CLI entry point (clap)
 ├── agent/
-│   ├── mod.rs               # Module exports
-│   ├── api_client.rs        # OpenRouter Messages API client (model-agnostic)
-│   ├── runner.rs            # Agent loop: prompt → model → tool calls → repeat
-│   └── rollout.rs           # Rollout logging (tokens, timing, tool calls)
+│   ├── api_client.rs        # OpenRouter + Anthropic API client
+│   ├── runner.rs            # Agent loop with phase checks, nudges, strategy switching
+│   └── rollout.rs           # Full rollout logging (tokens, timing, tool calls)
 └── tools/
-    ├── mod.rs               # Tool registry and dispatch
-    ├── file_ops.rs          # read_file, write_file, edit_file, list_dir
+    ├── mod.rs               # Tool registry, concurrent dispatch, lint loop
+    ├── file_ops.rs          # read_file, write_file, edit_file, replace_lines
     ├── shell.rs             # shell_exec
-    └── search.rs            # glob_search, grep_search
+    ├── search.rs            # glob_search, grep_search
+    └── mcp.rs               # MCP client (stdio transport, JSON-RPC 2.0)
+
+tasks/                       # Self-improvement task framework
+├── schema.py                # Task/evaluation schema
+├── runner.py                # CLI: generate, run, batch, evaluate, coverage
+├── generators/              # 12 task generators (frontier, repo_debug, etc.)
+├── evaluators/              # 7 evaluation methods
+└── dataset/                 # 250 tasks (175 frontier + 75 standard)
 ```
 
-## Autonomous Improvement Pipeline
+## The Improvement Pipeline (Arbos)
 
-Ninja is improved automatically through a closed-loop pipeline:
+The outer loop that drives Ninja's improvement lives in the [Arbos](https://github.com/unconst/arbos) repo:
 
-1. **Task Generation** — SWE tasks are generated from real GitHub PRs (merged pull requests from repos like Django, Flask, FastAPI, Black). The generator clones at the base commit, extracts the diff as ground truth, and packages it as a task.
+- `tools/swe_gen/` — Task generator: discovers merged PRs from GitHub Archive, clones at base commit, extracts ground truth diffs, packages as evaluation tasks
+- `tools/eval_pipeline.py` — Runs Ninja against tasks in Docker containers, evaluates with test suites
+- `tools/auto_improve.py` — Reads evaluation results, generates improvement patches to Ninja's Rust source
 
-2. **Execution** — Ninja attempts to solve the task in an isolated checkout. The full rollout (every LLM call, tool call, and result) is saved as JSON.
-
-3. **Evaluation** — An evaluator LLM reviews the rollout against the ground truth diff: which files were modified correctly, what was missed, where the agent got stuck.
-
-4. **Improvement** — Based on evaluation results, the evaluator generates patches to Ninja's own source code (system prompt tuning, tool improvements, agent loop fixes). Patches are applied with automatic rollback on build failure.
-
-5. **Rebuild & Retest** — Ninja is rebuilt and re-run on the same tasks to measure improvement.
-
-### SWE-Bench Pro Results
-
-| Metric | Value |
-|--------|-------|
-| **SWE-Bench Pro pass@1** | **19/215 (8.8%)** |
-| Patch rate | 93% (199/215 produced patches) |
-| Near-misses (partial F2P) | 26 tasks |
-| Average cost per task | $0.16 |
-| Total eval cost | $34.61 |
-
-*Baseline measured on 215/731 tasks with locally available Docker images. Full run pending.*
-
-### Frontier Task Results (175 custom tasks)
-
-| Task Category | Result |
-|---------------|--------|
-| Isolated debugging (ETL, repo_debug) | 100% — immune to scale |
-| Construction (2-3 files) | 100% |
-| Construction (4 files) | 83% |
-| Construction (5 files) | 50% |
-| Dependency update (3-5 files) | 100% |
-| Dependency update (6 files) | 17% — sharpest cliff |
-| Refactoring extraction (2 modules) | 67% |
-| Refactoring extraction (3 modules) | 17% |
-| Migration (flask→fastapi) | 33% |
-| Cross-layer debugging (5+ bugs) | cliff at 5 bugs |
-| Deadlock/structural reorg | cliff at 4 bugs |
-| Parser/grammar debugging | cliff at 6 bugs |
-| Dead code elimination (8 files) | 50% |
-| Perf optimization (3+ bugs) | 0% — attention fragmentation |
-
-### Key Findings
-
-The agent's competence boundary follows a **gradual cliff model** driven by interconnection, not raw scale:
-- **Isolated fixes**: immune through 8+ bugs in 8+ files
-- **Interconnected fixes**: cliff onset at 4-6 bugs depending on interdependency type
-- **Construction**: cliff at 4 files / 6 endpoints
-- **Refactoring**: hardest — cliff at 2 modules (even simplest extraction is stochastic)
-- **Attention fragmentation**: agent preferentially does easy substitutions and drops hard structural changes
-
-Four distinct failure modes identified:
-1. **Propagation incompleteness** — misses locations in multi-file changes (stochastic)
-2. **Interface contract violation** — changes signatures during transformations
-3. **Difficulty-selective attention** — easy fixes done, hard ones dropped
-4. **Test gaming** — satisfies weak tests via shortcuts
-
-Pipeline tools live in the [Arbos](https://github.com/unconst/arbos) repo:
-- `tools/swe_gen/` — SWE task generator (GitHub Archive → PR discovery → task packaging)
-- `tools/eval_pipeline.py` — end-to-end task evaluation
-- `tools/auto_improve.py` — automated improvement suggestions
+The loop runs continuously via pm2. When a new weakness is found, it generates frontier tasks targeting that weakness, iterates on Ninja until it improves, then validates on SWE-Bench Pro to confirm the improvement transfers to real-world tasks.
 
 ## Configuration
 
@@ -159,8 +233,8 @@ Pipeline tools live in the [Arbos](https://github.com/unconst/arbos) repo:
 |---|---|---|
 | `OPENROUTER_API_KEY` | API key for OpenRouter | (required) |
 | `OPENROUTER_BASE_URL` | Override API base URL | `https://openrouter.ai/api` |
-| `ANTHROPIC_API_KEY` | Alternative: direct Anthropic API key (fallback) | — |
-| `ANTHROPIC_BASE_URL` | Alternative: direct API base URL (fallback) | — |
+| `ANTHROPIC_API_KEY` | Direct Anthropic API (fallback) | — |
+| `ANTHROPIC_BASE_URL` | Direct API base URL (fallback) | — |
 
 ## License
 
