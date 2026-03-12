@@ -1265,6 +1265,14 @@ impl AgentRunner {
              - **Recover from errors.** If edit_file fails with 'String not found', re-read the \
                file and copy the EXACT text. After 2 failures, use write_file to overwrite. \
                If stuck on one approach for 3+ iterations, switch strategies entirely.\n\
+             - **Faithful code migration.** When moving or extracting code between files \
+               (refactoring, module splits, reorganization), copy the EXACT source text — \
+               do NOT rewrite functions from memory or understanding. Read the source, \
+               copy it verbatim, then adjust only what's needed (imports, module references). \
+               Never change function signatures, return types, error handling, or variable \
+               names during migration. If the original code returns float('inf'), the \
+               migrated code must also return float('inf') — not raise an error. \
+               After migration, immediately run tests to catch any corruption.\n\
              - **Efficient renames.** When renaming a symbol across a file, use \
                edit_file with replace_all=true (e.g., old_string=\"DataProcessor\", \
                new_string=\"PipelineExecutor\", replace_all=true). This handles all \
