@@ -138,28 +138,36 @@ pub fn spawn_thread(args: &Value, workdir: &Path) -> Result<String, String> {
 
     thread_prompt.push_str(&format!("## Task\n{}\n\n", task));
 
+    // Use a unique result path per thread to avoid collisions
+    let thread_id: u64 = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0)
+        ^ (std::process::id() as u64);
+    let result_path = format!("/tmp/.ninja_thread_result_{}.json", thread_id);
+
     // Instruct thread to write structured result
-    thread_prompt.push_str(
+    thread_prompt.push_str(&format!(
         "## Output format\n\
-         When you are done, write your result summary as JSON to /tmp/.ninja_thread_result.json:\n\
+         When you are done, write your result summary as JSON to {result_path}:\n\
          ```json\n\
-         {\n\
+         {{\n\
            \"files_changed\": [\"list of files you modified\"],\n\
            \"findings\": [\"key observations or discoveries\"],\n\
            \"errors\": [\"any errors encountered\"],\n\
            \"test_results\": \"summary of test results if tests were run\",\n\
            \"confidence\": 0.8,\n\
            \"summary\": \"brief summary of what was done\"\n\
-         }\n\
+         }}\n\
          ```\n\
          Write this file using write_file as your LAST action before stopping.",
-    );
+    ));
 
     // Find the ninja binary
     let ninja_bin = std::env::current_exe().unwrap_or_else(|_| "ninja".into());
 
     // Clean up any previous thread result
-    let _ = std::fs::remove_file("/tmp/.ninja_thread_result.json");
+    let _ = std::fs::remove_file(&result_path);
 
     let output = Command::new(&ninja_bin)
         .arg("--prompt")
@@ -179,8 +187,9 @@ pub fn spawn_thread(args: &Value, workdir: &Path) -> Result<String, String> {
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     let exit_code = output.status.code().unwrap_or(-1);
 
-    // Try to read structured result first
-    let structured_result = std::fs::read_to_string("/tmp/.ninja_thread_result.json").ok();
+    // Try to read structured result first, then clean up
+    let structured_result = std::fs::read_to_string(&result_path).ok();
+    let _ = std::fs::remove_file(&result_path);
 
     // Build the response
     let mut result = String::new();

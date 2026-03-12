@@ -249,7 +249,7 @@ impl AgentRunner {
                         self.config.max_iterations, diff_preview, plan_hint
                     )),
                 });
-            } else if iteration == 20 || iteration == 40 {
+            } else if iteration == 20 || iteration == 30 || iteration == 40 || iteration == 60 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 let diff_preview = if diff_stat.is_empty() {
                     "No files modified yet.".to_string()
