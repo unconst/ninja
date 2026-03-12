@@ -166,10 +166,9 @@ ninja --prompt "Implement feature X" --max-iterations 75 --thinking-budget 10000
 | Metric | Value |
 |--------|-------|
 | **pass@1** | **69/615 (11.2%)** |
-| Total tasks | 651 (615 with patches, 36 no-patch) |
-| Near-misses | 52 tasks (partial F2P passes) |
-| Regressions | 6 tasks (F2P pass, P2P fail) |
-| Docker timeouts | 23 tasks |
+| Total tasks | 651 (592 evaluated, 59 Docker errors) |
+| Near-misses | 58 tasks (52 partial F2P + 6 P2P regressions) |
+| Zero-pass | 524 tasks |
 | Cost per task | ~$0.14 avg |
 | Max iterations | 75 |
 
@@ -185,10 +184,10 @@ ninja --prompt "Implement feature X" --max-iterations 75 --thinking-budget 10000
 | navidrome/navidrome | 4/56 (7%) | 57 |
 | protonmail/webclients | 5/61 (8%) | 65 |
 
-**Near-miss analysis** (52 tasks with partial test passes):
-- 15 tasks are just 1 test away from passing
-- Top failure modes: partial propagation, scope truncation, wrong refactoring strategy, spec misreading
+**Near-miss analysis** (58 tasks with partial test passes):
+- 6 P2P regressions (solved target tests but broke existing) — most addressable
 - 2 tasks at 90%+ F2P pass rate (navidrome 93%, teleport 92%)
+- Top failure modes: incomplete ripple propagation, over-modification, missing file creation, mock-path bypass, return-type cascading
 
 ### Performance Over Time
 
@@ -217,7 +216,9 @@ Claude 4.5 Sonnet raw: 23.7%
      Mar 11  Mar 12
 ```
 
-*Goal: close the gap to Claude 4.5 Sonnet raw (23.7%) through general-purpose improvements, not benchmark-specific hacks. Kimi-K2.5-TEE pilot showed 6.7% at 27x cost — sticking with Claude. Next run will test compilation check + propagation directive improvements.*
+*Goal: close the gap to Claude 4.5 Sonnet raw (23.7%) through general-purpose improvements, not benchmark-specific hacks.*
+
+**Active eval**: Kimi-K2.5-TEE full run in progress (169/621, ~27%). Pilot: 2/30 (6.7%) at 27x Claude's cost ($3.80 vs $0.14/task). Near-miss re-test with 7 new Ninja commits running (58 tasks).
 
 ### Frontier Tasks (175 custom diagnostic tasks)
 
