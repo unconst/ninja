@@ -169,8 +169,18 @@ ninja --prompt "Implement feature X" --max-iterations 75 --thinking-budget 10000
 | Patch rate | 93% (199/215 produced patches) |
 | Near-misses | 26 tasks (partial test fixes) |
 | Cost per task | $0.16 avg |
+| Max iterations | 75 |
 
-*Baseline on 215/731 tasks. Full run in progress.*
+*Baseline on 215/731 tasks (29% sample). Full 651-task run in progress (~48% done).*
+
+**Failure breakdown** (196 failures with patches):
+- 60% wrong fix / misdiagnosis — patch doesn't address actual issue
+- 12% partial fix — some tests pass, not all
+- 6% regressions — fixes one thing, breaks another
+- 12% Go binary pollution — compiled `.test` artifacts in diffs
+- 7% no patch — couldn't localize the bug at all
+
+**Top failure mode**: The agent finds plausible files and produces reasonable-looking patches, but misunderstands what the failing tests actually require. Localization + comprehension is the primary bottleneck, not patch quality.
 
 ### Frontier Tasks (175 custom diagnostic tasks)
 
