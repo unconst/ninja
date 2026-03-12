@@ -1557,7 +1557,10 @@ impl AgentRunner {
                 name in __init__.py files to clean up exports. Trace data flow END-TO-END: if you \
                 change how data is structured at one layer (e.g., struct fields), check whether \
                 upstream code that GENERATES that data (e.g., CSR generation, request builders, \
-                serializers) also needs updating — not just the consumer.\n\
+                serializers) also needs updating — not just the consumer. When adding a parameter \
+                to a function, propagate it through EVERY layer of the call chain — don't take \
+                shortcuts like extracting the value from context or globals at intermediate layers \
+                when the design intent is explicit parameter passing.\n\
              5. **Verify.** Run tests or linters when available. Run the FULL test suite for the \
                 affected modules, not just the new/failing tests. Your changes must not break \
                 previously-passing tests (regressions). If the test command runs both old and new \
