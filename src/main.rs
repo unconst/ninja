@@ -21,8 +21,8 @@ struct Cli {
     #[arg(short = 'd', long, default_value = ".")]
     workdir: PathBuf,
 
-    /// Model to use (default: moonshotai/Kimi-K2.5-TEE via Chutes)
-    #[arg(short, long, default_value = "moonshotai/Kimi-K2.5-TEE")]
+    /// Model to use (default: anthropic/claude-sonnet-4-6 via OpenRouter)
+    #[arg(short, long, default_value = "anthropic/claude-sonnet-4-6")]
     model: String,
 
     /// Fast model for exploration steps (auto-routes between fast and main model)
