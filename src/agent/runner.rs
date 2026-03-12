@@ -959,9 +959,41 @@ impl AgentRunner {
                         Ok(output) => {
                             if tc.name == "edit_file" {
                                 if let Some(validated) = self.validate_file_edit(&tc.input, &output) {
-                                    (validated, false)
+                                    // Also run Go lint if it's a .go file
+                                    let path_str = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                                    if path_str.ends_with(".go") {
+                                        let resolved = if Path::new(path_str).is_absolute() {
+                                            PathBuf::from(path_str)
+                                        } else {
+                                            self.config.workdir.join(path_str)
+                                        };
+                                        let go_lint = self.lint_go_file(&resolved);
+                                        if !go_lint.is_empty() {
+                                            (format!("{}{}", validated, go_lint), false)
+                                        } else {
+                                            (validated, false)
+                                        }
+                                    } else {
+                                        (validated, false)
+                                    }
                                 } else {
-                                    (output, false)
+                                    // No Python validation — check Go lint
+                                    let path_str = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                                    if path_str.ends_with(".go") {
+                                        let resolved = if Path::new(path_str).is_absolute() {
+                                            PathBuf::from(path_str)
+                                        } else {
+                                            self.config.workdir.join(path_str)
+                                        };
+                                        let go_lint = self.lint_go_file(&resolved);
+                                        if !go_lint.is_empty() {
+                                            (format!("{}{}", output, go_lint), false)
+                                        } else {
+                                            (output, false)
+                                        }
+                                    } else {
+                                        (output, false)
+                                    }
                                 }
                             } else if tc.name == "replace_lines" || tc.name == "write_file" {
                                 // Lint check for Python files after replace_lines/write_file
@@ -1006,6 +1038,18 @@ impl AgentRunner {
                                         } else {
                                             (output, false)
                                         }
+                                    }
+                                } else if path_str.ends_with(".go") {
+                                    let resolved = if Path::new(path_str).is_absolute() {
+                                        PathBuf::from(path_str)
+                                    } else {
+                                        self.config.workdir.join(path_str)
+                                    };
+                                    let lint_msg = self.lint_go_file(&resolved);
+                                    if !lint_msg.is_empty() {
+                                        (format!("{}{}", output, lint_msg), false)
+                                    } else {
+                                        (output, false)
                                     }
                                 } else {
                                     (output, false)
@@ -1793,8 +1837,36 @@ print(json.dumps(result))
             Ok(output) => {
                 // For edit_file operations, validate the changes were applied correctly
                 if tool_name == "edit_file" {
+                    let path_str = input.get("path").and_then(|v| v.as_str()).unwrap_or("");
                     if let Some(validation_result) = self.validate_file_edit(input, &output) {
-                        Ok(validation_result)
+                        // Also run Go lint if applicable
+                        if path_str.ends_with(".go") {
+                            let resolved = if Path::new(path_str).is_absolute() {
+                                PathBuf::from(path_str)
+                            } else {
+                                self.config.workdir.join(path_str)
+                            };
+                            let go_lint = self.lint_go_file(&resolved);
+                            if !go_lint.is_empty() {
+                                Ok(format!("{}{}", validation_result, go_lint))
+                            } else {
+                                Ok(validation_result)
+                            }
+                        } else {
+                            Ok(validation_result)
+                        }
+                    } else if path_str.ends_with(".go") {
+                        let resolved = if Path::new(path_str).is_absolute() {
+                            PathBuf::from(path_str)
+                        } else {
+                            self.config.workdir.join(path_str)
+                        };
+                        let go_lint = self.lint_go_file(&resolved);
+                        if !go_lint.is_empty() {
+                            Ok(format!("{}{}", output, go_lint))
+                        } else {
+                            Ok(output)
+                        }
                     } else {
                         Ok(output)
                     }
@@ -1840,6 +1912,18 @@ print(json.dumps(result))
                             } else {
                                 Ok(output)
                             }
+                        }
+                    } else if path_str.ends_with(".go") {
+                        let resolved = if Path::new(path_str).is_absolute() {
+                            PathBuf::from(path_str)
+                        } else {
+                            self.config.workdir.join(path_str)
+                        };
+                        let lint_msg = self.lint_go_file(&resolved);
+                        if !lint_msg.is_empty() {
+                            Ok(format!("{}{}", output, lint_msg))
+                        } else {
+                            Ok(output)
                         }
                     } else {
                         Ok(output)
@@ -2129,6 +2213,51 @@ print(json.dumps(result))
              names in other files to check if anything still references them.",
             warnings.join("\n")
         )
+    }
+
+    /// Run a quick Go compilation check after editing a .go file.
+    /// Returns error message to append, or empty string if compilation succeeds.
+    fn lint_go_file(&self, path: &Path) -> String {
+        // Only run if the project has a go.mod (it's a Go project)
+        if !self.config.workdir.join("go.mod").exists() {
+            return String::new();
+        }
+
+        // Find the package directory for this file
+        let pkg_dir = path.parent().unwrap_or(path);
+        let pkg_path = if pkg_dir == self.config.workdir {
+            ".".to_string()
+        } else if let Ok(rel) = pkg_dir.strip_prefix(&self.config.workdir) {
+            format!("./{}", rel.display())
+        } else {
+            return String::new();
+        };
+
+        // Run `go build` on just the package containing this file (fast, catches most errors)
+        if let Ok(output) = std::process::Command::new("go")
+            .args(&["build", &pkg_path])
+            .current_dir(&self.config.workdir)
+            .output()
+        {
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                if !stderr.trim().is_empty() {
+                    let errors: Vec<&str> = stderr.lines().take(10).collect();
+                    let total = stderr.lines().count();
+                    let mut msg = format!(
+                        "\n\nGO BUILD ERRORS after edit ({} issues):\n{}",
+                        total, errors.join("\n")
+                    );
+                    if total > 10 {
+                        msg.push_str(&format!("\n... and {} more", total - 10));
+                    }
+                    msg.push_str("\nFix these compilation errors before proceeding.");
+                    return msg;
+                }
+            }
+        }
+
+        String::new()
     }
 
     /// Check if git clone is necessary or if we're already in the target repository
