@@ -263,24 +263,38 @@ impl AgentRunner {
                     }
                     _ => String::new(),
                 };
-                // Include RLM state summary if available
-                let state_summary = crate::tools::state::summarize_state()
-                    .map(|s| format!("\n\nRLM State:\n{}", s))
-                    .unwrap_or_default();
+                // Strategy checkpoint with state recovery
+                let state_summary = crate::tools::state::summarize_state();
+                let state_section = match &state_summary {
+                    Some(s) => format!(
+                        "\n\n## Strategy State\n{}\n\
+                         Call `state_read` for details. Evaluate progress and update plan with `state_write`.",
+                        s
+                    ),
+                    None => String::new(),
+                };
+                let assess_text = if state_summary.is_some() {
+                    format!(
+                        "[SYSTEM] STRATEGY CHECKPOINT — Iteration {}.\n\
+                         1. Call `state_read` to see your strategic state\n\
+                         2. Which subtasks remain? Any blocked?\n\
+                         3. With {} iterations left, adjust your plan?\n\n\
+                         Current changes:\n```\n{}\n```{}{}",
+                        iteration + 1, remaining, diff_preview, plan_recovery, state_section
+                    )
+                } else {
+                    format!(
+                        "[SYSTEM] PROGRESS — Iteration {}. Assess:\n\
+                         1. What's done? What remains?\n\
+                         2. With {} iterations left, what's your plan?\n\
+                         3. All files identified? Don't forget docs, configs, __init__.py exports.\n\n\
+                         Current changes:\n```\n{}\n```{}",
+                        iteration + 1, remaining, diff_preview, plan_recovery
+                    )
+                };
                 self.conversation.push(Message {
                     role: "user".to_string(),
-                    content: MessageContent::Text(format!(
-                        "[SYSTEM] PROGRESS — Iteration {}. Check your state and assess:\n\
-                         1. What have you completed so far? (use state_read if using RLM)\n\
-                         2. What remains? Are you stuck on anything?\n\
-                         3. What's your plan for the remaining {} iterations?\n\
-                         4. Have you identified ALL files that need changes? Don't forget: \
-                         docs, changelog, config files (pyproject.toml, setup.cfg), \
-                         CI workflows, type stubs, __init__.py exports, test output files.\n\
-                         5. If using RLM: re-evaluate your plan based on thread results. \
-                         Update state_write with revised strategy if needed.\n\n\
-                         Current changes:\n```\n{}\n```{}{}", iteration + 1, remaining, diff_preview, plan_recovery, state_summary
-                    )),
+                    content: MessageContent::Text(assess_text),
                 });
             } else if remaining == 5 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
@@ -770,24 +784,44 @@ impl AgentRunner {
                 } else {
                     String::new()
                 };
-                // Include RLM state summary if available
-                let state_summary = crate::tools::state::summarize_state()
-                    .map(|s| format!("\n\nRLM State:\n{}", s))
-                    .unwrap_or_default();
-                messages.push(Message {
-                    role: "user".to_string(),
-                    content: MessageContent::Text(format!(
-                        "[SYSTEM] PROGRESS — Iteration {}. Check your state and assess:\n\
-                         1. What have you completed so far? (use state_read if using RLM)\n\
-                         2. What remains? Are you stuck on anything?\n\
-                         3. What's your plan for the remaining {} iterations?\n\
-                         4. Have you identified ALL files that need changes? Don't forget: \
+                // Strategy checkpoint: inject state summary with evaluation guidance
+                let state_summary = crate::tools::state::summarize_state();
+                let state_section = match &state_summary {
+                    Some(s) => format!(
+                        "\n\n## Strategy State (auto-recovered)\n{}\n\
+                         REQUIRED: Call `state_read` now. Evaluate which subtasks are done vs pending. \
+                         If any failed, diagnose WHY and update your plan with `state_write`. \
+                         Log strategy changes if your approach needs adjustment.",
+                        s
+                    ),
+                    None => String::new(),
+                };
+                let assess_section = if state_summary.is_some() {
+                    format!(
+                        "[SYSTEM] STRATEGY CHECKPOINT — Iteration {}.\n\
+                         1. Call `state_read` to see your full strategic state\n\
+                         2. How many subtasks remain? Which ones are blocked?\n\
+                         3. Are you making STRATEGIC progress or just TACTICAL activity?\n\
+                         4. With {} iterations left, should you adjust your plan?\n\n\
+                         Current changes:\n```\n{}\n```{}{}{}",
+                        iteration + 1, remaining, diff_preview, plan_recovery, edit_stats, state_section
+                    )
+                } else {
+                    format!(
+                        "[SYSTEM] PROGRESS — Iteration {}. Assess:\n\
+                         1. What have you completed? What remains?\n\
+                         2. With {} iterations left, what's your plan?\n\
+                         3. Have you identified ALL files that need changes? Don't forget: \
                          docs, changelog, config files (pyproject.toml, setup.cfg), \
                          CI workflows, type stubs, __init__.py exports, test output files.\n\
-                         5. If using RLM: re-evaluate your plan based on thread results. \
-                         Update state_write with revised strategy if needed.\n\n\
-                         Current changes:\n```\n{}\n```{}{}{}", iteration + 1, remaining, diff_preview, plan_recovery, edit_stats, state_summary
-                    )),
+                         4. Consider using `state_write` to track your plan if this is a complex task.\n\n\
+                         Current changes:\n```\n{}\n```{}{}",
+                        iteration + 1, remaining, diff_preview, plan_recovery, edit_stats
+                    )
+                };
+                messages.push(Message {
+                    role: "user".to_string(),
+                    content: MessageContent::Text(assess_section),
                 });
             } else if remaining == 5 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
@@ -1861,40 +1895,43 @@ impl AgentRunner {
             env_info
         );
 
-        // Add RLM (Recursive Language Model) orchestration section for multi-file tasks
+        // Strategy/Tactics orchestration for multi-file tasks
         prompt.push_str("\n\n\
-             ## RLM Orchestration (for complex multi-file tasks)\n\
-             For tasks touching 4+ files or requiring coordinated changes, use the RLM pattern:\n\n\
-             **The Loop**: READ state → EVALUATE → REWRITE plan → DISPATCH threads → COLLECT → VERIFY → repeat\n\n\
-             1. **Initialize state.** Use state_write to create your world model:\n\
+             ## Strategy & Tactics (for tasks touching 4+ files)\n\n\
+             You have two modes of operation:\n\
+             - **Strategic**: Reasoning about WHAT to do, in WHAT ORDER, and WHY. Decomposing tasks, \
+               evaluating progress, deciding to change approach. Use `state_write` and `state_read`.\n\
+             - **Tactical**: Actually doing it. Editing files, running tests, grepping for patterns. \
+               Use `spawn_thread` to delegate tactical work to focused sub-agents.\n\n\
+             **Critical**: Your conversation WILL be compacted (context lost). Your state object \
+             (`state_read`/`state_write`) SURVIVES compaction. Put strategic decisions in state, \
+             not in conversation. If you don't write it to state, you WILL forget it.\n\n\
+             ### How to orchestrate\n\
+             1. **Write state FIRST.** Before any edits, use state_write:\n\
                 ```\n\
                 state_write({\"state\": {\n\
-                  \"plan\": \"High-level strategy\",\n\
+                  \"plan\": \"WHY this approach: ...\",\n\
                   \"subtasks\": [{\"id\": 1, \"desc\": \"Fix X in file.py\", \"files\": [\"file.py\"], \"status\": \"pending\"}],\n\
-                  \"observations\": [],\n\
-                  \"iteration\": 1\n\
+                  \"observations\": [\"initial findings from reading code\"],\n\
+                  \"strategy_changes\": []\n\
                 }})\n\
                 ```\n\
-             2. **Dispatch threads.** Use spawn_thread to delegate subtasks:\n\
-                - Pass relevant context from your state\n\
-                - Constrain each thread to specific files\n\
-                - Launch multiple threads in parallel for independent subtasks\n\
-             3. **Collect and evaluate.** After threads complete:\n\
-                - Parse their structured results (files_changed, findings, errors)\n\
+             2. **Dispatch tactical threads.** Each thread gets ONE focused job:\n\
+                - Specific files to change, specific instructions, constraints from state\n\
+                - Threads don't need strategic context — just their assignment\n\
+             3. **Evaluate results.** After each thread:\n\
+                - Read its structured result (files_changed, findings, errors)\n\
                 - Update state: mark subtasks done/failed, add observations\n\
-                - Run tests to verify progress\n\
-             4. **Rewrite plan.** Based on thread results and test signals:\n\
-                - If a thread failed, dispatch with more context or split into smaller subtasks\n\
-                - If tests reveal new issues, add subtasks\n\
-                - If strategy isn't working, record why and switch approaches\n\
-             5. **Verify.** Run the full test suite. Check that ALL planned subtasks are done.\n\
-                If gaps remain, loop back to step 2.\n\n\
-             **Key principle**: Your plan is a LIVING DOCUMENT. Thread results are SIGNALS you reason \
-             over to update your state. Don't plan once and execute — iterate. Each loop gives you \
-             new information to refine your approach.\n\n\
-             **When NOT to use RLM**: For simple 1-3 file tasks, just edit directly. RLM adds overhead \
-             that isn't worth it for small tasks. Use it when the task has enough complexity that \
-             tracking state explicitly will prevent you from missing things.");
+                - Run tests to check progress\n\
+             4. **Re-evaluate strategy.** Based on signals:\n\
+                - If threads fail, diagnose WHY and adjust plan (not just retry)\n\
+                - If tests reveal new issues, add subtasks to state\n\
+                - Log strategy changes: \"Switched from X to Y because Z\"\n\
+             5. **Repeat** until all subtasks done and tests pass.\n\n\
+             **Dumb Zone warning**: After compaction, you lose conversational context but state persists. \
+             ALWAYS call `state_read` after compaction to recover your strategic thread.\n\n\
+             **When to use**: 4+ files, coordinated changes, refactoring, multi-step migrations. \
+             **When NOT to use**: Simple 1-3 file fixes — just edit directly.");
 
         // Append NINJA.md project config if present
         for config_name in &["NINJA.md", ".ninja.md", "CLAUDE.md"] {
@@ -3219,16 +3256,26 @@ print(json.dumps(result))
                      Review this plan and continue executing it.", truncated_plan)
         };
 
+        // Auto-recover RLM state through compaction (Dumb Zone prevention)
+        let state_section = crate::tools::state::summarize_state()
+            .map(|s| format!(
+                "\n\n## STRATEGY RECOVERED (from state object)\n{}\n\
+                 Your conversation was compacted but your strategic state survived. \
+                 Call `state_read` for full details, then continue executing your plan.",
+                s
+            ))
+            .unwrap_or_default();
+
         let mut compacted = Vec::new();
         // Keep original prompt
         compacted.push(messages[0].clone());
-        // Insert summary as a user message with git diff awareness + plan recovery
+        // Insert summary as a user message with git diff awareness + plan/state recovery
         compacted.push(Message {
             role: "user".to_string(),
             content: MessageContent::Text(format!(
-                "[SYSTEM] The conversation has been compacted to save context space.\n\n{}{}{}\n\n\
-                Continue working on the task. Check your todo list and complete any remaining changes.",
-                summary, git_diff_info, plan_section
+                "[SYSTEM] The conversation has been compacted to save context space.\n\n{}{}{}{}\n\n\
+                Continue working on the task. If using state-based orchestration, call `state_read` now.",
+                summary, git_diff_info, plan_section, state_section
             )),
         });
         // Keep the recent messages (last 4)
