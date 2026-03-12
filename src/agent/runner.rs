@@ -447,8 +447,11 @@ impl AgentRunner {
                                     role: "user".to_string(),
                                     content: MessageContent::Text(format!(
                                         "[SYSTEM] PRE-COMPLETION TEST CHECK (attempt {}/3) — Tests are FAILING. \
-                                         Your changes may have introduced a regression. Fix the \
-                                         failing tests before finishing.\n\
+                                         Your changes may have introduced a REGRESSION (broke previously-passing tests). \
+                                         Check: (1) Did you remove an import still used by other functions? \
+                                         (2) Did you change a shared function's behavior for ALL callers when only ONE needed fixing? \
+                                         (3) Did you move a function without updating all import sites? \
+                                         Fix ALL failing tests (old AND new) before finishing.\n\
                                          Test output (last 60 lines):\n```\n{}\n```{}",
                                         pre_completion_test_attempts, tail, api_hint
                                     )),
@@ -977,8 +980,11 @@ impl AgentRunner {
                                     role: "user".to_string(),
                                     content: MessageContent::Text(format!(
                                         "[SYSTEM] PRE-COMPLETION TEST CHECK (attempt {}/3) — Tests are FAILING. \
-                                         Your changes may have introduced a regression. Fix the \
-                                         failing tests before finishing.\n\
+                                         Your changes may have introduced a REGRESSION (broke previously-passing tests). \
+                                         Check: (1) Did you remove an import still used by other functions? \
+                                         (2) Did you change a shared function's behavior for ALL callers when only ONE needed fixing? \
+                                         (3) Did you move a function without updating all import sites? \
+                                         Fix ALL failing tests (old AND new) before finishing.\n\
                                          Test output (last 60 lines):\n```\n{}\n```{}",
                                         pre_completion_test_attempts, tail, api_hint2
                                     )),
@@ -1571,14 +1577,25 @@ impl AgentRunner {
                 to a function, propagate it through EVERY layer of the call chain — don't take \
                 shortcuts like extracting the value from context or globals at intermediate layers \
                 when the design intent is explicit parameter passing.\n\
-             5. **Verify.** Run tests or linters when available. Run the FULL test suite for the \
-                affected modules, not just the new/failing tests. Your changes must not break \
-                previously-passing tests (regressions). If the test command runs both old and new \
-                tests, check that ALL pass — not just the ones you targeted. If it shows remaining \
-                issues, fix them. Never stop while verification fails.\n\
+             5. **Verify — run ALL tests, not just targeted ones.** Run the FULL test suite for \
+                affected modules. CRITICAL: check that ALL tests pass, including tests that were \
+                passing BEFORE your changes. If the test output shows failures in tests you didn't \
+                target, those are REGRESSIONS you caused — fix them before stopping. A fix that \
+                passes 14/15 new tests but breaks 0 old tests is better than one that passes 15/15 \
+                new tests but breaks 7 old tests. Regressions are the #1 reason correct fixes fail.\n\
              5b. **Rename verification.** When renaming symbols, classes, or field names: after all \
                 edits, grep for the OLD name across ALL files (including tests, configs, docstrings, \
                 string literals). Any remaining reference is a bug. Fix it before stopping.\n\
+             5c. **Test indirect callers.** When you change a function interface (add/remove params, \
+                change return type, move to different module), trace ALL callers — not just the ones \
+                that directly call it. Use find_references. If function A calls function B which calls \
+                your changed function C, and B passes a context object to C, verify that B's callers \
+                set up the context correctly. The most common near-miss: fixing all DIRECT callers \
+                but missing one INDIRECT path through a wrapper/helper.\n\
+             5d. **Conditional fix verification.** When fixing a bug in a shared/helper function, check \
+                whether your fix changes behavior for OTHER callers too. If the function is called from \
+                5 places but the bug only affects 1 caller, your fix must be CONDITIONAL (only change \
+                behavior in the buggy case) — not a blanket change that breaks the other 4 callers.\n\
              6. **Summarize.** When done, list every file changed with a brief description.\n\n\
              ## Critical Rules\n\
              - **START EDITING EARLY.** You MUST begin making file changes within your first 5 \
@@ -1671,7 +1688,14 @@ impl AgentRunner {
                (c) Change data handling semantics (e.g., bytes→str conversion, unit interpretation) \
                unless the task explicitly requires it.\n\
                (d) Remove imports that are still used by OTHER functions in the same file. Before \
-               removing any import, grep the ENTIRE file for all usages of that import.\n\
+               removing any import, grep the ENTIRE file for all usages of that import — the import \
+               may be used by functions you're NOT editing. Example: if you replace uses of \
+               `pkg_resources.parse_version()`, check that the file doesn't also use \
+               `pkg_resources.resource_string()` — removing the import breaks those other calls.\n\
+               (e) Move a function to a new module without providing a backward-compatible \
+               re-export (or updating all import sites). When moving function X from module A \
+               to module B, either add `from B import X` in A, or update EVERY file that does \
+               `from A import X` to `from B import X`. Grep for the old import path globally.\n\
                When in doubt, make the SMALLEST change that fixes the issue.\n\
              - **Verify new file creation.** When your code references a new package, module, or \
                file that doesn't exist yet (e.g., `import webhook` or `from mypackage import NewClass`), \
