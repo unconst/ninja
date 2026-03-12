@@ -1999,9 +1999,20 @@ print(json.dumps(result))
                         let stdout = String::from_utf8_lossy(&output.stdout);
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         let combined = format!("{}\n{}", stdout, stderr);
-                        let trimmed: String = combined.lines().take(30)
-                            .collect::<Vec<_>>().join("\n");
-                        return format!("[TypeScript compilation failed]\n{}", trimmed);
+                        // Only report errors in files the agent modified (avoid pre-existing errors)
+                        let modified_ts: Vec<&str> = diff_stat.lines()
+                            .filter(|l| (l.contains(".ts ") || l.contains(".tsx ")) && l.contains('|'))
+                            .filter_map(|l| l.split('|').next().map(|s| s.trim()))
+                            .collect();
+                        let relevant_errors: Vec<&str> = combined.lines()
+                            .filter(|line| modified_ts.iter().any(|f| line.contains(f)))
+                            .collect();
+                        if !relevant_errors.is_empty() {
+                            let trimmed: String = relevant_errors.iter().take(20)
+                                .cloned().collect::<Vec<_>>().join("\n");
+                            return format!("[TypeScript compilation errors in modified files]\n{}", trimmed);
+                        }
+                        // If no errors in modified files, it's pre-existing — skip
                     }
                 }
             }
