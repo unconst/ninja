@@ -189,7 +189,29 @@ impl AgentRunner {
             }
 
             let remaining = self.config.max_iterations - iteration;
-            if iteration == 8 {
+            if iteration == 5 {
+                // Discovery phase check: for multi-file tasks, encourage discovery before editing
+                let state_exists = std::path::Path::new("/tmp/.ninja_state.json").exists();
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let plan_content = std::fs::read_to_string("/tmp/.ninja_plan.md").unwrap_or_default();
+                let file_count = plan_content.lines()
+                    .filter(|l| l.contains(".py") || l.contains(".rs") || l.contains(".go") || l.contains(".ts") || l.contains(".js"))
+                    .count();
+                if file_count >= 4 && !state_exists && diff_stat.is_empty() {
+                    self.conversation.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(format!(
+                            "[SYSTEM] DISCOVERY CHECK — Your plan lists {} files. Before editing, use `spawn_thread` \
+                             to dispatch a discovery thread that greps for ALL occurrences of the target pattern \
+                             across the entire codebase. Have the thread enumerate: every file needing changes, \
+                             indirect references (event handlers, dispatch dicts, getattr, decorators, __init__.py \
+                             exports, config defaults). Write results to state with `state_write`. This prevents \
+                             the #1 failure mode: missing files because you started editing before mapping scope.",
+                            file_count
+                        )),
+                    });
+                }
+            } else if iteration == 8 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 if diff_stat.is_empty() {
                     self.conversation.push(Message {
@@ -699,7 +721,30 @@ impl AgentRunner {
 
             // Inject phase transition and urgency reminders
             let remaining = self.config.max_iterations - iteration;
-            if iteration == 8 {
+            if iteration == 5 {
+                // Discovery phase check: for multi-file tasks, encourage discovery before editing
+                let state_exists = std::path::Path::new("/tmp/.ninja_state.json").exists();
+                let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
+                let plan_content = std::fs::read_to_string("/tmp/.ninja_plan.md").unwrap_or_default();
+                let file_count = plan_content.lines()
+                    .filter(|l| l.contains(".py") || l.contains(".rs") || l.contains(".go") || l.contains(".ts") || l.contains(".js"))
+                    .count();
+                // If plan mentions 4+ files and no state/discovery yet, nudge
+                if file_count >= 4 && !state_exists && diff_stat.is_empty() {
+                    messages.push(Message {
+                        role: "user".to_string(),
+                        content: MessageContent::Text(format!(
+                            "[SYSTEM] DISCOVERY CHECK — Your plan lists {} files. Before editing, use `spawn_thread` \
+                             to dispatch a discovery thread that greps for ALL occurrences of the target pattern \
+                             across the entire codebase. Have the thread enumerate: every file needing changes, \
+                             indirect references (event handlers, dispatch dicts, getattr, decorators, __init__.py \
+                             exports, config defaults). Write results to state with `state_write`. This prevents \
+                             the #1 failure mode: missing files because you started editing before mapping scope.",
+                            file_count
+                        )),
+                    });
+                }
+            } else if iteration == 8 {
                 let diff_stat = Self::get_git_diff_stat(&self.config.workdir);
                 if diff_stat.is_empty() {
                     messages.push(Message {
@@ -1676,7 +1721,17 @@ impl AgentRunner {
                 list of ALL files you'll modify — don't just list source code files. Also consider: \
                 docs, changelog/HISTORY, config (pyproject.toml, setup.cfg), CI workflows, \
                 type stubs, __init__.py exports, test output files. Use todo_write to track each file.\n\
-             3. **Implement breadth-first.** Start editing by iteration 5 at the latest. For tasks \
+             2b. **Discovery before editing (for tasks touching 4+ files).** Before making ANY edits, \
+                use `spawn_thread` to dispatch a DISCOVERY thread that maps the full scope of changes. \
+                The discovery thread should: grep for all occurrences of the target pattern, enumerate \
+                every file that needs changes, identify indirect references (event registrations, dispatch \
+                dicts, getattr, decorator usage, __init__.py exports, config defaults, documentation). \
+                Write the discovered file list to state: \
+                `state_write({{\"state\": {{\"discovered_files\": [...], \"observations\": [...]}}}})`. \
+                This is NOT optional for 4+ file tasks — the #1 failure mode is missing files because \
+                you started editing before mapping the complete scope. One discovery thread (5-10 iterations) \
+                saves you from spending 30+ iterations on incomplete changes.\n\
+             3. **Implement breadth-first.** Start editing by iteration 7 at the latest. For tasks \
                 touching 4+ files, make one pass through ALL files with minimal correct changes \
                 before polishing any single file. This ensures every file gets touched even if you \
                 run low on iterations. Edit with precision — prefer small targeted edits. For large \
@@ -1907,15 +1962,27 @@ impl AgentRunner {
              (`state_read`/`state_write`) SURVIVES compaction. Put strategic decisions in state, \
              not in conversation. If you don't write it to state, you WILL forget it.\n\n\
              ### How to orchestrate\n\
-             1. **Write state FIRST.** Before any edits, use state_write:\n\
+             1. **Discovery FIRST.** Before any edits, dispatch a discovery thread:\n\
+                ```\n\
+                spawn_thread({\n\
+                  \"task\": \"Map ALL files needing changes. For each file: grep for [pattern], \\\n\
+                    list every function/class/reference that needs modification. Check indirect \\\n\
+                    references: event handlers, dispatch dicts, getattr calls, decorator registrations, \\\n\
+                    __init__.py exports, config defaults, documentation, test fixtures.\",\n\
+                  \"max_iterations\": 10\n\
+                })\n\
+                ```\n\
+                Then write discovered files to state:\n\
                 ```\n\
                 state_write({\"state\": {\n\
                   \"plan\": \"WHY this approach: ...\",\n\
+                  \"discovered_files\": [\"file1.py\", \"file2.py\", ...],\n\
                   \"subtasks\": [{\"id\": 1, \"desc\": \"Fix X in file.py\", \"files\": [\"file.py\"], \"status\": \"pending\"}],\n\
-                  \"observations\": [\"initial findings from reading code\"],\n\
+                  \"observations\": [\"discovery thread found 12 files with pattern X\"],\n\
                   \"strategy_changes\": []\n\
                 }})\n\
                 ```\n\
+                This step is CRITICAL — it prevents the #1 failure mode (missing files).\n\
              2. **Dispatch tactical threads.** Each thread gets ONE focused job:\n\
                 - Specific files to change, specific instructions, constraints from state\n\
                 - Threads don't need strategic context — just their assignment\n\

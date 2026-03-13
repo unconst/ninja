@@ -67,23 +67,48 @@ struct Cli {
 }
 
 fn resolve_api_config(cli: &Cli) -> (String, String) {
-    let api_key = cli
-        .api_key
-        .clone()
-        .or_else(|| std::env::var("OPENROUTER_API_KEY").ok())
-        .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok())
-        .or_else(|| std::env::var("CHUTES_API_KEY").ok())
-        .expect("No API key found. Set OPENROUTER_API_KEY, ANTHROPIC_API_KEY, or use --api-key");
+    // If CLI provides both, use them directly
+    if let (Some(key), Some(url)) = (&cli.api_key, &cli.api_base_url) {
+        return (key.clone(), url.clone());
+    }
 
-    let api_base_url = cli
-        .api_base_url
-        .clone()
-        .or_else(|| std::env::var("OPENROUTER_BASE_URL").ok())
-        .or_else(|| std::env::var("CHUTES_BASE_URL").ok())
-        .or_else(|| std::env::var("ANTHROPIC_BASE_URL").ok())
-        .unwrap_or_else(|| "https://llm.chutes.ai".to_string());
+    // If CLI provides base URL, find any key
+    if let Some(url) = &cli.api_base_url {
+        let api_key = cli.api_key.clone()
+            .or_else(|| std::env::var("OPENROUTER_API_KEY").ok())
+            .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok())
+            .or_else(|| std::env::var("CHUTES_API_KEY").ok())
+            .expect("No API key found. Set OPENROUTER_API_KEY, ANTHROPIC_API_KEY, or use --api-key");
+        return (api_key, url.clone());
+    }
 
-    (api_key, api_base_url)
+    // If CLI provides key, find matching base URL
+    if let Some(key) = &cli.api_key {
+        let url = std::env::var("OPENROUTER_BASE_URL")
+            .or_else(|_| std::env::var("CHUTES_BASE_URL"))
+            .or_else(|_| std::env::var("ANTHROPIC_BASE_URL"))
+            .unwrap_or_else(|_| "https://openrouter.ai/api/v1".to_string());
+        return (key.clone(), url);
+    }
+
+    // Auto-detect: match key to its corresponding base URL
+    if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
+        let url = std::env::var("ANTHROPIC_BASE_URL")
+            .unwrap_or_else(|_| "https://api.anthropic.com".to_string());
+        return (key, url);
+    }
+    if let Ok(key) = std::env::var("OPENROUTER_API_KEY") {
+        let url = std::env::var("OPENROUTER_BASE_URL")
+            .unwrap_or_else(|_| "https://openrouter.ai/api/v1".to_string());
+        return (key, url);
+    }
+    if let Ok(key) = std::env::var("CHUTES_API_KEY") {
+        let url = std::env::var("CHUTES_BASE_URL")
+            .unwrap_or_else(|_| "https://llm.chutes.ai".to_string());
+        return (key, url);
+    }
+
+    panic!("No API key found. Set ANTHROPIC_API_KEY, OPENROUTER_API_KEY, CHUTES_API_KEY, or use --api-key");
 }
 
 async fn run_oneshot(cli: &Cli, prompt: String) {
