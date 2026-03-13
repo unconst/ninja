@@ -1676,12 +1676,12 @@ impl AgentRunner {
                 list of ALL files you'll modify — don't just list source code files. Also consider: \
                 docs, changelog/HISTORY, config (pyproject.toml, setup.cfg), CI workflows, \
                 type stubs, __init__.py exports, test output files. Use todo_write to track each file.\n\
-             2b. **Discovery before editing (for coordinated multi-file changes).** When MANY files need \
-                the SAME type of change (rename across 8+ files, update pattern in 6+ files), use \
-                `spawn_thread` to dispatch a discovery thread FIRST. The discovery thread greps for ALL \
-                occurrences of the target pattern and enumerates every file/location needing changes. \
-                Write results to `state_write`. This prevents missing files. Skip discovery for tasks \
-                where you can enumerate files yourself in 1-2 iterations.\n\
+             2b. **Surgical removal for dead code / function deletion.** When removing functions, \
+                classes, or blocks of dead code, use `edit_file` or `replace_lines` to delete ONLY \
+                the target code. Do NOT rewrite the entire file with `write_file` — rewriting from \
+                memory changes function signatures, parameter names, and defaults in surviving code. \
+                For each dead function: read its exact line range, then use replace_lines to delete \
+                those lines. Verify remaining functions are unchanged with a targeted read.\n\
              3. **Implement breadth-first.** Start editing by iteration 5 at the latest. For tasks \
                 touching 4+ files, make one pass through ALL files with minimal correct changes \
                 before polishing any single file. This ensures every file gets touched even if you \
@@ -1913,27 +1913,15 @@ impl AgentRunner {
              (`state_read`/`state_write`) SURVIVES compaction. Put strategic decisions in state, \
              not in conversation. If you don't write it to state, you WILL forget it.\n\n\
              ### How to orchestrate\n\
-             1. **Discovery FIRST.** Before any edits, dispatch a discovery thread:\n\
-                ```\n\
-                spawn_thread({\n\
-                  \"task\": \"Map ALL files needing changes. For each file: grep for [pattern], \\\n\
-                    list every function/class/reference that needs modification. Check indirect \\\n\
-                    references: event handlers, dispatch dicts, getattr calls, decorator registrations, \\\n\
-                    __init__.py exports, config defaults, documentation, test fixtures.\",\n\
-                  \"max_iterations\": 10\n\
-                })\n\
-                ```\n\
-                Then write discovered files to state:\n\
+             1. **Decompose into state.** Write your plan and subtask list to state:\n\
                 ```\n\
                 state_write({\"state\": {\n\
                   \"plan\": \"WHY this approach: ...\",\n\
-                  \"discovered_files\": [\"file1.py\", \"file2.py\", ...],\n\
                   \"subtasks\": [{\"id\": 1, \"desc\": \"Fix X in file.py\", \"files\": [\"file.py\"], \"status\": \"pending\"}],\n\
-                  \"observations\": [\"discovery thread found 12 files with pattern X\"],\n\
+                  \"observations\": [],\n\
                   \"strategy_changes\": []\n\
                 }})\n\
                 ```\n\
-                This step is CRITICAL — it prevents the #1 failure mode (missing files).\n\
              2. **Dispatch tactical threads.** Each thread gets ONE focused job:\n\
                 - Specific files to change, specific instructions, constraints from state\n\
                 - Threads don't need strategic context — just their assignment\n\
