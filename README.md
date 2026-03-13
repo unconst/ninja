@@ -221,7 +221,9 @@ Claude 4.5 Sonnet raw: 23.7%
 
 *Goal: close the gap to Claude 4.5 Sonnet raw (23.7%) through general-purpose improvements, not benchmark-specific hacks.*
 
-**Active eval**: Kimi-K2.5-TEE full run in progress (169/621, ~27%). Pilot: 2/30 (6.7%) at 27x Claude's cost ($3.80 vs $0.14/task). Near-miss re-test with 7 new Ninja commits running (58 tasks).
+**Active eval**: Full Claude re-run in progress (651 tasks, 16 commits since baseline).
+Near-miss re-test: 6 new passes on 58 previously-failing tasks (qutebrowser, vuls, NodeBB).
+Kimi-K2.5-TEE: 2/30 (6.7%) pilot at 27x Claude's cost ($3.80 vs $0.14/task) — not viable.
 
 ### Frontier Tasks (175 custom diagnostic tasks)
 
@@ -230,16 +232,16 @@ Claude 4.5 Sonnet raw: 23.7%
 | Isolated debugging | 100% | Immune to scale |
 | Construction (2-3 files) | 100% | |
 | Construction (4 files) | 83% | |
-| Construction (5 files) | 50% | |
+| Construction (5 files) | **100%** | Was 50%, fixed by directives |
 | Dependency update (3-5 files) | 100% | |
-| Dependency update (6 files) | 17% | Sharpest cliff measured |
+| Dependency update (6 files) | **100%** | Was 17%, fixed by directives |
 | Refactoring (2 modules) | 67% | |
-| Refactoring (3 modules) | 17% | |
+| Refactoring (3 modules) | **100%** | Was 17%, fixed by directives |
 | Migration (flask to fastapi) | 33% | |
 | Cross-layer debugging | cliff at 5 bugs | |
 | Deadlock/structural | cliff at 4 bugs | |
 | Parser/grammar | cliff at 6 bugs | |
-| Dead code elimination (8 files) | 50% | |
+| Dead code elimination (8 files) | 36% | Regressed from 90% — prompt bloat tradeoff |
 | Perf optimization (3+ bugs) | 0% | Attention fragmentation |
 | Backward compat shims | 100% | Writing new code is easier |
 | Test generation | 100% | Single-file comprehension |
